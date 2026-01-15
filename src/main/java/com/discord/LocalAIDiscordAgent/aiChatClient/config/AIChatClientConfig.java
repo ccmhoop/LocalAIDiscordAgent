@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 @Configuration
-public class AiChatClientConfig {
+public class AIChatClientConfig {
 
     @Bean
     public ChatClient chatClientOllamaKier(OllamaChatModel ollamaGeminiModelConfig, List<Advisor> scottishAdvisorsList) {
