@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.aiOllama.service;
 
 import com.discord.LocalAIDiscordAgent.aiChatClient.systemMsg.AISystemMsg;
 import com.discord.LocalAIDiscordAgent.aiMemory.service.AiMemoryContextBuilderService;
-import com.discord.LocalAIDiscordAgent.aiMemory.service.MemoryWriteService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -25,10 +24,12 @@ public class OllamaService {
         this.memoryContextBuilder = memoryContextBuilder;
     }
 
-    public String generateKierResponse(String userMessage, String userId, String guildId, String channelId) {
-        String conversationId = guildId + ":" + channelId + ":" + userId;
+    public String generateScottishResponse(String userMessage, String userId, String guildId, String channelId) {
+        String conversationId =  userId;
 
-        List<Message> messages = memoryContextBuilder.buildMessages(AISystemMsg.SYSTEM_MESSAGE_KIER, userId, userMessage);
+        List<Message> messages = memoryContextBuilder.buildMessages(AISystemMsg.SYSTEM_MESSAGE_SCOTTISH_AGENT, userId, userMessage);
+
+        System.out.println(messages.toString());
 
         ChatResponse response = chatClientOllamaKier
                 .prompt()
@@ -36,6 +37,7 @@ public class OllamaService {
                 .messages(messages)
                 .call()
                 .chatResponse();
+
 
         if (response == null || Objects.requireNonNull(response.getResult().getOutput().getText()).isBlank()) {
             log.warn("Ollama response was null or blank");

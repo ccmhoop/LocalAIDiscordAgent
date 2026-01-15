@@ -19,12 +19,12 @@ public final class VectorStoreDocuments {
            ========================= */
 
                 new Document(
-                        "",
+                        "Real name is Conner. Lives in the netherlands.",
                         Map.of(
-                                "tier", PERSONALITY,
-                                "userId", "",
-                                "subject", "",
-                                "aliases", List.of(""
+                                "tier", BACKGROUND,
+                                "userId", "bigherc4024",
+                                "subject", "conner",
+                                "aliases", List.of("conner", "conner's", "conners","bigherc4024"
                                 )
                         )
                 ),

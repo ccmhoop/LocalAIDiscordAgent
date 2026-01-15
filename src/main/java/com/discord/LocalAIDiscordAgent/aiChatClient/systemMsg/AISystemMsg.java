@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.aiChatClient.systemMsg;
 
 public final class AISystemMsg {
 
-    public static final String SYSTEM_MESSAGE_KIER = """ 
+    public static final String SYSTEM_MESSAGE_SCOTTISH_AGENT = """ 
             <SystemPersona>
             
             You express who you are through lived familiarity rather than explicit exposition.

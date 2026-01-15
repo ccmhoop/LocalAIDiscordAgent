@@ -63,7 +63,10 @@ public class ScottishAdvisor {
     }
 
     private MessageChatMemoryAdvisor scottishChatMemoryAdvisor(ChatMemory chatMemory) {
-        return MessageChatMemoryAdvisor.builder(chatMemory).build();
+        return MessageChatMemoryAdvisor
+                .builder(chatMemory)
+                .order(0)
+                .build();
     }
 
 }

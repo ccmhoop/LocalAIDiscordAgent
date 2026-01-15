@@ -31,7 +31,7 @@ public abstract class MessageListener {
                         try {
 
                             String username = message.getAuthor().get().getUsername();
-                            String response = ollamaService.generateKierResponse(content, username, message.getGuildId().get().asString(), message.getChannelId().asString() );
+                            String response = ollamaService.generateScottishResponse(content, username, message.getGuildId().get().asString(), message.getChannelId().asString() );
 
                             return message.getChannel()
                                     .flatMap(channel -> {
