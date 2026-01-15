@@ -16,11 +16,11 @@ import java.util.Objects;
 @Service
 public class OllamaService {
 
-    private final ChatClient chatClientOllamaKier;
+    private final ChatClient scottishChatClient;
     private final AiMemoryContextBuilderService memoryContextBuilder;
 
-    public OllamaService(ChatClient chatClientOllamaKier, AiMemoryContextBuilderService memoryContextBuilder) {
-        this.chatClientOllamaKier = chatClientOllamaKier;
+    public OllamaService(ChatClient chatClientOllamaScottish, AiMemoryContextBuilderService memoryContextBuilder) {
+        this.scottishChatClient = chatClientOllamaScottish;
         this.memoryContextBuilder = memoryContextBuilder;
     }
 
@@ -31,7 +31,7 @@ public class OllamaService {
 
         System.out.println(messages.toString());
 
-        ChatResponse response = chatClientOllamaKier
+        ChatResponse response = scottishChatClient
                 .prompt()
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .messages(messages)

@@ -12,7 +12,7 @@ import java.util.List;
 public class AIChatClientConfig {
 
     @Bean
-    public ChatClient chatClientOllamaKier(OllamaChatModel ollamaGeminiModelConfig, List<Advisor> scottishAdvisorsList) {
+    public ChatClient chatClientOllamaScottish(OllamaChatModel ollamaGeminiModelConfig, List<Advisor> scottishAdvisorsList) {
         return ChatClient.builder(ollamaGeminiModelConfig)
                 .defaultAdvisors(scottishAdvisorsList)
                 .build();
