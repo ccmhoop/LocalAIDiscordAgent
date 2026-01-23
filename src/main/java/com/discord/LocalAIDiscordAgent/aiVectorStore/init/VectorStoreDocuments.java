@@ -1,12 +1,11 @@
 package com.discord.LocalAIDiscordAgent.aiVectorStore.init;
 
-import com.discord.LocalAIDiscordAgent.aiMemory.enums.MemoryTier;
 import org.springframework.ai.document.Document;
 
 import java.util.List;
 import java.util.Map;
 
-import static com.discord.LocalAIDiscordAgent.aiMemory.enums.MemoryTier.*;
+import static com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.enums.MemoryTier.*;
 
 public final class VectorStoreDocuments {
 

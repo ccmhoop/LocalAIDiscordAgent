@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.situationalMemory;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.situationalMemory;
 
 import java.util.List;
 

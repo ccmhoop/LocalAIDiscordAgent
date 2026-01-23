@@ -1,6 +1,6 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.config;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.config;
 
-import com.discord.LocalAIDiscordAgent.aiMemory.repository.ScottishAgentChatMemoryRepository;
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.repository.ScottishAgentChatMemoryRepository;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;

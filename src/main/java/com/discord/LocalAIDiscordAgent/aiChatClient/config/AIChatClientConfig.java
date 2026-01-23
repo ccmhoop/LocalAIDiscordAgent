@@ -12,8 +12,8 @@ import java.util.List;
 public class AIChatClientConfig {
 
     @Bean
-    public ChatClient chatClientOllamaScottish(OllamaChatModel ollamaGeminiModelConfig, List<Advisor> scottishAdvisorsList) {
-        return ChatClient.builder(ollamaGeminiModelConfig)
+    public ChatClient chatClientOllamaScottish(OllamaChatModel ollamaQwenModelConfig, List<Advisor> scottishAdvisorsList) {
+        return ChatClient.builder(ollamaQwenModelConfig)
                 .defaultAdvisors(scottishAdvisorsList)
                 .build();
     }

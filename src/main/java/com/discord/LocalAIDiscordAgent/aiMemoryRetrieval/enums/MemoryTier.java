@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.enums;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.enums;
 
 public enum MemoryTier {
     PERSONALITY,

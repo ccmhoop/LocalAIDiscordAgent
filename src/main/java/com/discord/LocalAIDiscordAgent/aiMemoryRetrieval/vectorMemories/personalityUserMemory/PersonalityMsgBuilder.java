@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.personalityUserMemory;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.personalityUserMemory;
 
 import java.util.List;
 

@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.service;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.service;
 
-import com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.backgroundMemory.BackgroundMemoryContextBuilder;
-import com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.personalityUserMemory.PersonalityMemoryContextBuilder;
-import com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.situationalMemory.SituationalMemoryContextBuilder;
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.backgroundMemory.BackgroundMemoryContextBuilder;
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.personalityUserMemory.PersonalityMemoryContextBuilder;
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.situationalMemory.SituationalMemoryContextBuilder;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -31,6 +31,17 @@ public class AiMemoryContextBuilderService {
     public List<Message> buildMessages(String systemPersona, String userId, String userMessage) {
 
         List<Message> messages = new ArrayList<>();
+
+        messages.add(new SystemMessage("""
+                You are a web-aware assistant.
+                
+                Rules:
+                - If a user provides a URL, you MUST call webSearch.
+                - If the user asks a specific question about the webpage, you MUST call webFilterText
+                  using the output of webSearch as the pageText argument.
+                - You are NOT allowed to answer webpage questions without calling both tools in this order.
+                - If the filtered result does not contain the answer, say so explicitly.
+                """));
 
         messages.add(new SystemMessage(systemPersona));
 

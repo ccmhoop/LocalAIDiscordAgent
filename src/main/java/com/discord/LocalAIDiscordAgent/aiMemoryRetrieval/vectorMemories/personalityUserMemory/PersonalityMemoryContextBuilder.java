@@ -1,5 +1,8 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.personalityUserMemory;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.personalityUserMemory;
 
+import com.discord.LocalAIDiscordAgent.AiMemoryStore.personalityUserMemory.PersonalityExtractor;
+import com.discord.LocalAIDiscordAgent.AiMemoryStore.personalityUserMemory.PersonalitySaver;
+import com.discord.LocalAIDiscordAgent.AiMemoryStore.personalityUserMemory.PersonalityStatementNormalizer;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.document.Document;

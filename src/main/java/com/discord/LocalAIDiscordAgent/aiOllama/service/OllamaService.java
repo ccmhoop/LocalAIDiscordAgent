@@ -1,7 +1,9 @@
 package com.discord.LocalAIDiscordAgent.aiOllama.service;
 
 import com.discord.LocalAIDiscordAgent.aiChatClient.systemMsg.AISystemMsg;
-import com.discord.LocalAIDiscordAgent.aiMemory.service.AiMemoryContextBuilderService;
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.service.AiMemoryContextBuilderService;
+import com.discord.LocalAIDiscordAgent.aiTools.websearch.AIWebFilterTool;
+import com.discord.LocalAIDiscordAgent.aiTools.websearch.AIWebSearchTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -18,10 +20,12 @@ public class OllamaService {
 
     private final ChatClient scottishChatClient;
     private final AiMemoryContextBuilderService memoryContextBuilder;
+    private final List<Object> aiToolsConfig;
 
-    public OllamaService(ChatClient chatClientOllamaScottish, AiMemoryContextBuilderService memoryContextBuilder) {
+    public OllamaService(ChatClient chatClientOllamaScottish, AiMemoryContextBuilderService memoryContextBuilder, List<Object> aiToolsConfig) {
         this.scottishChatClient = chatClientOllamaScottish;
         this.memoryContextBuilder = memoryContextBuilder;
+        this.aiToolsConfig = aiToolsConfig;
     }
 
     public String generateScottishResponse(String userMessage, String userId, String guildId, String channelId) {
@@ -34,12 +38,15 @@ public class OllamaService {
         ChatResponse response = scottishChatClient
                 .prompt()
                 .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .tools(aiToolsConfig)
                 .messages(messages)
                 .call()
                 .chatResponse();
 
 
-        if (response == null || Objects.requireNonNull(response.getResult().getOutput().getText()).isBlank()) {
+        System.out.println(response.toString());
+
+        if (response.getResult().getOutput().getText() == null || response.getResult().getOutput().getText().isBlank()) {
             log.warn("Ollama response was null or blank");
             return "I'm sorry, I didn't understand you.";
         }
@@ -50,6 +57,5 @@ public class OllamaService {
 
         return responseText;
     }
-
 
 }

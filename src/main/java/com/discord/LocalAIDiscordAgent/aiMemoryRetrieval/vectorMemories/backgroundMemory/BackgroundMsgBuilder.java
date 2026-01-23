@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.backgroundMemory;
+package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.backgroundMemory;
 
 import java.util.List;
 

@@ -10,14 +10,14 @@ import org.springframework.context.annotation.Configuration;
 public class OllamaModelConfig {
 
     @Bean
-    public OllamaChatModel ollamaGeminiModelConfig(OllamaApi ollamaBasicApiConfig) {
+    public OllamaChatModel ollamaQwenModelConfig(OllamaApi ollamaBasicApiConfig) {
         return  OllamaChatModel.builder()
                 .ollamaApi(ollamaBasicApiConfig)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("gemma3:27b")
-                                .temperature(0.9)
-                                .numPredict(384)
+                                .model("qwen3:30b")
+                                .temperature(0.6)
+//                                .numPredict(1536)
                                 .build())
                 .build();
     }

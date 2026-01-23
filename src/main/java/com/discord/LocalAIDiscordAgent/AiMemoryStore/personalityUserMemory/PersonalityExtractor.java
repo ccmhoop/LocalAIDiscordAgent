@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiMemory.vectorMemories.personalityUserMemory;
+package com.discord.LocalAIDiscordAgent.AiMemoryStore.personalityUserMemory;
 
 import org.springframework.stereotype.Component;
 
