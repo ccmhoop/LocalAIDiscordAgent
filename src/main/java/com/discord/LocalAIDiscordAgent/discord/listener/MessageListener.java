@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 public abstract class MessageListener {
+    private static final int MAX_INPUT_LENGTH = 4096;
 
     public Mono<Void> processCommandAI(Message eventMessage, OllamaService ollamaService) {
         return Mono.just(eventMessage)
@@ -22,17 +23,23 @@ public abstract class MessageListener {
                 .flatMap(message -> {
                     String content = message.getContent();
 
-                    // Check if content contains !todo"
                     if (content.toLowerCase().contains("@kier") || content.contains("@1379869980123992274")) {
-
                         content = message.getContent().replace("<@1379869980123992274>", "").trim();
 
                         if (content.isEmpty()) {
                             return Mono.empty();
                         }
 
-                        try {
+                        if (content.length() > MAX_INPUT_LENGTH) {
+                            return message.getChannel()
+                                    .flatMap(channel -> channel.createMessage(
+                                            "I apologize, but your message is too long. Please limit your input to " 
+                                            + MAX_INPUT_LENGTH + " characters."))
+                                    .then();
+                        }
 
+                        try {
+                            // Rest of the existing implementation...
                             String username = message.getAuthor().get().getUsername();
                             String response = ollamaService.generateScottishResponse(content, username, message.getGuildId().get().asString(), message.getChannelId().asString() );
 

@@ -31,10 +31,28 @@ public class AISearchEngineTool {
     private static final int MAX_EXCERPT_CHARS = 2000;
 
     @Tool(description = """
-            Search the web using DuckDuckGo (HTML endpoint) and return the top 3 results
-            PLUS extracted content from each of the top 3 pages (excerpt).
-            Each result includes title, URL, snippet, and page excerpt.
-            """)
+        Web search and page-fetch tool (DuckDuckGo HTML).
+
+        Use this tool in either of these situations:
+        1) Knowledge fallback: when you do not have sufficient, confident information to answer, or details may be outdated.
+        2) Evidence & enrichment: when you can answer from general knowledge but should verify, cite, or enrich the response
+           with current sources, specific facts, names, dates, figures, or examples.
+
+        What it does:
+        - Runs a DuckDuckGo search via the HTML endpoint.
+        - Selects the top 3 organic results.
+        - Fetches each of the top 3 pages and extracts a short readable text excerpt.
+
+        Output (top 3 results):
+        - Title
+        - Resolved URL
+        - Search snippet
+        - Page excerpt (best-effort)
+
+        Notes:
+        - Some sites block automated fetching; you’ll see [Failed to fetch page: ...]. You can add backoff, caching, and retry logic if needed.
+        - If you want “information” to mean a short summary rather than an excerpt, a lightweight summarizer step can be added (e.g., compress the extract into N bullet points) while keeping output bounded.
+        """)
     public String searchAndFetch(@ToolParam(description = "The search query to look up on the web") String query) {
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String searchUrl = "https://html.duckduckgo.com/html/?q=" + encoded;
