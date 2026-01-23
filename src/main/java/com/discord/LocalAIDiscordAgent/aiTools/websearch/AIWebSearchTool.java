@@ -20,8 +20,9 @@ public class AIWebSearchTool {
             Fetch webpage text from a URL for downstream filtering.
             Return a structured result containing: status, final_url, title, description, and pageText.
             Exclude scripts/styles and common boilerplate where possible.
+            Focus only on the content of the current URL, not on previous conversation context.
             """)
-    public String webSearch(@ToolParam(description = "Absolute HTTP or HTTPS URL") String url) {
+    public String webSearch(@ToolParam(description = "Absolute HTTP or HTTPS URL. Process only this URL without considering previous conversation context.") String url) {
         try {
             Document doc = Jsoup.connect(url)
                     .timeout(10000)
@@ -34,7 +35,6 @@ public class AIWebSearchTool {
                 bodyText = bodyText.substring(0, 2000) + "...";
             }
 
-            System.out.println(String.format("Title: %s\n\nContent: %s", title, bodyText));
             return String.format("Title: %s\n\nContent: %s", title, bodyText);
         } catch (IOException e) {
             return "Error: Unable to fetch content.";

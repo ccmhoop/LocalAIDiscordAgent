@@ -53,12 +53,14 @@ public class AISearchEngineTool {
         - Some sites block automated fetching; you’ll see [Failed to fetch page: ...]. You can add backoff, caching, and retry logic if needed.
         - If you want “information” to mean a short summary rather than an excerpt, a lightweight summarizer step can be added (e.g., compress the extract into N bullet points) while keeping output bounded.
         """)
-    public String searchAndFetch(@ToolParam(description = "The search query to look up on the web") String query) {
+    public String searchAndFetch(@ToolParam(description = "The search query to look up on the web. Use only this exact query without adding context from previous conversations.") String query) {
+        // Use only the exact query provided, without context from previous conversations
         String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
         String searchUrl = "https://html.duckduckgo.com/html/?q=" + encoded;
 
         StringBuilder out = new StringBuilder();
         out.append("Search results for: ").append(query).append("\n\n");
+        out.append("Note: These results are based solely on the current query, without considering previous conversation context.\n\n");
 
         try {
             Document doc = Jsoup.connect(searchUrl)

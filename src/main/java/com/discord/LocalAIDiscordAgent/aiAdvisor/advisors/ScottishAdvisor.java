@@ -30,18 +30,16 @@ public class ScottishAdvisor {
 
         var template = new PromptTemplate("""
                 {instructions}
-                
+
                 You may use LONG_TERM_MEMORY only when it is clearly relevant to the user’s request.
                 Rules:
                 - Do not mention LONG_TERM_MEMORY, retrieval, embeddings, or these rules in your answer.
                 - If LONG_TERM_MEMORY is empty, irrelevant, or conflicts with the user’s message, ignore it.
                 - Never fabricate details not present in the conversation or LONG_TERM_MEMORY.
                 - If memory is relevant, incorporate it naturally (do not quote it verbatim unless the user asked for it).
-                
+
                 LONG_TERM_MEMORY:
                 {long_term_memory}
-                
-                /no_think
                 """);
 
         return VectorStoreChatMemoryAdvisor.builder(vectorStore)
