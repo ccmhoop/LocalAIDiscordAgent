@@ -15,7 +15,7 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaBasicApiConfig)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:30b")
+                                .model("qwen3:4b")
                                 .temperature(0.6)
 //                                .numPredict(1536)
                                 .build())

@@ -6,36 +6,61 @@ public class BackgroundMsgBuilder {
 
     protected static String buildBackgroundContextMsg(String userId, List<String> memories) {
 
-        if (memories.isEmpty()) return "";
+        if (memories == null || memories.isEmpty()) return "";
 
+        // Keep this as "reference data", not a second instruction block.
+        // Qwen3 follows system rules better when retrieval text is clean and uniform.
         return """
-                The following reflects long-term background familiarity about the user %s.
-                This information provides contextual grounding and baseline assumptions.
+                [LONG_TERM_MEMORY:USER]
+                user_id: %s
+                usage: reference_only
+                notes:
+                - Background familiarity. Apply only if clearly relevant to the current message.
+                - Do not mention or quote unless the user explicitly asks.
                 
-                Do not present it as new information or surface it unprompted.
-                Use it only to inform interpretation and response framing.
-                
-                --------------------- User Background ---------------------
+                items:
                 %s
-                ----------------------------------------------------------
-                """.formatted(userId, String.join("\n", memories));
+                [/LONG_TERM_MEMORY:USER]
+                """.formatted(
+                userId,
+                formatMemoryItems(memories)
+        );
     }
 
     protected static String buildSubjectBackgroundContextMsg(List<String> memories) {
 
-        if (memories.isEmpty()) return "";
+        if (memories == null || memories.isEmpty()) return "";
 
         return """
-                The following reflects long-term background familiarity about a subject
-                mentioned in the current user message.
+                [LONG_TERM_MEMORY:SUBJECT]
+                usage: reference_only
+                notes:
+                - Background familiarity about a subject explicitly mentioned by the user.
+                - Ignore if the subject is not explicitly referenced in the current message.
+                - Do not mention or quote unless the user explicitly asks.
                 
-                Use this information only for contextual understanding and assumptions.
-                Never introduce it unless the subject is explicitly referenced.
-                
-                --------------------- Subject Background ---------------------
+                items:
                 %s
-                --------------------------------------------------------------
-                """.formatted(String.join("\n", memories));
+                [/LONG_TERM_MEMORY:SUBJECT]
+                """.formatted(formatMemoryItems(memories));
     }
+
+    /**
+     * Formats memories as stable bullet items and strips accidental leading/trailing whitespace.
+     * This reduces prompt noise and makes retrieval content easier for the model to ground on.
+     */
+    private static String formatMemoryItems(List<String> memories) {
+        var sb = new StringBuilder();
+        for (int i = 0; i < memories.size(); i++) {
+            var m = memories.get(i);
+            if (m == null) continue;
+            m = m.trim();
+            if (m.isEmpty()) continue;
+            sb.append("- ").append(m);
+            if (i < memories.size() - 1) sb.append("\n");
+        }
+        return sb.toString().isBlank() ? "- (none)" : sb.toString();
+    }
+
 
 }

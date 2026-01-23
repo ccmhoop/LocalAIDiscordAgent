@@ -5,7 +5,10 @@ import discord4j.core.object.entity.Message;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.net.SocketException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -44,14 +47,30 @@ public abstract class MessageListener {
 
                                         // Discord has a 2000 character limit for messages
                                         if (cleanedResponse.length() <= 2000) {
-                                            return channel.createMessage(cleanedResponse);
+                                            return channel.createMessage(cleanedResponse)
+                                                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                                                            .filter(throwable -> throwable instanceof SocketException 
+                                                                && throwable.getMessage().contains("Connection reset"))
+                                                            .doBeforeRetry(retrySignal -> 
+                                                                log.warn("Retrying after connection reset, attempt: {}", 
+                                                                    retrySignal.totalRetries() + 1)));
                                         } else {
                                             Mono<Void> result = Mono.empty();
 
                                             for (int i = 0; i < cleanedResponse.length(); i += 2000) {
                                                 int end = Math.min(i + 2000, cleanedResponse.length());
                                                 String chunk = cleanedResponse.substring(i, end);
-                                                result = result.then(channel.createMessage(chunk).then());
+                                                final int chunkIndex = i; // Create a final copy for the lambda
+                                                result = result.then(
+                                                    channel.createMessage(chunk)
+                                                        .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                                                            .filter(throwable -> throwable instanceof SocketException 
+                                                                && throwable.getMessage().contains("Connection reset"))
+                                                            .doBeforeRetry(retrySignal -> 
+                                                                log.warn("Retrying chunk {} after connection reset, attempt: {}", 
+                                                                    chunkIndex / 2000 + 1, retrySignal.totalRetries() + 1)))
+                                                        .then()
+                                                );
                                             }
 
                                             return result;

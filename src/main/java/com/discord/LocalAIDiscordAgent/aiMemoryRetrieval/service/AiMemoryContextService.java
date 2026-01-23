@@ -4,21 +4,19 @@ import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.backgrou
 import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.personalityUserMemory.PersonalityMemoryContextBuilder;
 import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.situationalMemory.SituationalMemoryContextBuilder;
 import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class AiMemoryContextBuilderService {
+public class AiMemoryContextService {
 
     private final PersonalityMemoryContextBuilder userPersonalityContextBuilder;
     private final SituationalMemoryContextBuilder situationalContextBuilder;
     private final BackgroundMemoryContextBuilder backgroundContextBuilder;
 
-    public AiMemoryContextBuilderService(
+    public AiMemoryContextService(
             PersonalityMemoryContextBuilder userPersonalityContextBuilder,
             SituationalMemoryContextBuilder situationalContextBuilder,
             BackgroundMemoryContextBuilder backgroundContextBuilder
@@ -28,22 +26,7 @@ public class AiMemoryContextBuilderService {
         this.backgroundContextBuilder = backgroundContextBuilder;
     }
 
-    public List<Message> buildMessages(String systemPersona, String userId, String userMessage) {
-
-        List<Message> messages = new ArrayList<>();
-
-        messages.add(new SystemMessage("""
-                You are a web-aware assistant.
-                
-                Rules:
-                - If a user provides a URL, you MUST call webSearch.
-                - If the user asks a specific question about the webpage, you MUST call webFilterText
-                  using the output of webSearch as the pageText argument.
-                - You are NOT allowed to answer webpage questions without calling both tools in this order.
-                - If the filtered result does not contain the answer, say so explicitly.
-                """));
-
-        messages.add(new SystemMessage(systemPersona));
+    public void buildMessages( List<Message> messages, String userId, String userMessage) {
 
         userPersonalityContextBuilder.buildUserPersonalityMemories(userId, messages);
 
@@ -55,7 +38,6 @@ public class AiMemoryContextBuilderService {
 
         userPersonalityContextBuilder.processPersonality(userId, userMessage);
 
-        return messages;
     }
 
 }
