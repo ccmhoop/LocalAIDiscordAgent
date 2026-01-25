@@ -1,11 +1,10 @@
-package com.discord.LocalAIDiscordAgent.AiContext.service;
+package com.discord.LocalAIDiscordAgent.aiSystemMsgBuilder.service;
 
-import com.discord.LocalAIDiscordAgent.AiContext.systemMsg.AISystemMsg;
+import com.discord.LocalAIDiscordAgent.aiSystemMsgBuilder.systemMsg.AISystemMsg;
 import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.service.AiMemoryContextService;
 import com.discord.LocalAIDiscordAgent.aiTools.systemMsg.ToolSystemMsg;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
-import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

@@ -25,4 +25,9 @@ public class AIToolConfig {
         return new AIWebFilterTool();
     }
 
+    @Bean
+    public Object[] webSearchToolScottish() {
+        return new Object[]{ webSearchTool(), webSearchEngineTool(), webFilterTool() };
+    }
+
 }

@@ -1,21 +1,28 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.aiOllama.service.OllamaService;
+import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.net.SocketException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public abstract class MessageListener {
+
     private static final int MAX_INPUT_LENGTH = 4096;
+    private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
 
     public Mono<Void> processCommandAI(Message eventMessage, OllamaService ollamaService) {
         return Mono.just(eventMessage)
@@ -23,74 +30,49 @@ public abstract class MessageListener {
                 .flatMap(message -> {
                     String content = message.getContent();
 
-                    if (content.toLowerCase().contains("@kier") || content.contains("@1379869980123992274")) {
-                        content = message.getContent().replace("<@1379869980123992274>", "").trim();
+                    boolean mentioned =
+                            content.toLowerCase().contains("@kier") ||
+                                    content.contains("<@1379869980123992274>");
+                    if (!mentioned) return Mono.empty();
 
-                        if (content.isEmpty()) {
-                            return Mono.empty();
-                        }
+                    content = content.replace("<@1379869980123992274>", "").trim();
+                    if (content.isEmpty()) return Mono.empty();
 
-                        if (content.length() > MAX_INPUT_LENGTH) {
-                            return message.getChannel()
-                                    .flatMap(channel -> channel.createMessage(
-                                            "I apologize, but your message is too long. Please limit your input to " 
-                                            + MAX_INPUT_LENGTH + " characters."))
-                                    .then();
-                        }
-
-                        try {
-                            // Rest of the existing implementation...
-                            String username = message.getAuthor().get().getUsername();
-                            String response = ollamaService.generateScottishResponse(content, username, message.getGuildId().get().asString(), message.getChannelId().asString() );
-
-                            return message.getChannel()
-                                    .flatMap(channel -> {
-
-                                        // Normalize response: remove blank lines
-                                        String cleanedResponse = Arrays.stream(response.split("\\R"))
-                                                .map(String::trim)
-                                                .filter(line -> !line.isEmpty())
-                                                .collect(Collectors.joining("\n"));
-
-                                        // Discord has a 2000 character limit for messages
-                                        if (cleanedResponse.length() <= 2000) {
-                                            return channel.createMessage(cleanedResponse)
-                                                    .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
-                                                            .filter(throwable -> throwable instanceof SocketException 
-                                                                && throwable.getMessage().contains("Connection reset"))
-                                                            .doBeforeRetry(retrySignal -> 
-                                                                log.warn("Retrying after connection reset, attempt: {}", 
-                                                                    retrySignal.totalRetries() + 1)));
-                                        } else {
-                                            Mono<Void> result = Mono.empty();
-
-                                            for (int i = 0; i < cleanedResponse.length(); i += 2000) {
-                                                int end = Math.min(i + 2000, cleanedResponse.length());
-                                                String chunk = cleanedResponse.substring(i, end);
-                                                final int chunkIndex = i; // Create a final copy for the lambda
-                                                result = result.then(
-                                                    channel.createMessage(chunk)
-                                                        .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
-                                                            .filter(throwable -> throwable instanceof SocketException 
-                                                                && throwable.getMessage().contains("Connection reset"))
-                                                            .doBeforeRetry(retrySignal -> 
-                                                                log.warn("Retrying chunk {} after connection reset, attempt: {}", 
-                                                                    chunkIndex / 2000 + 1, retrySignal.totalRetries() + 1)))
-                                                        .then()
-                                                );
-                                            }
-
-                                            return result;
-                                        }
-                                    });
-                        } catch (Exception e) {
-                            log.error("Error generating or sending response: {}", e.getMessage());
-                            return Mono.empty();
-                        }
-
-                    } else {
-                        return Mono.empty();
+                    if (content.length() > MAX_INPUT_LENGTH) {
+                        return message.getChannel()
+                                .flatMap(channel -> channel.createMessage(
+                                        "I apologize, but your message is too long. Please limit your input to "
+                                                + MAX_INPUT_LENGTH + " characters."))
+                                .then();
                     }
+
+                    String username = message.getAuthor().map(User::getUsername).orElse("unknown-user");
+                    String guildId = message.getGuildId().map(Snowflake::asString).orElse("dm");
+                    String channelId = message.getChannelId().asString();
+
+                    String finalContent = content;
+
+                    Mono<String> responseMono =
+                            ollamaService.generateScottishResponseMono(finalContent, username, guildId, channelId);
+
+                    return message.getChannel()
+                            .flatMap(channel ->
+                                    responseMono
+                                            .flatMapMany(response -> {
+                                                String cleanedResponse = cleanResponse(response);
+                                                List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
+
+                                                return Flux.fromIterable(chunks)
+                                                        .concatMap(chunk -> channel.createMessage(chunk)
+                                                                .retryWhen(Retry.backoff(3, Duration.ofSeconds(120))
+                                                                        .filter(MessageListener::isConnectionReset)
+                                                                        .doBeforeRetry(rs -> log.warn(
+                                                                                "Retrying after connection reset, attempt: {}",
+                                                                                rs.totalRetries() + 1
+                                                                        ))));
+                                            })
+                                            .then()
+                            );
                 })
                 .then();
     }
@@ -104,4 +86,40 @@ public abstract class MessageListener {
                 .then();
     }
 
+    private static String cleanResponse(String response) {
+        if (response == null || response.isBlank()) {
+            return "I'm sorry, I didn't understand you.";
+        }
+
+        return Arrays.stream(response.split("\\R"))
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .collect(Collectors.joining("\n"));
+    }
+
+    private static boolean isConnectionReset(Throwable t) {
+        Throwable cur = t;
+        while (cur != null) {
+            if (cur instanceof SocketException se
+                    && se.getMessage() != null
+                    && se.getMessage().contains("Connection reset")) {
+                return true;
+            }
+            cur = cur.getCause();
+        }
+        return false;
+    }
+
+    private static List<String> splitIntoChunks(String s, int maxLen) {
+        List<String> chunks = new ArrayList<>();
+        if (s == null || s.isBlank()) {
+            chunks.add("I'm sorry, I didn't understand you.");
+            return chunks;
+        }
+
+        for (int i = 0; i < s.length(); i += maxLen) {
+            chunks.add(s.substring(i, Math.min(i + maxLen, s.length())));
+        }
+        return chunks;
+    }
 }

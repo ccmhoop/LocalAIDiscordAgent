@@ -25,6 +25,7 @@ public class ChatMemoryConfig {
                 .dialect(new ScottishAgentChatMemoryRepository())
                 .build();
 
+
        return MessageWindowChatMemory.builder()
                 .chatMemoryRepository(chatMemoryRepository)
                 .maxMessages(10)

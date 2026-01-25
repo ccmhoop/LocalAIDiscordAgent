@@ -1,42 +1,39 @@
 package com.discord.LocalAIDiscordAgent.aiChatClient.config;
 
-import com.discord.LocalAIDiscordAgent.aiTools.websearch.AISearchEngineTool;
-import com.discord.LocalAIDiscordAgent.aiTools.websearch.AIWebFilterTool;
-import com.discord.LocalAIDiscordAgent.aiTools.websearch.AIWebSearchTool;
+import com.discord.LocalAIDiscordAgent.aiSystemMsgBuilder.systemMsg.AISystemMsg;
+import com.discord.LocalAIDiscordAgent.aiTools.systemMsg.ToolSystemMsg;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 public class AIChatClientConfig {
 
-//    @Bean
-//    public ChatClient chatClientOllamaScottish(OllamaChatModel ollamaQwenModelConfig, List<Advisor> scottishAdvisorsList, AIWebFilterTool aiWebFilterTool, AIWebSearchTool aiWebSearchTool) {
-//        return ChatClient.builder(ollamaQwenModelConfig)
-//                .defaultAdvisors(scottishAdvisorsList)
-//                .defaultTools(aiWebSearchTool, aiWebFilterTool)
-//                .build();
-//    }
-
     @Bean
-    public ChatClient chatClientOllamaScottish(OllamaChatModel ollamaQwenModelConfig, List<Advisor> scottishAdvisorsList,
-                                               @Qualifier("webSearch") AIWebSearchTool webSearch,
-                                               @Qualifier("webFilterText") AIWebFilterTool webFilterText,
-                                               @Qualifier("webSearchEngine") AISearchEngineTool webSearchEngine
-                                               ) {
-
+    @Qualifier("scottishChatClient")
+    public ChatClient scottishChatClient(
+            OllamaChatModel ollamaQwenModelConfig,
+            List<Advisor> scottishAdvisorsList
+    ) {
         return ChatClient.builder(ollamaQwenModelConfig)
                 .defaultAdvisors(scottishAdvisorsList)
-                .defaultTools(webSearch, webSearchEngine, webFilterText)
                 .build();
     }
 
-
+    @Bean
+    @Qualifier("scottishToolChatClient")
+    public ChatClient scottishToolChatClient(
+            OllamaChatModel ollamaQwenModelConfig,
+            Object[] webSearchToolScottish
+    ) {
+        return ChatClient.builder(ollamaQwenModelConfig)
+                .defaultSystem(AISystemMsg.SYSTEM_MESSAGE_SCOTTISH_AGENT + "\n" + ToolSystemMsg.WEB_SEARCH_TOOL_INSTRUCTIONS)
+                .defaultTools(webSearchToolScottish)
+                .build();
+    }
 }

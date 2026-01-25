@@ -26,41 +26,33 @@ public class AISearchEngineTool {
 
     private static final int SEARCH_TIMEOUT_MS = 15000;
     private static final int PAGE_TIMEOUT_MS = 15000;
-
     private static final int MAX_RESULTS = 3;
-    private static final int MAX_EXCERPT_CHARS = 2000;
+    private static final int MAX_EXCERPT_CHARS = 1200;
+    private static final int MAX_TOTAL_OUTPUT_CHARS = 9000;
+
 
     @Tool(description = """
-        Web search and page-fetch tool (DuckDuckGo HTML).
-
-        Use this tool in either of these situations:
-        1) Knowledge fallback: when you do not have sufficient, confident information to answer, or details may be outdated.
-        2) Evidence & enrichment: when you can answer from general knowledge but should verify, cite, or enrich the response
-           with current sources, specific facts, names, dates, figures, or examples.
-
-        What it does:
-        - Runs a DuckDuckGo search via the HTML endpoint.
-        - Selects the top 3 organic results.
-        - Fetches each of the top 3 pages and extracts a short readable text excerpt.
-
-        Output (top 3 results):
-        - Title
-        - Resolved URL
-        - Search snippet
-        - Page excerpt (best-effort)
-
-        Notes:
-        - Some sites block automated fetching; you’ll see [Failed to fetch page: ...]. You can add backoff, caching, and retry logic if needed.
-        - If you want “information” to mean a short summary rather than an excerpt, a lightweight summarizer step can be added (e.g., compress the extract into N bullet points) while keeping output bounded.
+        Web search via DuckDuckGo HTML.
+        Returns up to 3 results (title, resolved URL, snippet) and a short page excerpt for each.
+        Use when facts may be outdated or when a URL fetch fails.
         """)
-    public String searchAndFetch(@ToolParam(description = "The search query to look up on the web. Use only this exact query without adding context from previous conversations.") String query) {
+    public String searchAndFetch(
+            @ToolParam(description = "Search query. Use only the exact query string; do not add prior conversation context.")
+            String query
+    ) {
+        String safeQuery = (query == null) ? "" : query.trim();
+        if (safeQuery.isEmpty()) {
+            return "SEARCH_RESULTS\nStatus: ERROR\nError: Empty query.";
+        }
+
         // Use only the exact query provided, without context from previous conversations
-        String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String encoded = URLEncoder.encode(safeQuery, StandardCharsets.UTF_8);
         String searchUrl = "https://html.duckduckgo.com/html/?q=" + encoded;
 
         StringBuilder out = new StringBuilder();
-        out.append("Search results for: ").append(query).append("\n\n");
-        out.append("Note: These results are based solely on the current query, without considering previous conversation context.\n\n");
+        out.append("SEARCH_RESULTS\n");
+        out.append("Query: ").append(safeQuery).append("\n");
+        out.append("Status: OK\n\n");
 
         try {
             Document doc = Jsoup.connect(searchUrl)
@@ -96,27 +88,32 @@ public class AISearchEngineTool {
             }
 
             if (top.isEmpty()) {
-                out.append("No results found for your query.");
-                return out.toString();
+                out.append("Results: 0\nMessage: No results found.");
+                return clipTotal(out.toString());
             }
+
+            out.append("Results: ").append(top.size()).append("\n\n");
 
             for (int i = 0; i < top.size(); i++) {
                 SearchResult sr = top.get(i);
 
-                out.append("Result ").append(i + 1).append(":\n")
+                out.append("---\n");
+                out.append("Result ").append(i + 1).append("\n")
                         .append("Title: ").append(sr.title).append("\n")
                         .append("URL: ").append(sr.url).append("\n")
-                        .append("Description: ").append(sr.snippet).append("\n");
+                        .append("Snippet: ").append(sr.snippet).append("\n");
 
                 String pageInfo = fetchAndExtractPage(sr.url);
-                out.append("Page extract: ").append(pageInfo).append("\n\n");
+                out.append("Excerpt: ").append(pageInfo).append("\n");
             }
 
-            return out.toString();
+            return clipTotal(out.toString());
 
         } catch (IOException e) {
             log.error("Search error: {}", e.getMessage(), e);
-            return out.append("Error: Unable to perform search. ").append(e.getMessage()).toString();
+            return clipTotal(out.append("\nStatus: ERROR\nError: Unable to perform search. ")
+                    .append(safeError(e.getMessage()))
+                    .toString());
         }
     }
 
@@ -147,14 +144,11 @@ public class AISearchEngineTool {
                 return "[No readable text found]";
             }
 
-            if (text.length() > MAX_EXCERPT_CHARS) {
-                text = text.substring(0, MAX_EXCERPT_CHARS) + "…";
-            }
-            return text;
+            return clip(text, MAX_EXCERPT_CHARS);
 
         } catch (IOException e) {
             log.warn("Failed to fetch page {}: {}", url, e.getMessage());
-            return "[Failed to fetch page: " + e.getMessage() + "]";
+            return "[Failed to fetch page: " + safeError(e.getMessage()) + "]";
         }
     }
 
@@ -197,6 +191,24 @@ public class AISearchEngineTool {
 
     private String commonUserAgent() {
         return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    }
+
+    private String clipTotal(String s) {
+        return clip(s, MAX_TOTAL_OUTPUT_CHARS);
+    }
+
+    private String clip(String s, int maxChars) {
+        if (s == null) return "";
+        if (maxChars <= 0) return "";
+        String t = s.trim();
+        if (t.length() <= maxChars) return t;
+        return t.substring(0, maxChars) + "…";
+    }
+
+    private String safeError(String msg) {
+        if (msg == null || msg.isBlank()) return "unknown";
+        // keep tool output stable and one-line to avoid downstream parsing issues
+        return msg.replaceAll("\\s+", " ").trim();
     }
 
     /**

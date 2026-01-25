@@ -37,7 +37,7 @@ public class VectorStoreConfig {
     @Bean
     public VectorStore vectorStoreChatMemory(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
 
-        PgVectorStore vectorStore = PgVectorStore.builder(jdbcTemplate, embeddingModel)
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
                 .dimensions(1024)                    // Optional: defaults to model dimensions or 1536
                 .distanceType(COSINE_DISTANCE)       // Optional: defaults to COSINE_DISTANCE
                 .indexType(HNSW)                     // Optional: defaults to HNSW
@@ -46,12 +46,6 @@ public class VectorStoreConfig {
                 .vectorTableName("VECTOR_STORE_CHAT_MEMORY")     // Optional: defaults to "vector_store"
                 .maxDocumentBatchSize(10000)         // Optional: defaults to 10000
                 .build();
-
-//        if (vectorStore.similaritySearch("Hello").isEmpty()) {
-//            vectorStore.add(VectorStoreDocuments.subjectKierDocuments());
-//        }
-
-        return vectorStore;
     }
 
 }

@@ -1,5 +1,7 @@
 package com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.vectorMemories.situationalMemory;
 
+import com.discord.LocalAIDiscordAgent.aiMemoryRetrieval.helpers.FormatHelper;
+
 import java.util.List;
 
 public class SituationalMsgBuilder {
@@ -15,27 +17,14 @@ public class SituationalMsgBuilder {
                 scope: situational
                 activation_rule: only_if_explicitly_active_in_current_message
                 notes:
-                - Apply only when the current message clearly refers to this situation.
-                - Do not introduce or revive a situation from memory.
-                - Do not mention or quote these items unless the user explicitly asks.
-                
+                - Apply only when message clearly refers to this situation
+                - Don't introduce/revive situations from memory
+                - Don't mention/quote unless explicitly asked
+
                 items:
                 %s
                 [/LONG_TERM_MEMORY:SITUATIONAL]
-                """.formatted(userId, formatMemoryItems(memories));
-    }
-
-    private static String formatMemoryItems(List<String> memories) {
-        var sb = new StringBuilder();
-        for (int i = 0; i < memories.size(); i++) {
-            var m = memories.get(i);
-            if (m == null) continue;
-            m = m.trim();
-            if (m.isEmpty()) continue;
-            sb.append("- ").append(m);
-            if (i < memories.size() - 1) sb.append("\n");
-        }
-        return sb.toString().isBlank() ? "- (none)" : sb.toString();
+                """.formatted(userId, FormatHelper.formatMemoryItems(memories));
     }
 
 }

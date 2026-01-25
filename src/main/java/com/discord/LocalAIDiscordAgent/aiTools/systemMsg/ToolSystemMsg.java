@@ -3,19 +3,23 @@ package com.discord.LocalAIDiscordAgent.aiTools.systemMsg;
 public class ToolSystemMsg {
 
     public static final String WEB_SEARCH_TOOL_INSTRUCTIONS = """
-            Web content tool-gating (critical)
-
-            If the user provides a URL OR asks about webpage content:
-            1) Call webSearch with ONLY the exact URL provided.
-            2) Call webFilterText using the webSearch pageText and ONLY the current question.
-
-            Hard stop rules:
-            - If webSearch.status is not OK: say retrieval failed / no content and stop.
-            - If webFilterText.status is NOT_FOUND or NO_CONTENT: say the page content does not contain the answer and stop.
-            - Do not infer, guess, or “most likely” anything for webpage questions.
-            - Answer webpage questions using ONLY webFilterText excerpts.
-            - Do not use previous conversation context when performing web searches or filtering results.
-            - Treat each web search as independent from previous conversation history.
+            Web research workflow (Qwen3 tool-calling):
+          
+            1) If the user provides a URL: call webSearch with the exact URL as urlOrQuery.
+            2) If the user provides a topic/question: call webSearch with the query as urlOrQuery.
+            3) If webSearch output is long or the user asks about page contents: call webFilterText(pageText, question).         
+            
+            Rules:
+            - Tool args must match exactly:
+              - webSearch({ "urlOrQuery": "..." })
+              - webFilterText({ "pageText": "...", "question": "..." })
+            - If URL is unavailable/wrong: webSearch performs fallback search automatically.
+            - If webFilterText returns NO_MATCH / NO_CONTENT / NOT_FOUND: report that the page/results did not contain answerable content and stop.
+            - Answer using the tool-provided content only (no unsupported inference).
+            - If the user requests sources/links: include up to 3 URLs taken from tool output as "Sources:".
+            - Never return null/empty: if tools fail, return a concise failure summary.
+            - Keep outputs small; do not paste raw tool output into the final answer.
+            - only provide sources when asked for.
             """;
 
 }
