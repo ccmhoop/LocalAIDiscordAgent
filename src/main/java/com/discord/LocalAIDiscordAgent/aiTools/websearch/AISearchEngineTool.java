@@ -30,6 +30,8 @@ public class AISearchEngineTool {
     private static final int MAX_EXCERPT_CHARS = 1200;
     private static final int MAX_TOTAL_OUTPUT_CHARS = 9000;
 
+    private final List<String> failedUrls = new ArrayList<>();
+
 
     @Tool(description = """
         Web search via DuckDuckGo HTML.
@@ -40,12 +42,13 @@ public class AISearchEngineTool {
             @ToolParam(description = "Search query. Use only the exact query string; do not add prior conversation context.")
             String query
     ) {
+        failedUrls.clear();
+
         String safeQuery = (query == null) ? "" : query.trim();
         if (safeQuery.isEmpty()) {
             return "SEARCH_RESULTS\nStatus: ERROR\nError: Empty query.";
         }
 
-        // Use only the exact query provided, without context from previous conversations
         String encoded = URLEncoder.encode(safeQuery, StandardCharsets.UTF_8);
         String searchUrl = "https://html.duckduckgo.com/html/?q=" + encoded;
 
@@ -107,6 +110,28 @@ public class AISearchEngineTool {
                 out.append("Excerpt: ").append(pageInfo).append("\n");
             }
 
+            System.out.println(out);
+
+            if (!failedUrls.isEmpty()) {
+                StringBuilder failedUrlsOutput = new StringBuilder();
+                failedUrlsOutput.append("SEARCH_RESULTS\n");
+                failedUrlsOutput.append("Query: ").append(safeQuery).append("\n");
+                failedUrlsOutput.append("Status: OK\n\n");
+                failedUrlsOutput.append("Some potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
+                for (String failedUrl : failedUrls) {
+                    failedUrlsOutput.append("- ").append(failedUrl).append("\n");
+                }
+
+                if (out.length() > MAX_TOTAL_OUTPUT_CHARS) {
+                    return clipTotal(failedUrlsOutput.toString());
+                }
+
+                out.append("\nSome potentially relevant results could not be fetched. Failed URLs:\n");
+                for (String failedUrl : failedUrls) {
+                    out.append("- ").append(failedUrl).append("\n");
+                }
+            }
+
             return clipTotal(out.toString());
 
         } catch (IOException e) {
@@ -119,6 +144,7 @@ public class AISearchEngineTool {
 
     private String fetchAndExtractPage(String url) {
         if (!isSafeHttpUrl(url)) {
+            failedUrls.add(url);
             return "[Skipped: unsafe or non-http(s) URL]";
         }
 
@@ -130,10 +156,18 @@ public class AISearchEngineTool {
                     .userAgent(commonUserAgent())
                     .header("Accept-Language", "en-US,en;q=0.9")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .ignoreHttpErrors(true)
                     .execute();
+
+            int status = resp.statusCode();
+            if (status >= 400) {
+                failedUrls.add(url);
+                return "[Failed to fetch page: HTTP " + status + "]";
+            }
 
             String contentType = resp.contentType();
             if (contentType == null || !contentType.toLowerCase().contains("text/html")) {
+                failedUrls.add(url);
                 return "[Skipped: non-HTML content type: " + (contentType == null ? "unknown" : contentType) + "]";
             }
 
@@ -141,6 +175,7 @@ public class AISearchEngineTool {
             String text = extractMainText(doc);
 
             if (text.isBlank()) {
+                failedUrls.add(url);
                 return "[No readable text found]";
             }
 
@@ -148,6 +183,7 @@ public class AISearchEngineTool {
 
         } catch (IOException e) {
             log.warn("Failed to fetch page {}: {}", url, e.getMessage());
+            failedUrls.add(url);
             return "[Failed to fetch page: " + safeError(e.getMessage()) + "]";
         }
     }

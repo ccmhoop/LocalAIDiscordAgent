@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class OllamaApiConfig {
 
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(120);
     private static final Duration READ_TIMEOUT = Duration.ofMinutes(5);
     private static final Duration WRITE_TIMEOUT = Duration.ofMinutes(2);
 

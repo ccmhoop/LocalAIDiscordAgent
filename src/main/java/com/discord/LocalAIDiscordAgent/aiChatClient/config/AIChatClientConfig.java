@@ -32,7 +32,7 @@ public class AIChatClientConfig {
             Object[] webSearchToolScottish
     ) {
         return ChatClient.builder(ollamaQwenModelConfig)
-                .defaultSystem(AISystemMsg.SYSTEM_MESSAGE_SCOTTISH_AGENT + "\n" + ToolSystemMsg.WEB_SEARCH_TOOL_INSTRUCTIONS)
+                .defaultSystem(ToolSystemMsg.WEB_SEARCH_TOOL_INSTRUCTIONS)
                 .defaultTools(webSearchToolScottish)
                 .build();
     }

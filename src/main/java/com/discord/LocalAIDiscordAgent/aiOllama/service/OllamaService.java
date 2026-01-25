@@ -22,7 +22,7 @@ import java.util.concurrent.TimeoutException;
 @Service
 public class OllamaService {
 
-    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(130);
+    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(120);
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     private final ChatClient scottishChatClient;      // memory/persona advisors

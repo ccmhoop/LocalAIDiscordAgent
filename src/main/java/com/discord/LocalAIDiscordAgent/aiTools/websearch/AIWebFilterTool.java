@@ -35,6 +35,7 @@ public class AIWebFilterTool {
             description = """
                     Filter the output of webSearch to the smallest excerpt needed to answer the current question.
                     The 'pageText' parameter MUST be the exact output returned by webSearch.
+                   
                     Call AFTER webSearch when you need details from the fetched page.
                     """
     )

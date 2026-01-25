@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.concurrent.*;
@@ -37,6 +39,8 @@ public class AIWebSearchTool {
             "video/"
     );
 
+    private final List<String> failedUrls = new ArrayList<>();
+
     /**
      * Optional dependency.
      * If a qualified bean named "webSearchEngine" is not available, the tool will still run URL fetches,
@@ -53,12 +57,13 @@ public class AIWebSearchTool {
             If the input is not a valid/safe URL or the page cannot be fetched, falls back to web search.
             """)
     public String webSearch(@ToolParam(description = "Absolute HTTP/HTTPS URL to fetch. If the value is not a valid URL, the tool will treat it as a search query and fall back to web search.") String url) {
+        failedUrls.clear();
+
         String input = safeTrim(url);
         if (input.isEmpty()) {
             return "WEBPAGE_FETCH\nStatus: ERROR\nError: Empty URL/query.";
         }
 
-        // If this doesn't look like a URL (spaces, no dots, etc.), treat it as a query.
         if (looksLikeQuery(input)) {
             return clipTotal(fallbackSearch(input, "Input does not look like a URL"));
         }
@@ -66,6 +71,7 @@ public class AIWebSearchTool {
         String normalized = normalizeUrl(input);
         if (!isValidUrl(normalized) || !isSafeHttpUrl(normalized)) {
             log.warn("Invalid or unsafe URL: {} (normalized: {})", input, normalized);
+            failedUrls.add(normalized);
             return clipTotal(fallbackSearch(input, "Invalid or unsafe URL"));
         }
 
@@ -82,6 +88,7 @@ public class AIWebSearchTool {
             Connection.Response resp = executeWithTimeout(connection::execute, TIMEOUT_MS);
             if (resp == null) {
                 log.warn("Timeout or null response when fetching: {}", normalized);
+                failedUrls.add(normalized);
                 return clipTotal(fallbackSearch(input, "Timeout while fetching URL"));
             }
 
@@ -92,17 +99,18 @@ public class AIWebSearchTool {
 
             if (status >= 400) {
                 log.warn("HTTP {} for URL {}", status, resolvedUrl);
+                failedUrls.add(resolvedUrl);
                 return clipTotal(fallbackSearch(input, "HTTP " + status));
             }
 
             if (!isHtml(contentType)) {
                 log.warn("Non-HTML content type for {}: {}", resolvedUrl, contentType);
+                failedUrls.add(resolvedUrl);
                 return clipTotal(fallbackSearch(input, "Non-HTML content type"));
             }
 
             Document doc = resp.parse();
 
-            // Clean document by removing scripts, styles, etc.
             doc.select("script, style, noscript, iframe, svg, canvas, form, nav, header, footer, aside").remove();
 
             String title = safeTrim(doc.title());
@@ -119,10 +127,19 @@ public class AIWebSearchTool {
             out.append("Title: ").append(title.isEmpty() ? "(none)" : title).append("\n");
             out.append("Truncated: ").append(truncated).append("\n\n");
             out.append("Content: ").append(bodyText.isEmpty() ? "(no readable text found)" : bodyText);
+
+            if (!failedUrls.isEmpty()) {
+                out.append("\n\nSome potentially relevant results could not be fetched. Failed URLs:\n");
+                for (String failedUrl : failedUrls) {
+                    out.append("- ").append(failedUrl).append("\n");
+                }
+            }
+
             return clipTotal(out.toString());
 
         } catch (Exception e) {
             log.error("Error fetching URL: {}, Error: {}", normalized, e.getMessage());
+            failedUrls.add(normalized);
             return clipTotal(fallbackSearch(input, safeError(e.getMessage())));
         }
     }
@@ -141,21 +158,76 @@ public class AIWebSearchTool {
         }
 
         if (searchEngineTool == null) {
-            return "WEBPAGE_FETCH\n" +
-                    "Status: FALLBACK_SEARCH\n" +
-                    "Reason: " + safeError(reason) + "\n" +
-                    "Input: " + q + "\n" +
-                    "SearchQuery: " + searchQuery + "\n\n" +
-                    "SEARCH_RESULTS\nStatus: ERROR\nError: Search engine tool bean not available (expected bean name: webSearchEngine).";
+            StringBuilder output = new StringBuilder();
+            output.append("WEBPAGE_FETCH\n")
+                  .append("Status: FALLBACK_SEARCH\n")
+                  .append("Reason: ").append(safeError(reason)).append("\n")
+                  .append("Input: ").append(q).append("\n")
+                  .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                  .append("SEARCH_RESULTS\nStatus: ERROR\nError: Search engine tool bean not available (expected bean name: webSearchEngine).");
+
+            if (!failedUrls.isEmpty()) {
+                output.append("\n\nSome potentially relevant results could not be fetched. Failed URLs:\n");
+                for (String failedUrl : failedUrls) {
+                    output.append("- ").append(failedUrl).append("\n");
+                }
+            }
+
+            return output.toString();
         }
 
         String results = searchEngineTool.searchAndFetch(searchQuery);
-        return "WEBPAGE_FETCH\n" +
-                "Status: FALLBACK_SEARCH\n" +
-                "Reason: " + safeError(reason) + "\n" +
-                "Input: " + q + "\n" +
-                "SearchQuery: " + searchQuery + "\n\n" +
-                results;
+
+        StringBuilder output = new StringBuilder();
+        output.append("WEBPAGE_FETCH\n")
+              .append("Status: FALLBACK_SEARCH\n")
+              .append("Reason: ").append(safeError(reason)).append("\n")
+              .append("Input: ").append(q).append("\n")
+              .append("SearchQuery: ").append(searchQuery).append("\n\n")
+              .append(results);
+
+        // Create a separate StringBuilder for the failed URLs to ensure they're not truncated
+        StringBuilder failedUrlsOutput = new StringBuilder();
+
+        // Always include failed URLs in the output to ensure they're not missed
+        // This is especially important for HTTP 400 status URLs
+        if (!failedUrls.isEmpty()) {
+            // Check if the results already contain any of our failed URLs
+            boolean allFailedUrlsIncluded = true;
+            for (String failedUrl : failedUrls) {
+                if (!results.contains(failedUrl)) {
+                    allFailedUrlsIncluded = false;
+                    break;
+                }
+            }
+
+            if (!allFailedUrlsIncluded) {
+                failedUrlsOutput.append("WEBPAGE_FETCH\n")
+                              .append("Status: FALLBACK_SEARCH\n")
+                              .append("Reason: ").append(safeError(reason)).append("\n")
+                              .append("Input: ").append(q).append("\n")
+                              .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                              .append("Some potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
+                for (String failedUrl : failedUrls) {
+                    failedUrlsOutput.append("- ").append(failedUrl).append("\n");
+                }
+
+                if (output.length() > MAX_TOTAL_OUTPUT_CHARS) {
+                    return failedUrlsOutput.toString();
+                }
+
+                output.append("\n\nSome potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
+                for (String failedUrl : failedUrls) {
+                    output.append("- ").append(failedUrl).append("\n");
+                }
+            }
+        }
+
+        if (output.length() > MAX_TOTAL_OUTPUT_CHARS && !failedUrls.isEmpty()) {
+            return failedUrlsOutput.toString();
+        }
+
+        return output.toString();
     }
 
     private boolean isValidUrl(String url) {
@@ -173,7 +245,6 @@ public class AIWebSearchTool {
             String host = url.getHost();
             return host.startsWith("www.") ? host.substring(4) : host;
         } catch (Exception e) {
-            // If we can't parse it as a URL, just return the original string
             return urlString;
         }
     }
