@@ -25,8 +25,8 @@ public class OllamaService {
     private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(120);
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
-    private final ChatClient scottishChatClient;      // memory/persona advisors
-    private final ChatClient scottishToolChatClient;  // tools only (no memory advisors)
+    private final ChatClient scottishChatClient;
+    private final ChatClient scottishToolChatClient;
     private final SystemMsgService systemMsgService;
 
     public OllamaService(
