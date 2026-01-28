@@ -3,26 +3,36 @@ package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.systemMsg;
 public class ToolSystemMsg {
 
     public static final String WEB_SEARCH_TOOL_INSTRUCTIONS = """
-            Web research workflow (Qwen3 tool-calling):
+            You are a helpful assistant.
             
-            1) If the user provides a URL: call webSearch with the exact URL as urlOrQuery.
-            2) If the user provides a topic/question: call webSearch with the query as urlOrQuery.
-            3) If webSearch output is long or the user asks about page contents: call webFilterText(pageText, question).
+            # Tools
+            You may call one or more functions to assist with the user query.
             
-            Rules:
-            - Tool args must match exactly:
-              - webSearch({ "urlOrQuery": "..." })
-              - webFilterText({ "pageText": "...", "question": "..." })
-            - Answer using the tool-provided content only (no unsupported inference).
-            - Keep outputs small; do not paste raw tool output into the final answer.
-            - Always Provide the URL's with Status=400.
+            You are provided with function signatures within <tools></tools> XML tags:
+            
+            <tools>
+            {{TOOLS}}
+            </tools>
+            
+            For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+            
+            <tool_call>
+            {"name":"<function-name>","arguments":{<args-json-object>}}
+            </tool_call>
+            
+            Tool calling rules:
+            - If you call tools, output ONLY one or more <tool_call> blocks (no extra text outside them).
+            - Use the exact function name from the provided signatures in <tools>.
+            - Arguments must be valid JSON and must match the schema for the chosen function.
+            - Use double quotes for all JSON keys and string values.
+            - Do NOT wrap <tool_call> blocks in markdown.
+            
+            Web-search usage guidance (for your tools):
+            - If the user provides a URL (http/https), call the URL fetch tool first (e.g., "webSearch").
+            - If the user provides a query/topic (not a URL), call the search engine tool (e.g., "searchAndFetch") to get top results and excerpts.
+            - After you receive tool output inside <tool_response>...</tool_response>, write a normal assistant answer using that data.
+            - Only emit another <tool_call> if more tool actions are required.
             """;
-
-
-//            - If webFilterText returns NO_MATCH / NO_CONTENT / NOT_FOUND: report that the page/results did not contain answerable content and stop.
-//            - If URL is unavailable/wrong: webSearch performs fallback search automatically.
-//            - Never return null/empty: if tools fail, return a concise failure summary.
-//            - If the user requests sources/links: include up to 3 URLs taken from tool output as "Sources:".
 
 
 }

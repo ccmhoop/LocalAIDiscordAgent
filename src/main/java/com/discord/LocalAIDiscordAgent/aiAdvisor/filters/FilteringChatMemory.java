@@ -86,11 +86,8 @@ public final class FilteringChatMemory implements ChatMemory {
             if (looksLikeFailure(t)) {
                 return false;
             }
-            if (INSTRUCTION_MARKERS.matcher(t).find()) {
-                return false;
-            }
+            return !INSTRUCTION_MARKERS.matcher(t).find();
         }
-
         return true;
     }
 

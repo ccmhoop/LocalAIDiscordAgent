@@ -14,12 +14,13 @@ import org.springframework.stereotype.Component;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.concurrent.*;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
@@ -40,23 +41,22 @@ public class AIWebSearchTool {
             "video/"
     );
 
-    private final List<String> failedUrls = new ArrayList<>();
-
     /**
      * Optional dependency.
      * If a qualified bean named "webSearchEngine" is not available, the tool will still run URL fetches,
      * but fallback-to-search will return a bounded error message instead of throwing.
      */
-    @Autowired(required = false)
-    @Qualifier("webSearchEngine")
-    private AISearchEngineTool searchEngineTool;
+    private final AISearchEngineTool searchEngineTool;
+    private final WebSearchMemoryService webSearchMemoryService;
 
-    /**
-     * Service to save web search results to vector store memory and search existing content
-     */
     @Autowired
-    private WebSearchMemoryService webSearchMemoryService;
-
+    public AIWebSearchTool(
+            WebSearchMemoryService webSearchMemoryService,
+            @Qualifier("webSearchEngine") Optional<AISearchEngineTool> searchEngineTool
+    ) {
+        this.webSearchMemoryService = webSearchMemoryService;
+        this.searchEngineTool = searchEngineTool.orElse(null);
+    }
 
     @Tool(description = """
             Fetch readable text from a single HTTP/HTTPS URL.
@@ -64,34 +64,37 @@ public class AIWebSearchTool {
             If the input is not a valid URL or the page cannot be fetched, falls back to web search.
             First checks existing web search memory for relevant content.
             """)
-    public String webSearch(@ToolParam(description = "Absolute HTTP/HTTPS URL to fetch. If the value is not a valid URL, the tool will treat it as a search query and fall back to web search.") String url) {
-        failedUrls.clear();
+    public String webSearch(
+            @ToolParam(description = "Absolute HTTP/HTTPS URL to fetch. If the value is not a valid URL, the tool will treat it as a search query and fall back to web search.")
+            String url
+    ) {
+        final List<String> failedUrls = new ArrayList<>();
 
         String input = safeTrim(url);
         if (input.isEmpty()) {
             return "WEBPAGE_FETCH\nStatus: ERROR\nError: Empty URL/query.";
         }
 
-        // First, check if we have existing content for this query/URL in memory
+        // 1) Cache lookup
         try {
             String existingContent = webSearchMemoryService.searchExistingContent(input);
             if (existingContent != null) {
                 log.info("Found existing content for query/URL: {}", input);
-                return existingContent;
+                return clipTotal("WEBPAGE_FETCH\nStatus: CACHED\nInput: " + input + "\n\n" + existingContent);
             }
         } catch (Exception e) {
-            log.warn("Error checking existing content, proceeding with web search: {}", e.getMessage());
+            log.warn("Error checking existing content, proceeding with web fetch/search: {}", e.getMessage());
         }
 
         if (looksLikeQuery(input)) {
-            return clipTotal(fallbackSearch(input, "Input does not look like a URL"));
+            return clipTotal(fallbackSearch(input, "Input does not look like a URL", failedUrls));
         }
 
         String normalized = normalizeUrl(input);
         if (!isValidUrl(normalized) || !isSafeHttpUrl(normalized)) {
             log.warn("Invalid or unsafe URL: {} (normalized: {})", input, normalized);
             failedUrls.add(normalized);
-            return clipTotal(fallbackSearch(input, "Invalid or unsafe URL"));
+            return clipTotal(fallbackSearch(input, "Invalid or unsafe URL", failedUrls));
         }
 
         try {
@@ -108,28 +111,26 @@ public class AIWebSearchTool {
             if (resp == null) {
                 log.warn("Timeout or null response when fetching: {}", normalized);
                 failedUrls.add(normalized);
-                return clipTotal(fallbackSearch(input, "Timeout while fetching URL"));
+                return clipTotal(fallbackSearch(input, "Timeout while fetching URL", failedUrls));
             }
 
             int status = resp.statusCode();
             String contentType = resp.contentType();
-            resp.url();
             String resolvedUrl = resp.url().toString();
 
             if (status >= 400) {
                 log.warn("HTTP {} for URL {}", status, resolvedUrl);
                 failedUrls.add(resolvedUrl);
-                return clipTotal(fallbackSearch(input, "HTTP " + status));
+                return clipTotal(fallbackSearch(input, "HTTP " + status, failedUrls));
             }
 
             if (!isHtml(contentType)) {
                 log.warn("Non-HTML content type for {}: {}", resolvedUrl, contentType);
                 failedUrls.add(resolvedUrl);
-                return clipTotal(fallbackSearch(input, "Non-HTML content type"));
+                return clipTotal(fallbackSearch(input, "Non-HTML content type", failedUrls));
             }
 
             Document doc = resp.parse();
-
             doc.select("script, style, noscript, iframe, svg, canvas, form, nav, header, footer, aside").remove();
 
             String title = safeTrim(doc.title());
@@ -147,11 +148,11 @@ public class AIWebSearchTool {
             out.append("Truncated: ").append(truncated).append("\n\n");
             out.append("Content: ").append(bodyText.isEmpty() ? "(no readable text found)" : bodyText);
 
-            if (!failedUrls.isEmpty()) {
-                out.append("\n\nSome potentially relevant results could not be fetched. Failed URLs:\n");
-                for (String failedUrl : failedUrls) {
-                    out.append("- ").append(failedUrl).append("\n");
-                }
+            // 2) Persist WEBPAGE_FETCH output for vector memory
+            try {
+                webSearchMemoryService.saveWebSearchResult(out.toString());
+            } catch (Exception e) {
+                log.warn("Error saving WEBPAGE_FETCH to memory: {}", e.getMessage());
             }
 
             return clipTotal(out.toString());
@@ -159,11 +160,11 @@ public class AIWebSearchTool {
         } catch (Exception e) {
             log.error("Error fetching URL: {}, Error: {}", normalized, e.getMessage());
             failedUrls.add(normalized);
-            return clipTotal(fallbackSearch(input, safeError(e.getMessage())));
+            return clipTotal(fallbackSearch(input, safeError(e.getMessage()), failedUrls));
         }
     }
 
-    private String fallbackSearch(String urlOrQuery, String reason) {
+    private String fallbackSearch(String urlOrQuery, String reason, List<String> failedUrls) {
         String q = safeTrim(urlOrQuery);
         log.info("Fallback search. reason='{}' input='{}'", reason, q);
 
@@ -205,13 +206,8 @@ public class AIWebSearchTool {
                 .append("SearchQuery: ").append(searchQuery).append("\n\n")
                 .append(results);
 
-        // Create a separate StringBuilder for the failed URLs to ensure they're not truncated
-        StringBuilder failedUrlsOutput = new StringBuilder();
-
-        // Always include failed URLs in the output to ensure they're not missed
-        // This is especially important for HTTP 400 status URLs
+        // Ensure failed URLs are not lost if output gets clipped
         if (!failedUrls.isEmpty()) {
-            // Check if the results already contain any of our failed URLs
             boolean allFailedUrlsIncluded = true;
             for (String failedUrl : failedUrls) {
                 if (!results.contains(failedUrl)) {
@@ -221,6 +217,7 @@ public class AIWebSearchTool {
             }
 
             if (!allFailedUrlsIncluded) {
+                StringBuilder failedUrlsOutput = new StringBuilder();
                 failedUrlsOutput.append("WEBPAGE_FETCH\n")
                         .append("Status: FALLBACK_SEARCH\n")
                         .append("Reason: ").append(safeError(reason)).append("\n")
@@ -243,7 +240,18 @@ public class AIWebSearchTool {
         }
 
         if (output.length() > MAX_TOTAL_OUTPUT_CHARS && !failedUrls.isEmpty()) {
-            return failedUrlsOutput.toString();
+            // If we get here, clipping might hide the failed URLs; prefer returning them.
+            StringBuilder failedUrlsOnly = new StringBuilder();
+            failedUrlsOnly.append("WEBPAGE_FETCH\n")
+                    .append("Status: FALLBACK_SEARCH\n")
+                    .append("Reason: ").append(safeError(reason)).append("\n")
+                    .append("Input: ").append(q).append("\n")
+                    .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                    .append("Some potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
+            for (String failedUrl : failedUrls) {
+                failedUrlsOnly.append("- ").append(failedUrl).append("\n");
+            }
+            return failedUrlsOnly.toString();
         }
 
         return output.toString();
@@ -270,17 +278,19 @@ public class AIWebSearchTool {
 
     private <T> T executeWithTimeout(Callable<T> callable, long timeoutMs) {
         try (ExecutorService executor = Executors.newSingleThreadExecutor()) {
-            Future<T> future = executor.submit(callable);
             try {
-                return future.get(timeoutMs, TimeUnit.MILLISECONDS);
-            } catch (TimeoutException e) {
-                future.cancel(true);
-                log.warn("Execution timed out after {}ms", timeoutMs);
-                return null;
-            } catch (Exception e) {
-                future.cancel(true);
-                log.warn("Execution failed: {}", e.getMessage());
-                return null;
+                Future<T> future = executor.submit(callable);
+                try {
+                    return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+                } catch (TimeoutException e) {
+                    future.cancel(true);
+                    log.warn("Execution timed out after {}ms", timeoutMs);
+                    return null;
+                } catch (Exception e) {
+                    future.cancel(true);
+                    log.warn("Execution failed: {}", e.getMessage());
+                    return null;
+                }
             } finally {
                 executor.shutdownNow();
             }
@@ -290,10 +300,7 @@ public class AIWebSearchTool {
     private String extractMainText(Document doc) {
         Element container = doc.selectFirst("article");
         if (container == null) container = doc.selectFirst("main");
-        if (container == null) {
-            container = doc.body();
-        }
-        if (container == null) return "";
+        if (container == null) container = doc.body();
         return normalizeWhitespace(container.text());
     }
 
@@ -322,8 +329,9 @@ public class AIWebSearchTool {
     }
 
     /**
-     * Baseline SSRF mitigation: only http/https and reject localhost/private/link-local.
-     * Mirrors the approach in {@link AISearchEngineTool} to keep behavior consistent.
+     * Basic SSRF mitigation:
+     * - only http/https
+     * - reject localhost / loopback / private / link-local addresses
      */
     private boolean isSafeHttpUrl(String url) {
         try {
@@ -389,7 +397,7 @@ public class AIWebSearchTool {
         if (maxChars <= 0) return "";
         String t = s.trim();
         if (t.length() <= maxChars) return t;
-        return t.substring(0, maxChars) + "…";
+        return t.substring(0, maxChars) + "...";
     }
 
     private String safeError(String msg) {

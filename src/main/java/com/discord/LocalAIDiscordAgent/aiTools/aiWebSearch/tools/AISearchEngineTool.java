@@ -9,7 +9,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -21,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
-@Component
+@Component("webSearchEngine")
 public class AISearchEngineTool {
 
     private static final Pattern UDDG_PARAM = Pattern.compile("[?&]uddg=([^&]+)");
@@ -32,14 +31,14 @@ public class AISearchEngineTool {
     private static final int MAX_EXCERPT_CHARS = 1200;
     private static final int MAX_TOTAL_OUTPUT_CHARS = 9000;
 
-    private final List<String> failedUrls = new ArrayList<>();
-
     /**
-     * Service to save web search results to vector store memory
+     * Service to save web search results to vector store memory.
      */
-    @Autowired
-    private WebSearchMemoryService webSearchMemoryService;
+    private final WebSearchMemoryService webSearchMemoryService;
 
+    public AISearchEngineTool(WebSearchMemoryService webSearchMemoryService) {
+        this.webSearchMemoryService = webSearchMemoryService;
+    }
 
     @Tool(description = """
         Web search via DuckDuckGo HTML.
@@ -51,19 +50,19 @@ public class AISearchEngineTool {
             @ToolParam(description = "Search query. Use only the exact query string; do not add prior conversation context.")
             String query
     ) {
-        failedUrls.clear();
-
         String safeQuery = (query == null) ? "" : query.trim();
         if (safeQuery.isEmpty()) {
             return "SEARCH_RESULTS\nStatus: ERROR\nError: Empty query.";
         }
 
-        // First, check if we have existing content for this query in memory
+        final List<String> failedUrls = new ArrayList<>();
+
+        // 1) Cache lookup (vector memory)
         try {
             String existingContent = webSearchMemoryService.searchExistingContent(safeQuery);
             if (existingContent != null) {
                 log.info("Found existing content for search query: {}", safeQuery);
-                return existingContent;
+                return clipTotal("SEARCH_RESULTS\nQuery: " + safeQuery + "\nStatus: CACHED\n\n" + existingContent);
             }
         } catch (Exception e) {
             log.warn("Error checking existing content, proceeding with web search: {}", e.getMessage());
@@ -71,11 +70,6 @@ public class AISearchEngineTool {
 
         String encoded = URLEncoder.encode(safeQuery, StandardCharsets.UTF_8);
         String searchUrl = "https://html.duckduckgo.com/html/?q=" + encoded;
-
-        StringBuilder out = new StringBuilder();
-        out.append("SEARCH_RESULTS\n");
-        out.append("Query: ").append(safeQuery).append("\n");
-        out.append("Status: OK\n\n");
 
         try {
             Document doc = Jsoup.connect(searchUrl)
@@ -104,12 +98,18 @@ public class AISearchEngineTool {
 
                 String rawHref = a.attr("href");
                 String url = normalizeDuckDuckGoUrl(rawHref);
+                if (url.isBlank()) continue;
 
                 Element snip = r.selectFirst(".result__snippet, .result__snippet--expanded, .result__body");
                 String snippet = (snip != null) ? snip.text().trim() : "No description available";
 
                 top.add(new SearchResult(title, url, snippet));
             }
+
+            StringBuilder out = new StringBuilder();
+            out.append("SEARCH_RESULTS\n");
+            out.append("Query: ").append(safeQuery).append("\n");
+            out.append("Status: OK\n\n");
 
             if (top.isEmpty()) {
                 out.append("Results: 0\nMessage: No results found.");
@@ -119,7 +119,7 @@ public class AISearchEngineTool {
             out.append("Results: ").append(top.size()).append("\n\n");
 
             for (int i = 0; i < top.size(); i++) {
-                SearchResult sr = top.get(i);
+               SearchResult sr = top.get(i);
 
                 out.append("---\n");
                 out.append("Result ").append(i + 1).append("\n")
@@ -127,7 +127,7 @@ public class AISearchEngineTool {
                         .append("URL: ").append(sr.url).append("\n")
                         .append("Snippet: ").append(sr.snippet).append("\n");
 
-                String pageInfo = fetchAndExtractPage(sr.url);
+                String pageInfo = fetchAndExtractPage(sr.url, failedUrls);
                 out.append("Excerpt: ").append(pageInfo).append("\n");
             }
 
@@ -165,15 +165,13 @@ public class AISearchEngineTool {
 
         } catch (IOException e) {
             log.error("Search error: {}", e.getMessage(), e);
-            return clipTotal(out.append("\nStatus: ERROR\nError: Unable to perform search. ")
-                    .append(safeError(e.getMessage()))
-                    .toString());
+            return clipTotal("SEARCH_RESULTS\nQuery: " + safeQuery + "\nStatus: ERROR\nError: Unable to perform search. " + safeError(e.getMessage()));
         }
     }
 
-    private String fetchAndExtractPage(String url) {
+    private String fetchAndExtractPage(String url, List<String> failedUrls) {
         if (!isSafeHttpUrl(url)) {
-            failedUrls.add(url);
+            safeAdd(failedUrls, url);
             return "[Skipped: unsafe or non-http(s) URL]";
         }
 
@@ -190,13 +188,13 @@ public class AISearchEngineTool {
 
             int status = resp.statusCode();
             if (status >= 400) {
-                failedUrls.add(url);
+                safeAdd(failedUrls, url);
                 return "[Failed to fetch page: HTTP " + status + "]";
             }
 
             String contentType = resp.contentType();
             if (contentType == null || !contentType.toLowerCase().contains("text/html")) {
-                failedUrls.add(url);
+                safeAdd(failedUrls, url);
                 return "[Skipped: non-HTML content type: " + (contentType == null ? "unknown" : contentType) + "]";
             }
 
@@ -204,19 +202,25 @@ public class AISearchEngineTool {
             String text = extractMainText(doc);
 
             if (text.isBlank()) {
-                failedUrls.add(url);
-                return "[No readable text found]";
+                safeAdd(failedUrls, url);
+                // WebSearchMemoryService.parseSearchResults ignores excerpts containing "Skipped"
+                return "[Skipped: no readable text found]";
             }
 
             return clip(text, MAX_EXCERPT_CHARS);
 
         } catch (IOException e) {
             log.warn("Failed to fetch page {}: {}", url, e.getMessage());
-            failedUrls.add(url);
+            safeAdd(failedUrls, url);
             return "[Failed to fetch page: " + safeError(e.getMessage()) + "]";
         }
     }
 
+    private void safeAdd(List<String> list, String value) {
+        if (list == null) return;
+        String v = value == null ? "" : value.trim();
+        if (!v.isEmpty()) list.add(v);
+    }
 
     private String extractMainText(Document doc) {
         doc.select("script, style, noscript, iframe, svg, canvas, form, nav, header, footer, aside").remove();
@@ -225,8 +229,7 @@ public class AISearchEngineTool {
         if (container == null) container = doc.selectFirst("main");
         if (container == null) container = doc.body();
 
-        String text = container.text();
-        return normalizeWhitespace(text);
+        return normalizeWhitespace(container.text());
     }
 
     private String normalizeWhitespace(String s) {
@@ -239,7 +242,7 @@ public class AISearchEngineTool {
      *   https://duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com
      */
     private String normalizeDuckDuckGoUrl(String href) {
-        if (href == null || href.isBlank()) return "No URL available";
+        if (href == null || href.isBlank()) return "";
 
         String absolute = href.startsWith("/") ? "https://duckduckgo.com" + href : href;
 
@@ -267,7 +270,7 @@ public class AISearchEngineTool {
         if (maxChars <= 0) return "";
         String t = s.trim();
         if (t.length() <= maxChars) return t;
-        return t.substring(0, maxChars) + "…";
+        return t.substring(0, maxChars) + "...";
     }
 
     private String safeError(String msg) {

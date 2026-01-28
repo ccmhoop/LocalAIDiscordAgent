@@ -26,10 +26,6 @@ import java.util.*;
 @Service
 public class WebSearchMemoryService {
 
-    // -----------------------------
-    // Configuration
-    // -----------------------------
-
     private static final String TIER_WEB_SEARCH = "WEB_SEARCH";
 
     // Retrieval behavior
@@ -41,16 +37,11 @@ public class WebSearchMemoryService {
     private static final int DEDUPE_TOP_K = 3;
     private static final double DEDUPE_SIMILARITY_THRESHOLD = 0.95;
 
-    // TokenTextSplitter defaults (token-based chunks, not char-based)
     private static final int CHUNK_SIZE_TOKENS = 256;
     private static final int MIN_CHUNK_SIZE_CHARS = 100;
     private static final int MIN_CHUNK_LENGTH_TO_EMBED = 100;
     private static final int MAX_NUM_CHUNKS = 10_000;
     private static final boolean KEEP_SEPARATOR = true;
-
-    // -----------------------------
-    // Dependencies
-    // -----------------------------
 
     private final VectorStore vectorStore;
     private final DocumentTransformer splitter;
@@ -268,8 +259,6 @@ public class WebSearchMemoryService {
         }
     }
 
-
-
     private List<WebSearchData> parse(String raw) {
         if (raw.startsWith("WEBPAGE_FETCH")) {
             return parseWebPageFetch(raw).map(List::of).orElseGet(List::of);
@@ -436,48 +425,6 @@ public class WebSearchMemoryService {
         sb.append(s.trim());
     }
 
-    // -----------------------------
-    // Response formatting (memory hit)
-    // -----------------------------
-
-    private String formatMemoryResponse(String query, List<Document> matches) {
-        StringBuilder response = new StringBuilder();
-        response.append("EXISTING_CONTENT_FOUND\n");
-        response.append("Query: ").append(query).append("\n");
-        response.append("Status: OK\n");
-        response.append("Source: Vector Store Memory\n\n");
-
-        Set<String> seenUrls = new HashSet<>();
-        int count = 0;
-
-        for (Document match : matches) {
-            String url = asString(match.getMetadata().get("url"));
-            if (!url.isBlank() && !seenUrls.add(url)) {
-                continue;
-            }
-
-            count++;
-            response.append("---\n");
-            response.append("Result ").append(count).append(" (from memory)\n");
-            response.append("Title: ").append(nvl(asString(match.getMetadata().get("title")), "Unknown")).append("\n");
-            response.append("URL: ").append(nvl(url, "Unknown")).append("\n");
-            response.append("Domain: ").append(nvl(asString(match.getMetadata().get("domain")), "Unknown")).append("\n");
-            response.append("Content: ").append(nvl(match.getText(), "")).append("\n");
-
-            if (count >= RESPONSE_MAX_RESULTS) break;
-        }
-
-        response.append("\nNote: This information was retrieved from previously cached web search results.");
-        return response.toString();
-    }
-
-    private String asString(Object o) {
-        return o == null ? "" : String.valueOf(o);
-    }
-
-    private String nvl(String s, String fallback) {
-        return (s == null || s.isBlank()) ? fallback : s;
-    }
 
     private String extractDomain(String urlString) {
         if (urlString == null || urlString.isBlank()) {
