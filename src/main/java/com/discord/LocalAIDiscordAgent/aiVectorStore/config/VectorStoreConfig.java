@@ -48,4 +48,18 @@ public class VectorStoreConfig {
                 .build();
     }
 
+    @Bean
+    public VectorStore vectorStoreWebSearchMemory(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
+
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .dimensions(1024)
+                .distanceType(COSINE_DISTANCE)
+                .indexType(HNSW)
+                .initializeSchema(true)
+                .schemaName("public")
+                .vectorTableName("VECTOR_STORE_WEB_SEARCH_MEMORY")
+                .maxDocumentBatchSize(10000)
+                .build();
+    }
+
 }

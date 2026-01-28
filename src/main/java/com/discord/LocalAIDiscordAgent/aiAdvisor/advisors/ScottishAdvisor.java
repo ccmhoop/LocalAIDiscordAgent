@@ -4,9 +4,11 @@ import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringChatMemory;
 import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringVectorStore;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
@@ -18,15 +20,27 @@ public class ScottishAdvisor {
 
     @Bean
     public List<Advisor> scottishAdvisorsList(VectorStore vectorStoreChatMemory,
-                                              ChatMemory scottishChatMemoryConfig) {
+                                              ChatMemory scottishChatMemoryConfig,
+                                              VectorStore vectorStoreWebSearchMemory) {
 
         ChatMemory safeChatMemory = new FilteringChatMemory(scottishChatMemoryConfig);
         VectorStore safeVectorStore = new FilteringVectorStore(vectorStoreChatMemory);
 
         return List.of(
                 shortTermChatMemoryAdvisor(safeChatMemory),
-                enhancedLongTermMemoryAdvisor(safeVectorStore)
+                enhancedLongTermMemoryAdvisor(safeVectorStore),
+                webSearchQuestionAnswerAdvisor(vectorStoreWebSearchMemory)
+
         );
+    }
+
+    private QuestionAnswerAdvisor webSearchQuestionAnswerAdvisor(VectorStore vectorStore) {
+        return QuestionAnswerAdvisor.builder(vectorStore)
+                .searchRequest(SearchRequest.builder()
+                        .similarityThreshold(0.50)
+                        .topK(3)
+                        .build())
+                .build();
     }
 
     private MessageChatMemoryAdvisor shortTermChatMemoryAdvisor(ChatMemory chatMemory) {
@@ -55,7 +69,7 @@ public class ScottishAdvisor {
                 """);
 
         return VectorStoreChatMemoryAdvisor.builder(vectorStore)
-                .defaultTopK(8)
+                .defaultTopK(3)
                 .order(0)
                 .systemPromptTemplate(template)
                 .build();

@@ -1,5 +1,6 @@
-package com.discord.LocalAIDiscordAgent.aiTools.websearch;
+package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools;
 
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.service.WebSearchMemoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -50,11 +51,18 @@ public class AIWebSearchTool {
     @Qualifier("webSearchEngine")
     private AISearchEngineTool searchEngineTool;
 
+    /**
+     * Service to save web search results to vector store memory and search existing content
+     */
+    @Autowired
+    private WebSearchMemoryService webSearchMemoryService;
+
 
     @Tool(description = """
             Fetch readable text from a single HTTP/HTTPS URL.
             Returns title + bounded content excerpt.
-            If the input is not a valid/safe URL or the page cannot be fetched, falls back to web search.
+            If the input is not a valid URL or the page cannot be fetched, falls back to web search.
+            First checks existing web search memory for relevant content.
             """)
     public String webSearch(@ToolParam(description = "Absolute HTTP/HTTPS URL to fetch. If the value is not a valid URL, the tool will treat it as a search query and fall back to web search.") String url) {
         failedUrls.clear();
@@ -62,6 +70,17 @@ public class AIWebSearchTool {
         String input = safeTrim(url);
         if (input.isEmpty()) {
             return "WEBPAGE_FETCH\nStatus: ERROR\nError: Empty URL/query.";
+        }
+
+        // First, check if we have existing content for this query/URL in memory
+        try {
+            String existingContent = webSearchMemoryService.searchExistingContent(input);
+            if (existingContent != null) {
+                log.info("Found existing content for query/URL: {}", input);
+                return existingContent;
+            }
+        } catch (Exception e) {
+            log.warn("Error checking existing content, proceeding with web search: {}", e.getMessage());
         }
 
         if (looksLikeQuery(input)) {
@@ -160,11 +179,11 @@ public class AIWebSearchTool {
         if (searchEngineTool == null) {
             StringBuilder output = new StringBuilder();
             output.append("WEBPAGE_FETCH\n")
-                  .append("Status: FALLBACK_SEARCH\n")
-                  .append("Reason: ").append(safeError(reason)).append("\n")
-                  .append("Input: ").append(q).append("\n")
-                  .append("SearchQuery: ").append(searchQuery).append("\n\n")
-                  .append("SEARCH_RESULTS\nStatus: ERROR\nError: Search engine tool bean not available (expected bean name: webSearchEngine).");
+                    .append("Status: FALLBACK_SEARCH\n")
+                    .append("Reason: ").append(safeError(reason)).append("\n")
+                    .append("Input: ").append(q).append("\n")
+                    .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                    .append("SEARCH_RESULTS\nStatus: ERROR\nError: Search engine tool bean not available (expected bean name: webSearchEngine).");
 
             if (!failedUrls.isEmpty()) {
                 output.append("\n\nSome potentially relevant results could not be fetched. Failed URLs:\n");
@@ -180,11 +199,11 @@ public class AIWebSearchTool {
 
         StringBuilder output = new StringBuilder();
         output.append("WEBPAGE_FETCH\n")
-              .append("Status: FALLBACK_SEARCH\n")
-              .append("Reason: ").append(safeError(reason)).append("\n")
-              .append("Input: ").append(q).append("\n")
-              .append("SearchQuery: ").append(searchQuery).append("\n\n")
-              .append(results);
+                .append("Status: FALLBACK_SEARCH\n")
+                .append("Reason: ").append(safeError(reason)).append("\n")
+                .append("Input: ").append(q).append("\n")
+                .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                .append(results);
 
         // Create a separate StringBuilder for the failed URLs to ensure they're not truncated
         StringBuilder failedUrlsOutput = new StringBuilder();
@@ -203,11 +222,11 @@ public class AIWebSearchTool {
 
             if (!allFailedUrlsIncluded) {
                 failedUrlsOutput.append("WEBPAGE_FETCH\n")
-                              .append("Status: FALLBACK_SEARCH\n")
-                              .append("Reason: ").append(safeError(reason)).append("\n")
-                              .append("Input: ").append(q).append("\n")
-                              .append("SearchQuery: ").append(searchQuery).append("\n\n")
-                              .append("Some potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
+                        .append("Status: FALLBACK_SEARCH\n")
+                        .append("Reason: ").append(safeError(reason)).append("\n")
+                        .append("Input: ").append(q).append("\n")
+                        .append("SearchQuery: ").append(searchQuery).append("\n\n")
+                        .append("Some potentially relevant results could not be fetched. Failed URLs (HTTP 400 or other errors):\n");
                 for (String failedUrl : failedUrls) {
                     failedUrlsOutput.append("- ").append(failedUrl).append("\n");
                 }

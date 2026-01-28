@@ -1,5 +1,6 @@
-package com.discord.LocalAIDiscordAgent.aiTools.websearch;
+package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools;
 
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.service.WebSearchMemoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -8,6 +9,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -32,11 +34,18 @@ public class AISearchEngineTool {
 
     private final List<String> failedUrls = new ArrayList<>();
 
+    /**
+     * Service to save web search results to vector store memory
+     */
+    @Autowired
+    private WebSearchMemoryService webSearchMemoryService;
+
 
     @Tool(description = """
         Web search via DuckDuckGo HTML.
         Returns up to 3 results (title, resolved URL, snippet) and a short page excerpt for each.
         Use when facts may be outdated or when a URL fetch fails.
+        First checks existing web search memory for relevant content.
         """)
     public String searchAndFetch(
             @ToolParam(description = "Search query. Use only the exact query string; do not add prior conversation context.")
@@ -47,6 +56,17 @@ public class AISearchEngineTool {
         String safeQuery = (query == null) ? "" : query.trim();
         if (safeQuery.isEmpty()) {
             return "SEARCH_RESULTS\nStatus: ERROR\nError: Empty query.";
+        }
+
+        // First, check if we have existing content for this query in memory
+        try {
+            String existingContent = webSearchMemoryService.searchExistingContent(safeQuery);
+            if (existingContent != null) {
+                log.info("Found existing content for search query: {}", safeQuery);
+                return existingContent;
+            }
+        } catch (Exception e) {
+            log.warn("Error checking existing content, proceeding with web search: {}", e.getMessage());
         }
 
         String encoded = URLEncoder.encode(safeQuery, StandardCharsets.UTF_8);
@@ -65,6 +85,7 @@ public class AISearchEngineTool {
                     .header("Accept-Language", "en-US,en;q=0.9")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .referrer("https://duckduckgo.com/")
+                    .ignoreContentType(true)
                     .get();
 
             Elements resultBlocks = doc.select("div.results > div.result, div.result");
@@ -110,8 +131,6 @@ public class AISearchEngineTool {
                 out.append("Excerpt: ").append(pageInfo).append("\n");
             }
 
-            System.out.println(out);
-
             if (!failedUrls.isEmpty()) {
                 StringBuilder failedUrlsOutput = new StringBuilder();
                 failedUrlsOutput.append("SEARCH_RESULTS\n");
@@ -132,7 +151,17 @@ public class AISearchEngineTool {
                 }
             }
 
-            return clipTotal(out.toString());
+            String result = clipTotal(out.toString());
+
+            // Save the search results to vector store memory
+            try {
+                webSearchMemoryService.saveWebSearchResult(result);
+            } catch (Exception e) {
+                log.error("Error saving search results to memory: {}", e.getMessage());
+                // Don't fail the search if memory save fails
+            }
+
+            return result;
 
         } catch (IOException e) {
             log.error("Search error: {}", e.getMessage(), e);

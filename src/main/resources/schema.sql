@@ -16,6 +16,14 @@ CREATE TABLE IF NOT EXISTS VECTOR_STORE_CHAT_MEMORY
     embedding VECTOR(1024)
 );
 
+CREATE TABLE IF NOT EXISTS VECTOR_STORE_WEB_SEARCH_MEMORY
+(
+    id        uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+    content   TEXT,
+    metadata  JSON,
+    embedding VECTOR(1024)
+);
+
 CREATE TABLE IF NOT EXISTS SCOTTISH_AI_CHAT_MEMORY
 (
     conversation_id varchar(128) not null,
@@ -36,3 +44,5 @@ create index IF NOT EXISTS spring_ai_chat_memory_conversation_id_timestamp_idx
 CREATE INDEX ON VECTOR_STORE_SCOTTISH_AGENT USING HNSW (embedding vector_cosine_ops);
 
 CREATE INDEX ON VECTOR_STORE_CHAT_MEMORY USING HNSW (embedding vector_cosine_ops);
+
+CREATE INDEX ON  VECTOR_STORE_WEB_SEARCH_MEMORY USING HNSW (embedding vector_cosine_ops);

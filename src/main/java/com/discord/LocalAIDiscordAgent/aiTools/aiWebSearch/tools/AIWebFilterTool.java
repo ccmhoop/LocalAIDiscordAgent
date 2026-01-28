@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.aiTools.websearch;
+package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;

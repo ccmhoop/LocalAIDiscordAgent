@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.aiChatClient.config;
 
-import com.discord.LocalAIDiscordAgent.aiSystemMsgBuilder.systemMsg.AISystemMsg;
-import com.discord.LocalAIDiscordAgent.aiTools.systemMsg.ToolSystemMsg;
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.systemMsg.ToolSystemMsg;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.ollama.OllamaChatModel;

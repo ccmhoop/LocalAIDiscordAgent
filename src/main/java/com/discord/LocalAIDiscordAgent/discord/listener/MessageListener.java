@@ -52,8 +52,8 @@ public abstract class MessageListener {
 
                     String finalContent = content;
 
-                    Mono<String> responseMono =
-                            ollamaService.generateScottishResponseMono(finalContent, username, guildId, channelId);
+                    Mono<String> responseMono = Mono.fromCallable(() ->
+                            ollamaService.generateScottishResponse(finalContent, username, guildId, channelId));
 
                     return message.getChannel()
                             .flatMap(channel ->
