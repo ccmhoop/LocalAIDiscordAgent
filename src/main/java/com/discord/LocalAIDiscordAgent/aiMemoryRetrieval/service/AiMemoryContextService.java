@@ -28,15 +28,15 @@ public class AiMemoryContextService {
 
     public void buildMessages( List<Message> messages, String userId, String userMessage) {
 
-        userPersonalityContextBuilder.buildUserPersonalityMemories(userId, messages);
+//        userPersonalityContextBuilder.buildUserPersonalityMemories(userId, messages);
 
-        backgroundContextBuilder.buildBackgroundMemories(userId, userMessage, messages);
+//        backgroundContextBuilder.buildBackgroundMemories(userId, userMessage, messages);
 
-        situationalContextBuilder.buildSituationalMemories(userId, userMessage, messages);
+//        situationalContextBuilder.buildSituationalMemories(userId, userMessage, messages);
 
         messages.add(new UserMessage(userMessage));
 
-        userPersonalityContextBuilder.processPersonality(userId, userMessage);
+//        userPersonalityContextBuilder.processPersonality(userId, userMessage);
 
     }
 

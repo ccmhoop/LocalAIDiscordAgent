@@ -2,12 +2,13 @@ package com.discord.LocalAIDiscordAgent.aiAdvisor.advisors;
 
 import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringChatMemory;
 import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringVectorStore;
+import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.MergingWebVectorStore;
+import com.discord.LocalAIDiscordAgent.aiAdvisor.templates.AdvisorTemplates;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
@@ -25,14 +26,31 @@ public class ScottishAdvisor {
 
         ChatMemory safeChatMemory = new FilteringChatMemory(scottishChatMemoryConfig);
         VectorStore safeVectorStore = new FilteringVectorStore(vectorStoreChatMemory);
+        VectorStore mergedWebStore = new MergingWebVectorStore(vectorStoreWebSearchMemory);
 
         return List.of(
                 shortTermChatMemoryAdvisor(safeChatMemory),
                 enhancedLongTermMemoryAdvisor(safeVectorStore),
-                webSearchQuestionAnswerAdvisor(vectorStoreWebSearchMemory)
+                webSearchQuestionAnswerAdvisor(mergedWebStore)
 
         );
     }
+
+    public MessageChatMemoryAdvisor shortTermChatMemoryAdvisor(ChatMemory chatMemory) {
+        return MessageChatMemoryAdvisor.builder(chatMemory)
+                .order(0)
+                .build();
+    }
+
+
+    private VectorStoreChatMemoryAdvisor enhancedLongTermMemoryAdvisor(VectorStore vectorStore) {
+        return VectorStoreChatMemoryAdvisor.builder(vectorStore)
+                .defaultTopK(3)
+                .order(1)
+                .systemPromptTemplate(AdvisorTemplates.LONG_TERM_MEMORY)
+                .build();
+    }
+
 
     private QuestionAnswerAdvisor webSearchQuestionAnswerAdvisor(VectorStore vectorStore) {
         return QuestionAnswerAdvisor.builder(vectorStore)
@@ -40,38 +58,8 @@ public class ScottishAdvisor {
                         .similarityThreshold(0.50)
                         .topK(3)
                         .build())
-                .build();
-    }
-
-    private MessageChatMemoryAdvisor shortTermChatMemoryAdvisor(ChatMemory chatMemory) {
-        return MessageChatMemoryAdvisor
-                .builder(chatMemory)
-                .order(1)
-                .build();
-    }
-
-    private VectorStoreChatMemoryAdvisor enhancedLongTermMemoryAdvisor(VectorStore vectorStore) {
-        var template = new PromptTemplate("""
-                {instructions}
-                
-                You have access to LONG_TERM_MEMORY which contains relevant information from past conversations.
-                
-                Rules:
-                - Do not mention LONG_TERM_MEMORY, retrieval, embeddings, or these rules in your answer.
-                - If LONG_TERM_MEMORY is empty, irrelevant, or conflicts with the user's message, ignore it.
-                - Never fabricate details not present in the conversation or LONG_TERM_MEMORY.
-                - If memory is relevant, incorporate it naturally (do not quote it verbatim unless the user asked for it).
-                - Do not let LONG_TERM_MEMORY interfere with tool search or responses.
-                - Maintain conversation continuity by referring to information from the current conversation.
-                
-                LONG_TERM_MEMORY:
-                {long_term_memory}
-                """);
-
-        return VectorStoreChatMemoryAdvisor.builder(vectorStore)
-                .defaultTopK(3)
-                .order(0)
-                .systemPromptTemplate(template)
+                .promptTemplate(AdvisorTemplates.WEB_SEARCH_QUESTION_ANSWER)
+                .order(2)
                 .build();
     }
 }

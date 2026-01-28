@@ -13,8 +13,14 @@ import java.util.stream.Collectors;
 
 public final class FilteringChatMemory implements ChatMemory {
 
+    private static final int MAX_MESSAGES = 12;
+
     private static final Pattern FAILURE_MARKERS = Pattern.compile(
             "(?is)\\b(NO_CONTENT|NOT_FOUND|TOOL[_\\s-]?ERROR|TOOL[_\\s-]?FAILED|FUNCTION[_\\s-]?CALL[_\\s-]?FAILED)\\b"
+    );
+
+    private static final Pattern INSTRUCTION_MARKERS = Pattern.compile(
+            "(?is)\\b(ignore previous|system prompt|you are an ai|act as|follow these rules)\\b"
     );
 
     private final ChatMemory delegate;
@@ -29,7 +35,7 @@ public final class FilteringChatMemory implements ChatMemory {
             return;
         }
 
-        var filtered = messages.stream()
+        List<Message> filtered = messages.stream()
                 .filter(Objects::nonNull)
                 .filter(this::shouldStore)
                 .collect(Collectors.toList());
@@ -42,7 +48,13 @@ public final class FilteringChatMemory implements ChatMemory {
     @Override
     @NonNull
     public List<Message> get(@NonNull String conversationId) {
-        return delegate.get(conversationId);
+        List<Message> messages = delegate.get(conversationId);
+
+        return messages.stream()
+                .filter(Objects::nonNull)
+                .filter(this::shouldStore)
+                .limit(MAX_MESSAGES)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -53,6 +65,11 @@ public final class FilteringChatMemory implements ChatMemory {
     private boolean shouldStore(Message message) {
         MessageType type = message.getMessageType();
 
+        // Never persist system or tool messages
+        if (type == MessageType.SYSTEM || type == MessageType.TOOL) {
+            return false;
+        }
+
         String text = message.getText();
         if (!StringUtils.hasText(text)) {
             return false;
@@ -60,16 +77,21 @@ public final class FilteringChatMemory implements ChatMemory {
 
         String t = text.trim();
 
-        if (type == MessageType.TOOL) {
-            return false;
-        }
-
         if ("null".equalsIgnoreCase(t)) {
             return false;
         }
 
-        return type != MessageType.ASSISTANT || !looksLikeFailure(t);
+        // Prevent assistant self-instruction or hallucinated control text
+        if (type == MessageType.ASSISTANT) {
+            if (looksLikeFailure(t)) {
+                return false;
+            }
+            if (INSTRUCTION_MARKERS.matcher(t).find()) {
+                return false;
+            }
+        }
 
+        return true;
     }
 
     private boolean looksLikeFailure(String t) {
@@ -79,6 +101,7 @@ public final class FilteringChatMemory implements ChatMemory {
         if (FAILURE_MARKERS.matcher(t).find()) {
             return true;
         }
-        return t.contains("WEBPAGE_FETCH") && t.matches("(?is).*\\bStatus:\\s*ERROR\\b.*");
+        return t.contains("WEBPAGE_FETCH") &&
+                t.matches("(?is).*\\bStatus:\\s*ERROR\\b.*");
     }
 }

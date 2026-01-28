@@ -69,10 +69,6 @@ public class WebSearchMemoryService {
                 .build();
     }
 
-    // -----------------------------
-    // Public API
-    // -----------------------------
-
     /**
      * Searches cached web results in the vector store for the given query.
      * @return formatted response, or null if nothing relevant.
@@ -96,13 +92,46 @@ public class WebSearchMemoryService {
                 return null;
             }
 
-            return formatMemoryResponse(query, matches);
+            List<MergedWebArticle> merged = mergeByArticle(matches);
+            return formatMergedWebResponse(query, merged);
 
         } catch (Exception e) {
             log.error("Error searching existing content: {}", e.getMessage(), e);
             return null;
         }
     }
+
+    private String formatMergedWebResponse(String query, List<MergedWebArticle> articles) {
+        StringBuilder out = new StringBuilder();
+
+        int count = 0;
+        for (MergedWebArticle article : articles) {
+            if (count++ >= RESPONSE_MAX_RESULTS) break;
+
+            Map<String, Object> meta = article.metadata();
+
+            out.append("Source: ")
+                    .append(meta.getOrDefault("title", "Unknown title"))
+                    .append("\n");
+
+            out.append("Domain: ")
+                    .append(meta.getOrDefault("domain", "unknown"))
+                    .append("\n");
+
+            out.append("URL: ")
+                    .append(meta.getOrDefault("url", "unknown"))
+                    .append("\n");
+
+            out.append("Relevant to query: \"")
+                    .append(query)
+                    .append("\"\n\n");
+
+            out.append(article.content()).append("\n\n---\n\n");
+        }
+
+        return out.toString().trim();
+    }
+
 
     /**
      * Ingests tool output (WEBPAGE_FETCH or SEARCH_RESULTS) into the vector store.
@@ -186,7 +215,6 @@ public class WebSearchMemoryService {
             }
         }
 
-        // Re-index contiguously
         int total = kept.size();
         if (total == 0) {
             return List.of();
@@ -226,8 +254,6 @@ public class WebSearchMemoryService {
                 return false;
             }
 
-            // If threshold is honored, any returned match is already "very close".
-            // Prefer explicit same-URL check for clarity/logging.
             for (Document m : matches) {
                 Object url = m.getMetadata().get("url");
                 if (sourceUrl != null && sourceUrl.equals(url)) {
@@ -237,15 +263,12 @@ public class WebSearchMemoryService {
 
             return true;
         } catch (Exception e) {
-            // If dedupe fails, err on the side of saving.
             log.debug("Dedupe check failed, will save chunk. Reason: {}", e.getMessage());
             return false;
         }
     }
 
-    // -----------------------------
-    // Parsing
-    // -----------------------------
+
 
     private List<WebSearchData> parse(String raw) {
         if (raw.startsWith("WEBPAGE_FETCH")) {
@@ -467,9 +490,60 @@ public class WebSearchMemoryService {
         }
     }
 
-    // -----------------------------
-    // Model
-    // -----------------------------
+    private List<MergedWebArticle> mergeByArticle(List<Document> docs) {
+        Map<String, List<Document>> grouped = new LinkedHashMap<>();
+
+        for (Document doc : docs) {
+            Map<String, Object> meta = doc.getMetadata();
+
+            Object parentId = meta.get("parent_document_id");
+            String key = parentId != null
+                    ? parentId.toString()
+                    : doc.getId(); // fallback (single-chunk)
+
+            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(doc);
+        }
+
+        List<MergedWebArticle> merged = new ArrayList<>();
+
+        for (List<Document> group : grouped.values()) {
+            group.sort(Comparator.comparingInt(this::extractChunkIndex));
+
+            StringBuilder combined = new StringBuilder();
+            Map<String, Object> meta = group.get(0).getMetadata();
+
+            for (Document d : group) {
+                combined.append(d.getFormattedContent()).append("\n\n");
+            }
+
+            merged.add(new MergedWebArticle(
+                    combined.toString().trim(),
+                    meta
+            ));
+        }
+
+        return merged;
+    }
+
+    private int extractChunkIndex(Document doc) {
+        Map<String, Object> meta = doc.getMetadata();
+
+        Object v = meta.getOrDefault("chunkIndex",
+                meta.getOrDefault("chunk_index", 0));
+
+        if (v instanceof Number n) return n.intValue();
+
+        try {
+            return Integer.parseInt(v.toString());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private record MergedWebArticle(
+            String content,
+            Map<String, Object> metadata
+    ) {}
 
     private record WebSearchData(
             String status,

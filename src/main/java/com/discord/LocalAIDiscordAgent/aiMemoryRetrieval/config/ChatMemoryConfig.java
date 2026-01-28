@@ -20,6 +20,7 @@ public class ChatMemoryConfig {
 
     @Bean
     public ChatMemory scottishChatMemoryConfig(){
+
         ChatMemoryRepository chatMemoryRepository = JdbcChatMemoryRepository.builder()
                 .jdbcTemplate(jdbcTemplate)
                 .dialect(new ScottishAgentChatMemoryRepository())

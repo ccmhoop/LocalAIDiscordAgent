@@ -4,19 +4,25 @@ import lombok.NonNull;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.Filter.Expression;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class FilteringVectorStore implements VectorStore {
 
+    private static final int MIN_CONTENT_LENGTH = 20;
+    private static final int MAX_CONTENT_LENGTH = 4_000;
+
+    private static final Pattern INSTRUCTION_MARKERS = Pattern.compile(
+            "(?is)\\b(ignore previous|system prompt|you are an ai|act as|follow these rules)\\b"
+    );
+
     private static final Pattern FAILURE_MARKERS = Pattern.compile(
-            "(?is)\\b(NO_CONTENT|NOT_FOUND|TOOL[_\\s-]?ERROR|TOOL[_\\s-]?FAILED|FUNCTION[_\\s-]?CALL[_\\s-]?FAILED)\\b"
+            "(?is)\\b(NO_CONTENT|NOT_FOUND|TOOL[_\\s-]?ERROR|FAILED|EXCEPTION|STACKTRACE)\\b"
     );
 
     private final VectorStore delegate;
@@ -26,12 +32,24 @@ public final class FilteringVectorStore implements VectorStore {
     }
 
     @Override
+    @NonNull
+    public String getName() {
+        return delegate.getName();
+    }
+
+    @Override
+    @NonNull
+    public <T> Optional<T> getNativeClient() {
+        return delegate.getNativeClient();
+    }
+
+    @Override
     public void add(List<Document> documents) {
         if (documents.isEmpty()) {
             return;
         }
 
-        var filtered = documents.stream()
+        List<Document> filtered = documents.stream()
                 .filter(Objects::nonNull)
                 .filter(this::shouldStore)
                 .collect(Collectors.toList());
@@ -42,13 +60,36 @@ public final class FilteringVectorStore implements VectorStore {
     }
 
     @Override
+    public void write(@NonNull List<Document> documents) {
+        add(documents); // enforce filtering
+    }
+
+    @Override
+    public void accept(@NonNull List<Document> documents) {
+        add(documents); // Consumer interface → same behavior
+    }
+
+
+    @Override
     public void delete(@NonNull List<String> idList) {
         delegate.delete(idList);
     }
 
     @Override
-    public void delete( @NonNull Filter.Expression filterExpression) {
+    public void delete(@NonNull Expression filterExpression) {
         delegate.delete(filterExpression);
+    }
+
+    @Override
+    public void delete(@NonNull String filterExpression) {
+        delegate.delete(filterExpression);
+    }
+
+
+    @Override
+    @NonNull
+    public List<Document> similaritySearch(@NonNull SearchRequest request) {
+        return delegate.similaritySearch(request);
     }
 
     @Override
@@ -59,33 +100,41 @@ public final class FilteringVectorStore implements VectorStore {
 
     @Override
     @NonNull
-    public List<Document> similaritySearch(@NonNull SearchRequest request) {
-        return delegate.similaritySearch(request);
+    public Consumer<List<Document>> andThen(@NonNull Consumer<? super List<Document>> after) {
+        return docs -> {
+            accept(docs);
+            after.accept(docs);
+        };
     }
 
-    @Override
-    @NonNull
-    public <T> Optional<T> getNativeClient() {
-        return delegate.getNativeClient();
-    }
 
-    private boolean shouldStore(Document d) {
-        String text = d.getText();
-
-        if (!StringUtils.hasText(text)) {
+    private boolean shouldStore(Document doc) {
+        String content = doc.getFormattedContent();
+        if (!StringUtils.hasText(content)) {
             return false;
         }
 
-        String t = text.trim();
-        if ("null".equalsIgnoreCase(t)) {
+        String text = content.trim();
+
+        if (text.length() < MIN_CONTENT_LENGTH || text.length() > MAX_CONTENT_LENGTH) {
             return false;
         }
-        if (t.equalsIgnoreCase("NO_CONTENT") || t.equalsIgnoreCase("NOT_FOUND")) {
+
+        if (INSTRUCTION_MARKERS.matcher(text).find()) {
             return false;
         }
-        if (FAILURE_MARKERS.matcher(t).find()) {
+
+        if (FAILURE_MARKERS.matcher(text).find()) {
             return false;
         }
-        return !t.contains("WEBPAGE_FETCH") || !t.matches("(?is).*\\bStatus:\\s*ERROR\\b.*");
+
+        Map<String, Object> metadata = doc.getMetadata();
+        Object role = metadata.get("role");
+        if ("system".equals(role) || "tool".equals(role)) {
+            return false;
+        }
+
+        Object source = metadata.get("source");
+        return source == null || !source.toString().toLowerCase().contains("error");
     }
 }
