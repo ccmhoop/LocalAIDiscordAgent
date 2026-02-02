@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.discord.service;
 
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;
-import com.discord.LocalAIDiscordAgent.aiOllama.service.OllamaService;
+import com.discord.LocalAIDiscordAgent.chatClient.service.OllamaService;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;

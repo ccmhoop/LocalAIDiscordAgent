@@ -1,38 +1,23 @@
 package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.config;
 
-import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.service.WebSearchMemoryService;
-import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools.AISearchEngineTool;
-import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools.AIWebSearchTool;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools.DirectLinkTool;
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.tools.WebSearchTool;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Qualifier;
 
-import java.util.Optional;
-
-@Configuration(proxyBeanMethods = false)
+@Configuration()
 public class AIWebToolConfig {
 
-    @Bean("webSearchEngine")
-    public AISearchEngineTool webSearchEngineTool(WebSearchMemoryService webSearchMemoryService) {
-        return new AISearchEngineTool(webSearchMemoryService);
-    }
-
-    @Bean("webSearch")
-    public AIWebSearchTool webSearchTool(
-            WebSearchMemoryService webSearchMemoryService,
-            @Qualifier("webSearchEngine") AISearchEngineTool webSearchEngine
-    ) {
-        return new AIWebSearchTool(webSearchMemoryService, Optional.of(webSearchEngine));
-    }
-
     @Bean
+    @Qualifier("webSearchToolScottish")
     public Object[] webSearchToolScottish(
-            @Qualifier("webSearch") AIWebSearchTool webSearch,
-            @Qualifier("webSearchEngine") AISearchEngineTool webSearchEngine
+            WebSearchTool webSearchTool,
+            DirectLinkTool directLinkTool
     ) {
         return new Object[]{
-                webSearch,
-                webSearchEngine
+                directLinkTool,
+                webSearchTool
         };
     }
 }

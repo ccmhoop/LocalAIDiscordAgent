@@ -1,5 +1,7 @@
 package com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.service;
 
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.helpers.WebSearchChunkMerger;
+import com.discord.LocalAIDiscordAgent.aiTools.aiWebSearch.helpers.WebSearchChunkMerger.MergedContent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.document.DocumentReader;
@@ -10,13 +12,13 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * WebSearchMemoryService
- *
  * - Extract: parse tool output into WebSearchData
  * - Transform: TokenTextSplitter (token-aware chunking) + dedupe + chunk indexing
  * - Load: VectorStore.write(...)
@@ -27,6 +29,14 @@ import java.util.*;
 public class WebSearchMemoryService {
 
     private static final String TIER_WEB_SEARCH = "WEB_SEARCH";
+    private static final int MAX_CLEANED_CHARS = 40_000; // hard cap safety
+
+    private static final Pattern URL_PATTERN = Pattern.compile("(?i)\\b(?:https?://|www\\.)\\S+\\b");
+
+    private static final Pattern BOILERPLATE_LINE = Pattern.compile(
+                    "(?i)^\\s*(skip to|cookie|cookies|privacy|terms|consent|subscribe|sign in|sign up|login|" +
+                            "newsletter|advertis|advertisement|promo|share|follow us|all rights reserved|©)\\b.*"
+            );
 
     // Retrieval behavior
     private static final int SEARCH_TOP_K = 5;
@@ -83,7 +93,7 @@ public class WebSearchMemoryService {
                 return null;
             }
 
-            List<MergedWebArticle> merged = mergeByArticle(matches);
+            List<MergedContent> merged = WebSearchChunkMerger.mergeByArticle(matches);
             return formatMergedWebResponse(query, merged);
 
         } catch (Exception e) {
@@ -92,11 +102,11 @@ public class WebSearchMemoryService {
         }
     }
 
-    private String formatMergedWebResponse(String query, List<MergedWebArticle> articles) {
+    private String formatMergedWebResponse(String query, List<MergedContent> articles) {
         StringBuilder out = new StringBuilder();
 
         int count = 0;
-        for (MergedWebArticle article : articles) {
+        for (WebSearchChunkMerger.MergedContent article : articles) {
             if (count++ >= RESPONSE_MAX_RESULTS) break;
 
             Map<String, Object> meta = article.metadata();
@@ -158,16 +168,12 @@ public class WebSearchMemoryService {
     private void ingest(WebSearchData data) {
         DocumentReader reader = () -> List.of(buildSourceDocument(data));
 
-        // Extract
         List<Document> docs = reader.read();
 
-        // Transform (split)
         List<Document> splitDocs = splitter.apply(docs);
 
-        // Transform (dedupe + chunkIndex/totalChunks)
         List<Document> ready = dedupeAndIndex(splitDocs, data.resolvedUrl());
 
-        // Load (batch write)
         if (!ready.isEmpty()) {
             writer.write(ready);
         }
@@ -184,8 +190,60 @@ public class WebSearchMemoryService {
         if (!data.inputUrl().isBlank() && !data.inputUrl().equals(data.resolvedUrl())) {
             metadata.put("originalUrl", data.inputUrl());
         }
+        String cleaned = sanitizeWebText(data.content());
 
-        return new Document(data.content().trim(), metadata);
+        return new Document(cleaned, metadata);
+    }
+
+    private String sanitizeWebText(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+
+        // Normalize whitespace + remove NBSP
+        String s = raw.replace('\u00A0', ' ');
+
+        // Remove raw URLs anywhere
+        s = URL_PATTERN.matcher(s).replaceAll("");
+
+        // Line-based cleanup (kills banners/nav/link dumps)
+        List<String> kept = new ArrayList<>();
+        int emptyRun = 0;
+
+        for (String line : s.split("\\R")) {
+            String l = line.strip();
+
+            // drop boilerplate + very-short menu-ish lines
+            if (l.isEmpty()) {
+                emptyRun++;
+                if (emptyRun <= 1) kept.add("");
+                continue;
+            }
+            emptyRun = 0;
+
+            if (BOILERPLATE_LINE.matcher(l).matches()) continue;
+
+            // Drop lines that are mostly punctuation/symbols (common in nav separators)
+            int letters = 0;
+            for (int i = 0; i < l.length(); i++) {
+                if (Character.isLetterOrDigit(l.charAt(i))) letters++;
+            }
+            if ((double) letters / l.length() < 0.25 && l.length() < 120) {
+                continue;
+            }
+
+            kept.add(l);
+        }
+
+        // Re-join, collapse whitespace a bit
+        String cleaned = String.join("\n", kept)
+                .replaceAll("[ \\t]{2,}", " ")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
+
+        if (cleaned.length() > MAX_CLEANED_CHARS) {
+            cleaned = cleaned.substring(0, MAX_CLEANED_CHARS).trim();
+        }
+
+        return cleaned;
     }
 
     private List<Document> dedupeAndIndex(List<Document> docs, String sourceUrl) {
@@ -425,72 +483,36 @@ public class WebSearchMemoryService {
         sb.append(s.trim());
     }
 
-
     private String extractDomain(String urlString) {
         if (urlString == null || urlString.isBlank()) {
             return "";
         }
+
+        String s = urlString.trim();
+
+        // If it's missing a scheme, URI#getHost() will be null.
+        // Add a default scheme so host parsing works.
+        if (!s.contains("://")) {
+            s = "https://" + s;
+        }
+
         try {
-            return new URL(urlString).getHost();
-        } catch (MalformedURLException e) {
+            URI uri = new URI(s);
+
+            // Normalize and extract host
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                return "";
+            }
+
+            // Optional: strip leading "www."
+            // host = host.startsWith("www.") ? host.substring(4) : host;
+
+            return host;
+        } catch (URISyntaxException e) {
             return "";
         }
     }
-
-    private List<MergedWebArticle> mergeByArticle(List<Document> docs) {
-        Map<String, List<Document>> grouped = new LinkedHashMap<>();
-
-        for (Document doc : docs) {
-            Map<String, Object> meta = doc.getMetadata();
-
-            Object parentId = meta.get("parent_document_id");
-            String key = parentId != null
-                    ? parentId.toString()
-                    : doc.getId(); // fallback (single-chunk)
-
-            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(doc);
-        }
-
-        List<MergedWebArticle> merged = new ArrayList<>();
-
-        for (List<Document> group : grouped.values()) {
-            group.sort(Comparator.comparingInt(this::extractChunkIndex));
-
-            StringBuilder combined = new StringBuilder();
-            Map<String, Object> meta = group.get(0).getMetadata();
-
-            for (Document d : group) {
-                combined.append(d.getFormattedContent()).append("\n\n");
-            }
-
-            merged.add(new MergedWebArticle(
-                    combined.toString().trim(),
-                    meta
-            ));
-        }
-
-        return merged;
-    }
-
-    private int extractChunkIndex(Document doc) {
-        Map<String, Object> meta = doc.getMetadata();
-
-        Object v = meta.getOrDefault("chunkIndex",
-                meta.getOrDefault("chunk_index", 0));
-
-        if (v instanceof Number n) return n.intValue();
-
-        try {
-            return Integer.parseInt(v.toString());
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    private record MergedWebArticle(
-            String content,
-            Map<String, Object> metadata
-    ) {}
 
     private record WebSearchData(
             String status,

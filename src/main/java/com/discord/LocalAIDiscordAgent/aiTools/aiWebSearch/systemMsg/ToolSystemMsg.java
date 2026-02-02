@@ -14,7 +14,7 @@ public class ToolSystemMsg {
             {{TOOLS}}
             </tools>
             
-            For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+            For each function call, return a JSON object with the function name and arguments within <tool_call></tool_call> XML tags:
             
             <tool_call>
             {"name":"<function-name>","arguments":{<args-json-object>}}
@@ -26,12 +26,13 @@ public class ToolSystemMsg {
             - Arguments must be valid JSON and must match the schema for the chosen function.
             - Use double quotes for all JSON keys and string values.
             - Do NOT wrap <tool_call> blocks in markdown.
-            
-            Web-search usage guidance (for your tools):
-            - If the user provides a URL (http/https), call the URL fetch tool first (e.g., "webSearch").
-            - If the user provides a query/topic (not a URL), call the search engine tool (e.g., "searchAndFetch") to get top results and excerpts.
-            - After you receive tool output inside <tool_response>...</tool_response>, write a normal assistant answer using that data.
+            - After receiving tool output inside <tool_response>...</tool_response>, write a normal assistant answer using that data.
             - Only emit another <tool_call> if more tool actions are required.
+            
+            Web-search guidance:
+            - Never decline a web search request just because the previous search-history lookup returned no results; refine and retry the ("Web_Search") query to improve relevance.
+            - If the user provides a URL, call the URL fetch tool first ("Direct_Link").
+            - If the user provides a query or topic, call the search tool ("Web_Search").
             """;
 
 

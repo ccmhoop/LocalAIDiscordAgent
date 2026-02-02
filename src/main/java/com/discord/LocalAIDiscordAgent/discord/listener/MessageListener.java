@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
-import com.discord.LocalAIDiscordAgent.aiOllama.service.OllamaService;
+import com.discord.LocalAIDiscordAgent.chatClient.service.OllamaService;
 import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -36,6 +36,7 @@ public abstract class MessageListener {
                     if (!mentioned) return Mono.empty();
 
                     content = content.replace("<@1379869980123992274>", "").trim();
+
                     if (content.isEmpty()) return Mono.empty();
 
                     if (content.length() > MAX_INPUT_LENGTH) {

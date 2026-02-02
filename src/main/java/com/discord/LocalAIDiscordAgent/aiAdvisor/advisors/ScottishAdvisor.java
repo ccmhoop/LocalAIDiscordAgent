@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.aiAdvisor.advisors;
 
 import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringChatMemory;
 import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.FilteringVectorStore;
-import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.MergingWebVectorStore;
+import com.discord.LocalAIDiscordAgent.aiAdvisor.filters.ChunkMergeFilterWebSearchStore;
 import com.discord.LocalAIDiscordAgent.aiAdvisor.templates.AdvisorTemplates;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
@@ -11,52 +11,64 @@ import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMem
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-public class ScottishAdvisor {
+public final class ScottishAdvisor {
 
-    @Bean
-    public List<Advisor> scottishAdvisorsList(VectorStore vectorStoreChatMemory,
-                                              ChatMemory scottishChatMemoryConfig,
-                                              VectorStore vectorStoreWebSearchMemory) {
+    public static List<Advisor> scottishAdvisorsList(
+            VectorStore vectorStoreChatMemory,
+            ChatMemory scottishChatMemoryConfig,
+            VectorStore vectorStoreWebSearchMemory
+    ) {
 
-        ChatMemory safeChatMemory = new FilteringChatMemory(scottishChatMemoryConfig);
-        VectorStore safeVectorStore = new FilteringVectorStore(vectorStoreChatMemory);
-        VectorStore mergedWebStore = new MergingWebVectorStore(vectorStoreWebSearchMemory);
+        VectorStore mergedWebStore = new ChunkMergeFilterWebSearchStore(vectorStoreWebSearchMemory);
 
         return List.of(
-                shortTermChatMemoryAdvisor(safeChatMemory),
-                enhancedLongTermMemoryAdvisor(safeVectorStore),
+                shortTermChatMemoryAdvisor(scottishChatMemoryConfig),
+                enhancedLongTermMemoryAdvisor(vectorStoreChatMemory),
                 webSearchQuestionAnswerAdvisor(mergedWebStore)
-
         );
     }
 
-    public MessageChatMemoryAdvisor shortTermChatMemoryAdvisor(ChatMemory chatMemory) {
+    public static List<Advisor> toolAdvisor(
+            ChatMemory scottishChatMemoryConfig,
+            VectorStore vectorStoreWebSearchMemory
+    ) {
+        VectorStore mergedWebStore = new ChunkMergeFilterWebSearchStore(vectorStoreWebSearchMemory);
+
+        return List.of(
+//                webSearchQuestionAnswerAdvisor(mergedWebStore),
+                shortTermChatMemoryAdvisor(scottishChatMemoryConfig)
+        );
+    }
+
+    private static MessageChatMemoryAdvisor shortTermChatMemoryAdvisor(
+            ChatMemory chatMemory
+    ) {
         return MessageChatMemoryAdvisor.builder(chatMemory)
                 .order(0)
                 .build();
     }
 
-
-    private VectorStoreChatMemoryAdvisor enhancedLongTermMemoryAdvisor(VectorStore vectorStore) {
+    private static VectorStoreChatMemoryAdvisor enhancedLongTermMemoryAdvisor(
+            VectorStore vectorStore
+    ) {
         return VectorStoreChatMemoryAdvisor.builder(vectorStore)
                 .defaultTopK(3)
-                .order(1)
                 .systemPromptTemplate(AdvisorTemplates.LONG_TERM_MEMORY)
+                .order(1)
                 .build();
     }
 
-
-    private QuestionAnswerAdvisor webSearchQuestionAnswerAdvisor(VectorStore vectorStore) {
+    private static QuestionAnswerAdvisor webSearchQuestionAnswerAdvisor(VectorStore vectorStore) {
         return QuestionAnswerAdvisor.builder(vectorStore)
                 .searchRequest(SearchRequest.builder()
-                        .similarityThreshold(0.50)
-                        .topK(3)
+                        .topK(8)
+                        .similarityThreshold(0.45)
+                        .filterExpression("tier == 'WEB_SEARCH'")
                         .build())
                 .promptTemplate(AdvisorTemplates.WEB_SEARCH_QUESTION_ANSWER)
                 .order(2)

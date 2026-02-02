@@ -1,13 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE IF NOT EXISTS VECTOR_STORE_SCOTTISH_AGENT
-(
-    id        uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    content   TEXT,
-    metadata  JSON,
-    embedding VECTOR(1024)
-);
-
 CREATE TABLE IF NOT EXISTS VECTOR_STORE_CHAT_MEMORY
 (
     id        uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -40,8 +32,6 @@ alter table SCOTTISH_AI_CHAT_MEMORY
 
 create index IF NOT EXISTS spring_ai_chat_memory_conversation_id_timestamp_idx
     on SCOTTISH_AI_CHAT_MEMORY (conversation_id, timestamp);
-
-CREATE INDEX ON VECTOR_STORE_SCOTTISH_AGENT USING HNSW (embedding vector_cosine_ops);
 
 CREATE INDEX ON VECTOR_STORE_CHAT_MEMORY USING HNSW (embedding vector_cosine_ops);
 
