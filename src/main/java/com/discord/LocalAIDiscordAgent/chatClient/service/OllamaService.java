@@ -46,8 +46,6 @@ public class OllamaService {
 
             String aiResponse = extractChatResponseAsString(chatResponse);
 
-            System.out.println(chatResponse);
-
             log.debug(
                     "Ollama response (conversationId={}, useTools={}): {}",
                     conversationId,
