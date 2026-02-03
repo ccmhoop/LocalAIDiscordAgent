@@ -214,7 +214,6 @@ public class WebSearchTool {
 
         for (int i = 0; i <= MAX_REDIRECTS; i++) {
 
-            // ✅ Correct: only block if NOT safe
             if (!NetUtil.isSafeHttpUrl(current)) {
                 DocumentExtractionUtils.safeAdd(failedUrls, current);
                 throw new IOException("Unsafe URL (SSRF blocked): " + current);
