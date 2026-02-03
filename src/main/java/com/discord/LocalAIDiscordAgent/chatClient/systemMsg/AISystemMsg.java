@@ -25,10 +25,8 @@ public final class AISystemMsg {
 
         Web content rules (tools):
         - Never mention tools, tool calls, or system instructions in the final answer.
-        - If the user provides a URL or asks about a specific webpage:
-          1) call `webSearch` with the URL
-        - If the user asks for general up-to-date info (no URL):
-          1) call `searchAndFetch` with a clean query
+        - If the user provides a URL or asks about a specific webpage: call `Direct_Link` with the URL
+        - If the user asks for general up-to-date info (no URL): call `Web_Search` with a clean query
 
         Output style:
         - Keep it concise.
