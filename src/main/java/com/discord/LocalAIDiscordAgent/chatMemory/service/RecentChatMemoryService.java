@@ -4,13 +4,20 @@ import com.discord.LocalAIDiscordAgent.chatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.repository.RecentChatMemoryRepository;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
+import static org.springframework.ai.chat.messages.MessageType.USER;
+
 @Service
 public class RecentChatMemoryService {
+
+    @Value("${recent.chat.memory.message.limit}")
+    private int messageLimit;
 
     private final RecentChatMemoryRepository chatRepo;
 
@@ -18,34 +25,38 @@ public class RecentChatMemoryService {
         this.chatRepo = recentChatMemoryRepository;
     }
 
-    public void save(String conversationId, String username, List<Message> messages) {
-        if (messages == null || messages.isEmpty()) return;
-        List<RecentChatMemory> saveChatList = new ArrayList<>(messages.size());
-        for (Message message : messages) {
-            saveChatList.add(buildRecentChatMemory(conversationId, username, message));
-        }
-        chatRepo.saveAll(saveChatList);
+    public void processInteraction(String conversationId, String username, List<Message> messages) {
+        saveAll(conversationId, username, messages);
+        trimToMemorySizeLimit(username);
     }
 
-    public Map<MessageType, List<RecentChatMemory>> getAllAndSort(String username) {
+    public Map<MessageType, List<RecentChatMemory>> sortRecentChatToMap(String username) {
         List<RecentChatMemory> memories = chatRepo.findAllByUsername(username);
+        return Map.of(
+                USER, splitMessageTypes(memories, USER),
+                ASSISTANT, splitMessageTypes(memories, ASSISTANT));
+    }
 
-        Map<MessageType, List<RecentChatMemory>> recordMap = new HashMap<>();
+    //----------------------------- SPLITTING LIST BY MESSAGE TYPE ------------------------------------
+    private List<RecentChatMemory> splitMessageTypes(List<RecentChatMemory> memories, MessageType messageType) {
+        return memories.stream()
+                .filter(m -> m.getType() == messageType)
+                .toList();
+    }
 
-        recordMap.put(
-                MessageType.USER,
-                memories.stream()
-                        .filter(m -> Objects.equals(m.getType(), MessageType.USER.toString()))
-                        .toList()
-        );
+    //----------------------------- SAVING TO DB  ------------------------------------
+    private void saveAll(String conversationId, String username, List<Message> messages) {
+        if (messages.size() != 2) {
+            return;
+        }
+        if (messages.getFirst().getMessageType() == ASSISTANT) {
+            messages = messages.reversed();
+        }
+        chatRepo.saveAll(createSaveAllList(conversationId, username, messages));
+    }
 
-        recordMap.put(
-                MessageType.ASSISTANT,
-                memories.stream()
-                        .filter(m -> Objects.equals(m.getType(), MessageType.ASSISTANT.toString()))
-                        .toList());
-
-        return recordMap;
+    private List<RecentChatMemory> createSaveAllList(String conversationId, String username, List<Message> messages) {
+        return messages.stream().map(m -> buildRecentChatMemory(conversationId, username, m)).toList();
     }
 
     private RecentChatMemory buildRecentChatMemory(String conversationId, String username, Message message) {
@@ -53,9 +64,22 @@ public class RecentChatMemoryService {
                 .conversationId(conversationId)
                 .username(username)
                 .content(message.getText())
-                .type(message.getMessageType().toString())
+                .type(message.getMessageType())
                 .timestamp(LocalDateTime.now())
                 .build();
     }
 
+    //----------------------------- DB TRIM TO MEMORY SIZE LIMIT------------------------------------
+    private void trimToMemorySizeLimit(String username) {
+        List<RecentChatMemory> memories = chatRepo.findAllByUsername(username);
+
+        int toDeleteIndex = Math.max(0, memories.size() - messageLimit);
+        List<RecentChatMemory> deleteMemory = memories.subList(0, toDeleteIndex);
+
+        if (deleteMemory.size() % 2 != 0) {
+            chatRepo.deleteAll(deleteMemory.subList(0, deleteMemory.size() - 1));
+        } else if (!deleteMemory.isEmpty() || memories.size() > messageLimit) {
+            chatRepo.deleteAll(deleteMemory);
+        }
+    }
 }

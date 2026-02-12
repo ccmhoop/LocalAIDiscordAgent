@@ -15,25 +15,23 @@ import org.springframework.ai.chat.client.advisor.api.BaseChatMemoryAdvisor;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.prompt.PromptTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.util.Assert;
 import reactor.core.scheduler.Scheduler;
 
+import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
+import static org.springframework.ai.chat.messages.MessageType.USER;
+
 @Getter
 public final class RecentChatMemoryAdvisor implements BaseChatMemoryAdvisor {
+
+    @Value("${recent.chat.memory.message.limit}")
+    private int messageLimit;
 
     private final String defaultConversationId;
     private final RecentChatMemoryService recentChatMemoryService;
     private final int order;
     private final Scheduler scheduler;
-
-    /*
-     * @Todo
-     *   Make this configurable by adding a property to the application.properties file.
-     *   Add a method to the RecentChatMemoryService to limit the number of messages returned by the getAllAndSort method.
-     *   Add a method to the RecentChatMemoryService to limit X amount of messages in the chat memory depending on the user.
-     */
-    private final int TEMPORARY_MEMORY_SIZE = 6;
-
 
     private RecentChatMemoryAdvisor(String defaultConversationId, RecentChatMemoryService recentChatMemoryService, int order, Scheduler scheduler) {
         this.recentChatMemoryService = recentChatMemoryService;
@@ -49,7 +47,7 @@ public final class RecentChatMemoryAdvisor implements BaseChatMemoryAdvisor {
     @NonNull
     public ChatClientRequest before(ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
         String conversationId = this.getConversationId(chatClientRequest.context(), this.defaultConversationId);
-        Map<MessageType, List<RecentChatMemory>> chatMemories = recentChatMemoryService.getAllAndSort(conversationId);
+        Map<MessageType, List<RecentChatMemory>> chatMemories = recentChatMemoryService.sortRecentChatToMap(conversationId);
         SystemMessage previousSystemMsg = chatClientRequest.prompt().getSystemMessage();
         String newSystemMessage = previousSystemMsg.getText() + buildPromptTemplate(conversationId, chatMemories);
         return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(newSystemMessage)).build();
@@ -71,31 +69,27 @@ public final class RecentChatMemoryAdvisor implements BaseChatMemoryAdvisor {
                 .render();
     }
 
-
     private String buildRecentChat(String userId, Map<MessageType, List<RecentChatMemory>> chatMemories) {
-        if (chatMemories.get(MessageType.USER).isEmpty() || chatMemories.get(MessageType.ASSISTANT).isEmpty()) {
+        if (chatMemories.get(USER).isEmpty() || chatMemories.get(ASSISTANT).isEmpty()) {
             return "None";
         }
 
-        List<RecentChatMemory> userMemories = chatMemories.get(MessageType.USER);
-        List<RecentChatMemory> assistantMemories = chatMemories.get(MessageType.ASSISTANT);
-
-        int from = Math.max(0, assistantMemories.size() - TEMPORARY_MEMORY_SIZE);
-        assistantMemories = assistantMemories.subList(from, assistantMemories.size());
-        userMemories = userMemories.subList(from, userMemories.size());
-
         StringBuilder sb = new StringBuilder();
 
-        for (int i = 0; i < assistantMemories.size(); i++) {
-            RecentChatMemory userChat = userMemories.get(i);
-            RecentChatMemory assistantChat = assistantMemories.get(i);
-            sb.append(formatRecentChat(userId, userChat, assistantChat));
+        for (int i = 0; i < messageLimit; i++) {
+            String messagePair = createMessagePairBlock(
+                    userId,
+                    chatMemories.get(USER).get(i),
+                    chatMemories.get(ASSISTANT).get(i)
+            );
+
+            sb.append(messagePair);
         }
 
         return sb.toString().stripTrailing();
     }
 
-    private String formatRecentChat(String userId, RecentChatMemory userChat, RecentChatMemory assistantChat) {
+    private String createMessagePairBlock(String userId, RecentChatMemory userChat, RecentChatMemory assistantChat) {
         return """
                 <message_pair>
                 \t<note>

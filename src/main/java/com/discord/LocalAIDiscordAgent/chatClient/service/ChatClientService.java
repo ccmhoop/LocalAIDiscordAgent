@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.stereotype.Service;
@@ -43,13 +44,11 @@ public class ChatClientService {
 
             String extractedResponse = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 
-            recentChatMemoryService.save(
-                    conversationId,
-                    metadata.get("username"),
-                    List.of(new UserMessage(userMessage), new AssistantMessage(extractedResponse))
-            );
-
             log.debug("Ollama response (conversationId={}, extractedResponse={}): ", conversationId, extractedResponse);
+
+            List<Message> messages =  List.of(new UserMessage(userMessage), new AssistantMessage(extractedResponse));
+
+            recentChatMemoryService.processInteraction(conversationId, metadata.get("username"), messages);
 
             return extractedResponse;
 

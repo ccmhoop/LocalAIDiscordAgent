@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class DiscordWebRequest {
+public class DiscordWebClient {
 
     private final GatewayDiscordClient client;
 

@@ -32,6 +32,7 @@ public class ToolClientService {
     private final ChatMemory webMemory;
     private final ChatModel chatModel;
 
+
     public ToolClientService(
             OllamaChatModel ollamaQwenModelConfig,
             WebSearchMemoryService webSearchMemoryService,

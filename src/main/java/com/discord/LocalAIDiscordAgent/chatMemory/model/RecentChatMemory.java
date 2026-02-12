@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.chatMemory.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.ai.chat.messages.MessageType;
 
 import java.time.LocalDateTime;
 
@@ -19,7 +20,8 @@ public class RecentChatMemory{
     private String username;
     @Column(columnDefinition = "TEXT")
     private String content;
-    private String type;
+    @Enumerated(EnumType.STRING)
+    private MessageType type;
     private LocalDateTime timestamp;
 
 }
