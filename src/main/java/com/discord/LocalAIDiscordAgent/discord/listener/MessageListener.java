@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
-import com.discord.LocalAIDiscordAgent.chatClient.service.OllamaService;
+import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
+import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
 import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -8,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 import java.net.SocketException;
@@ -15,6 +17,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -24,7 +27,7 @@ public abstract class MessageListener {
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
 
-    public Mono<Void> processCommandAI(Message eventMessage, OllamaService ollamaService) {
+    public Mono<Void> processCommandAI(Message eventMessage, ChatClientService chatClientService, ToolClientService toolClientService) {
         return Mono.just(eventMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .flatMap(message -> {
@@ -53,8 +56,20 @@ public abstract class MessageListener {
 
                     String finalContent = content;
 
-                    Mono<String> responseMono = Mono.fromCallable(() ->
-                            ollamaService.generateScottishResponse(finalContent, username, guildId, channelId));
+                    Map<String, String> metadata = Map.of("username", username, "guildId", guildId, "channelId", channelId);
+
+                    Mono<String> responseMono =
+                            Mono.fromCallable(() -> {
+                                        if (toolClientService.shouldUseWebSearch(finalContent)) {
+                                            return toolClientService.generateToolResponse(finalContent, metadata, true);
+                                        } else if (toolClientService.shouldUseDirectLink(finalContent)) {
+                                            return toolClientService.generateToolResponse(finalContent, metadata, false);
+                                        } else {
+                                            return chatClientService.generateScottishResponse(finalContent, metadata);
+                                        }
+                                    })
+                                    .subscribeOn(Schedulers.boundedElastic())
+                                    .cache();
 
                     return message.getChannel()
                             .flatMap(channel ->

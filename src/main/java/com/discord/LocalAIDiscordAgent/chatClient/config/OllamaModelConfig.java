@@ -10,16 +10,17 @@ import org.springframework.context.annotation.Configuration;
 public class OllamaModelConfig {
 
     @Bean
-    public OllamaChatModel ollamaQwenModelConfig(OllamaApi ollamaBasicApiConfig) {
+    public OllamaChatModel ollamaQwenModelConfig(OllamaApi ollamaApi) {
         return OllamaChatModel.builder()
-                .ollamaApi(ollamaBasicApiConfig)
+                .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
                                 .model("qwen3:30b")
-                                .temperature(0.6)
-                                .numPredict(1536)
-                                .build())
+                                .temperature(1.5)
+                                .numCtx(32768)      // context window (input+output+history)
+                                .numPredict(4096)   // max generated tokens
+                                .build()
+                )
                 .build();
     }
-
 }

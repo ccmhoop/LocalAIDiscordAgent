@@ -1,4 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Use '^' as the delimiter in application.properties: spring.sql.init.separator=^
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp"^
+CREATE EXTENSION IF NOT EXISTS vector^
 
 CREATE TABLE IF NOT EXISTS VECTOR_STORE_CHAT_MEMORY
 (
@@ -6,7 +8,7 @@ CREATE TABLE IF NOT EXISTS VECTOR_STORE_CHAT_MEMORY
     content   TEXT,
     metadata  JSON,
     embedding VECTOR(1024)
-);
+)^
 
 CREATE TABLE IF NOT EXISTS VECTOR_STORE_WEB_SEARCH_MEMORY
 (
@@ -14,25 +16,25 @@ CREATE TABLE IF NOT EXISTS VECTOR_STORE_WEB_SEARCH_MEMORY
     content   TEXT,
     metadata  JSON,
     embedding VECTOR(1024)
-);
+)^
 
-CREATE TABLE IF NOT EXISTS SCOTTISH_AI_CHAT_MEMORY
+CREATE TABLE IF NOT EXISTS TOOL_MEMORY
 (
     conversation_id varchar(128) not null,
     content         text         not null,
     type            varchar(10)  not null
-        constraint spring_ai_chat_memory_type_check
-            check ((type)::text = ANY
-                   ((ARRAY ['USER'::character varying, 'ASSISTANT'::character varying, 'SYSTEM'::character varying, 'TOOL'::character varying])::text[])),
+        constraint tool_memory_type_check check ((type)::text = ANY
+                                                 ((ARRAY ['USER'::character varying, 'ASSISTANT'::character varying, 'SYSTEM'::character varying, 'TOOL'::character varying])::text[])),
     timestamp       timestamp    not null
-);
+)^
 
-alter table SCOTTISH_AI_CHAT_MEMORY
-    owner to postgres;
+ALTER TABLE TOOL_MEMORY OWNER TO postgres^
 
-create index IF NOT EXISTS spring_ai_chat_memory_conversation_id_timestamp_idx
-    on SCOTTISH_AI_CHAT_MEMORY (conversation_id, timestamp);
+CREATE INDEX IF NOT EXISTS tool_memory_conversation_id_timestamp_idx
+    ON TOOL_MEMORY (conversation_id, timestamp)^
 
-CREATE INDEX ON VECTOR_STORE_CHAT_MEMORY USING HNSW (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS chat_memory_hnsw_idx
+    ON VECTOR_STORE_CHAT_MEMORY USING HNSW (embedding vector_cosine_ops)^
 
-CREATE INDEX ON  VECTOR_STORE_WEB_SEARCH_MEMORY USING HNSW (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS web_search_hnsw_idx
+    ON VECTOR_STORE_WEB_SEARCH_MEMORY USING HNSW (embedding vector_cosine_ops)^
