@@ -1,7 +1,6 @@
-package com.discord.LocalAIDiscordAgent.Advisor.advisor;
+package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
-import com.discord.LocalAIDiscordAgent.Advisor.templates.AdvisorTemplates;
-import com.discord.LocalAIDiscordAgent.chatMemory.encoder.ContentOnlyMessage;
+import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import lombok.Getter;
 import lombok.NonNull;
 import org.springframework.ai.chat.client.ChatClientRequest;

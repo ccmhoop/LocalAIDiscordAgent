@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.Advisor.templates;
+package com.discord.LocalAIDiscordAgent.advisor.templates;
 
 import org.springframework.ai.chat.prompt.PromptTemplate;
 

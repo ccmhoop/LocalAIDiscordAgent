@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.Advisor.advisor;
+package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
 import java.util.*;
 
-import com.discord.LocalAIDiscordAgent.Advisor.templates.AdvisorTemplates;
+import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.chatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.RecentChatMemoryService;
 import lombok.Getter;

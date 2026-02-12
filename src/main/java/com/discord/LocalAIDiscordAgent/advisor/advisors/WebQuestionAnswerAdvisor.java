@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.Advisor.advisor;
+package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
 import lombok.Getter;
 import lombok.NonNull;

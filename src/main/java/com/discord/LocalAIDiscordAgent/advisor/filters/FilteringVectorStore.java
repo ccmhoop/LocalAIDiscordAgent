@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.Advisor.filters;
+package com.discord.LocalAIDiscordAgent.advisor.filters;
 
 import lombok.NonNull;
 import org.springframework.ai.document.Document;

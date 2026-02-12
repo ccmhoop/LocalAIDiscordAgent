@@ -1,10 +1,10 @@
-package com.discord.LocalAIDiscordAgent.Advisor.config;
+package com.discord.LocalAIDiscordAgent.advisor.config;
 
 
-import com.discord.LocalAIDiscordAgent.Advisor.advisor.RecentChatMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.Advisor.advisor.WebMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.Advisor.filters.ChunkMergeFilterWebSearchStore;
-import com.discord.LocalAIDiscordAgent.Advisor.templates.AdvisorTemplates;
+import com.discord.LocalAIDiscordAgent.advisor.advisors.RecentChatMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.advisors.WebMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.filters.ChunkMergeFilterWebSearchStore;
+import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.RecentChatMemoryService;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;

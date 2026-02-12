@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.Advisor.filters;
+package com.discord.LocalAIDiscordAgent.advisor.filters;
 
 import com.discord.LocalAIDiscordAgent.tools.webSearch.helpers.WebSearchChunkMerger;
 import lombok.NonNull;
