@@ -1,6 +1,8 @@
 package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 
@@ -12,10 +14,19 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 
 public class XmlAdvisor<T extends ChatMemoryINTF>  {
 
-    public String buildNewSystemMessage(PromptTemplate template, Map<MessageType, List<T>> chatMemories, String oldSystemMsg) {
+    private final String template;
+
+    @Getter
+    private String augmentedSystemMsg;
+
+    public XmlAdvisor(PromptTemplate template) {
+        this.template = template.getTemplate();
+    }
+
+    public void augmentSystemMsg(Map<MessageType, List<T>> chatMemories, String beforeSystemMsg) {
         String xmlChatContext = buildChatXml(chatMemories);
-        return oldSystemMsg + PromptTemplate.builder()
-                .template(template.getTemplate())
+        this.augmentedSystemMsg = beforeSystemMsg + PromptTemplate.builder()
+                .template(template)
                 .variables(Map.of(
                         "context", xmlChatContext
                 ))

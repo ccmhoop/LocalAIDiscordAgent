@@ -16,6 +16,8 @@ public final class AdvisorTemplates {
         \t\t\t{context}
         \t\t</chat_memory_context>
         \t</short_term_chat_memory>
+        \t<think>
+        \t</think>
         """);
 
     public static final PromptTemplate WEB_SEARCH_MEMORY_TEMPLATE = new PromptTemplate("""    

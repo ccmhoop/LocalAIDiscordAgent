@@ -27,6 +27,7 @@ public class GroupChatMemoryAdvisor extends XmlAdvisor<GroupChatMemory> implemen
     private final Scheduler scheduler;
 
     private GroupChatMemoryAdvisor(String defaultConversationId, GroupChatMemoryService service, int order, Scheduler scheduler) {
+        super(AdvisorTemplates.GROUP_CHAT_MEMORY);
         this.service = service;
         Assert.notNull(service, "recentChatMemoryService cannot be null");
         Assert.hasText(defaultConversationId, "defaultConversationId cannot be null or empty");
@@ -43,10 +44,8 @@ public class GroupChatMemoryAdvisor extends XmlAdvisor<GroupChatMemory> implemen
         if (chatMemories.isEmpty()) {
             return chatClientRequest;
         }
-        String oldSystemMsg = chatClientRequest.prompt().getSystemMessage().getText();
-        String newSystemMsg= buildNewSystemMessage(AdvisorTemplates.GROUP_CHAT_MEMORY, chatMemories, oldSystemMsg);
-
-        return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(newSystemMsg)).build();
+        augmentSystemMsg(chatMemories, chatClientRequest.prompt().getSystemMessage().getText());
+        return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(getAugmentedSystemMsg())).build();
     }
 
     @Override
