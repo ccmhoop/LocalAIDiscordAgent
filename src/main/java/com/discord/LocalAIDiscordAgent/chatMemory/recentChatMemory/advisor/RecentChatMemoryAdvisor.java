@@ -56,7 +56,6 @@ public final class RecentChatMemoryAdvisor extends XmlAdvisor<RecentChatMemory> 
         return chatClientResponse;
     }
 
-
     public static Builder builder(RecentChatMemoryService recentChatMemoryService) {
         return new Builder(recentChatMemoryService);
     }

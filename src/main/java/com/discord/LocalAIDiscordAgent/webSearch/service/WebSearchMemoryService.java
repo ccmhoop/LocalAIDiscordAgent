@@ -1,6 +1,6 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.service;
+package com.discord.LocalAIDiscordAgent.webSearch.service;
 
-import com.discord.LocalAIDiscordAgent.tools.webSearch.helpers.WebSearchChunkMerger;
+import com.discord.LocalAIDiscordAgent.webSearch.helpers.WebSearchChunkMerger;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;

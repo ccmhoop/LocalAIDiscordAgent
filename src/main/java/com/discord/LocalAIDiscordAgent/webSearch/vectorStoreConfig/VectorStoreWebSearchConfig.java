@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.vectorStoreConfig;
+package com.discord.LocalAIDiscordAgent.webSearch.vectorStoreConfig;
 
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;

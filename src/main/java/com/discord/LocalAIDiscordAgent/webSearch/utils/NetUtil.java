@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.utils;
+package com.discord.LocalAIDiscordAgent.webSearch.utils;
 
 import java.io.IOException;
 import java.net.*;

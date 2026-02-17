@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.helpers;
+package com.discord.LocalAIDiscordAgent.webSearch.helpers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.document.Document;

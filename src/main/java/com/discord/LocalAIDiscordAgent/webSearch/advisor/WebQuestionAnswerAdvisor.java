@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.advisor.advisors;
+package com.discord.LocalAIDiscordAgent.webSearch.advisor;
 
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.helpers.WebSearchChunkMerger;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
+import com.discord.LocalAIDiscordAgent.webSearch.helpers.WebSearchChunkMerger;
+import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.NonNull;

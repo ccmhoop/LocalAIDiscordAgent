@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.tools.DirectLinkTool;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.tools.WebSearchTool;
+import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
+import com.discord.LocalAIDiscordAgent.webSearch.tools.DirectLinkTool;
+import com.discord.LocalAIDiscordAgent.webSearch.tools.WebSearchTool;
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatClient.systemMsg.SystemMsg;
 import lombok.extern.slf4j.Slf4j;

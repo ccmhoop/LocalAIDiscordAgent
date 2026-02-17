@@ -3,11 +3,11 @@ package com.discord.LocalAIDiscordAgent.advisor.config;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor.RecentChatMemoryAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.advisor.WebMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.advisor.advisors.WebQuestionAnswerAdvisor;
+import com.discord.LocalAIDiscordAgent.webSearch.advisor.WebQuestionAnswerAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor.GroupChatMemoryAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
+import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;

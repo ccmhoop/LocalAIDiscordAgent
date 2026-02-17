@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.tools;
+package com.discord.LocalAIDiscordAgent.webSearch.tools;
 
-import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.utils.DocumentExtractionUtils;
-import com.discord.LocalAIDiscordAgent.tools.webSearch.utils.NetUtil;
+import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
+import com.discord.LocalAIDiscordAgent.webSearch.utils.DocumentExtractionUtils;
+import com.discord.LocalAIDiscordAgent.webSearch.utils.NetUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;

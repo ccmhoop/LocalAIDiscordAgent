@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.tools.webSearch.utils;
+package com.discord.LocalAIDiscordAgent.webSearch.utils;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
