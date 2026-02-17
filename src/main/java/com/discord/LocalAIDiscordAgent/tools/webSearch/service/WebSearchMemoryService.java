@@ -1,7 +1,7 @@
 package com.discord.LocalAIDiscordAgent.tools.webSearch.service;
 
 import com.discord.LocalAIDiscordAgent.tools.webSearch.helpers.WebSearchChunkMerger;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -18,23 +18,12 @@ import java.net.URISyntaxException;
 import java.util.*;
 import java.util.regex.Pattern;
 
-/**
- * WebSearchMemoryService
- * - Extract: parse tool output into WebSearchData
- * - Transform: TokenTextSplitter (token-aware chunking) + dedupe + chunk indexing
- * - Load: VectorStore.write(...)
- *
- * Updated to support JSON:
- * - searchExistingContent(...) returns MERGED_WEB_RESULTS JSON (via WebSearchChunkMerger.mergeByArticleToJson)
- * - saveWebSearchResult(...) ingests JSON SEARCH_RESULTS produced by your web_search tool
- * - Legacy "WEBPAGE_FETCH" and "SEARCH_RESULTS" (string) parsing kept for backward compatibility
- */
 @Slf4j
 @Service
 public class WebSearchMemoryService {
 
     private static final String TIER_WEB_SEARCH = "WEB_SEARCH";
-    private static final int MAX_CLEANED_CHARS = 800; // reduced to prevent context overload
+    private static final int MAX_CLEANED_CHARS = 800; // NOTE: truncates stored text
 
     private static final Pattern URL_PATTERN = Pattern.compile("(?i)\\b(?:https?://|www\\.)\\S+\\b");
 
@@ -43,25 +32,28 @@ public class WebSearchMemoryService {
                     "newsletter|advertis|advertisement|promo|share|follow us|all rights reserved|©)\\b.*"
     );
 
-    // Pattern to detect advertisement URLs
+    private static final Pattern ISO_DATE_TIME = Pattern.compile(
+            "\\b(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:?\\d{2})?\\b"
+    );
+
+    private static final Pattern SLASH_DATE = Pattern.compile(
+            "\\s*/\\s*(\\d{4}-\\d{2}-\\d{2})\\b"
+    );
+
     private static final Pattern AD_PARAMS = Pattern.compile("(?i)[?&](ad_domain|ad_provider|ad_type|click_metadata|ad_click|advertisement)=");
 
-    // Retrieval behavior - reduced to prevent context window overload
-    private static final int SEARCH_TOP_K = 2;
-    private static final double RETRIEVAL_SIMILARITY_THRESHOLD = 0.95;
+    private static final int SEARCH_TOP_K = 3;
+    private static final double RETRIEVAL_SIMILARITY_THRESHOLD = .50;
 
-    // Ingestion / dedupe behavior
     private static final int DEDUPE_TOP_K = 3;
     private static final double DEDUPE_SIMILARITY_THRESHOLD = 0.95;
 
-    // Chunking behavior - significantly reduced to prevent context overload (256k limit)
     private static final int CHUNK_SIZE_TOKENS = 200;
     private static final int MIN_CHUNK_SIZE_CHARS = 100;
     private static final int MIN_CHUNK_LENGTH_TO_EMBED = 100;
     private static final int MAX_NUM_CHUNKS = 300;
     private static final boolean KEEP_SEPARATOR = true;
 
-    // JSON shaping for searchExistingContent
     private static final int JSON_MAX_ARTICLES = 2;
     private static final int JSON_MAX_CHARS_PER_ARTICLE = 2000;
 
@@ -85,13 +77,11 @@ public class WebSearchMemoryService {
     }
 
     /**
-     * Searches cached web results in the vector store for the given query.
-     * @return JSON string (MERGED_WEB_RESULTS) or null if nothing relevant.
+     * Record-based retrieval: returns a typed object (not JSON).
+     * @return Merged results or null if nothing relevant.
      */
-    public String searchExistingContent(String query) {
-        if (query == null || query.isBlank()) {
-            return null;
-        }
+    public WebSearchChunkMerger.MergedWebResults searchExistingContent(String query) {
+        if (query == null || query.isBlank()) return null;
 
         try {
             List<Document> matches = vectorStore.similaritySearch(
@@ -103,12 +93,9 @@ public class WebSearchMemoryService {
                             .build()
             );
 
-            if (matches.isEmpty()) {
-                return null;
-            }
+            if (matches.isEmpty()) return null;
 
-            // Return a compact, structured JSON blob (single string)
-            return WebSearchChunkMerger.mergeByArticleToJson(
+            return WebSearchChunkMerger.mergeByArticle(
                     matches,
                     JSON_MAX_ARTICLES,
                     JSON_MAX_CHARS_PER_ARTICLE
@@ -121,11 +108,18 @@ public class WebSearchMemoryService {
     }
 
     /**
+     * Backward-compatible wrapper if some tool boundary still expects a string.
+     */
+    public String searchExistingContentJson(String query) {
+        WebSearchChunkMerger.MergedWebResults merged = searchExistingContent(query);
+        if (merged == null) return null;
+        return toJson(merged);
+    }
+
+    /**
      * Ingests tool output into the vector store.
-     * Supported formats:
+     * Supported:
      * - JSON SEARCH_RESULTS (preferred)
-     * - Legacy string SEARCH_RESULTS
-     * - Legacy string WEBPAGE_FETCH
      */
     public void saveWebSearchResult(String webSearchResult) {
         if (webSearchResult == null || webSearchResult.isBlank()) {
@@ -141,9 +135,7 @@ public class WebSearchMemoryService {
 
         int ingested = 0;
         for (WebSearchData data : parsed) {
-            if (!data.isOk() || data.content().isBlank() || data.resolvedUrl().isBlank()) {
-                continue;
-            }
+            if (!data.isOk() || data.content().isBlank() || data.resolvedUrl().isBlank()) continue;
             ingest(data);
             ingested++;
         }
@@ -152,11 +144,10 @@ public class WebSearchMemoryService {
     }
 
     // -----------------------------
-    // ETL pipeline (Extract/Transform/Load)
+    // ETL pipeline
     // -----------------------------
 
     private void ingest(WebSearchData data) {
-        // Filter out advertisement URLs as a safety net
         if (isAdvertisementUrl(data.resolvedUrl()) || isAdvertisementUrl(data.inputUrl())) {
             log.debug("Skipping advertisement URL: {}", data.resolvedUrl());
             return;
@@ -167,9 +158,7 @@ public class WebSearchMemoryService {
         List<Document> splitDocs = splitter.apply(docs);
         List<Document> ready = dedupeAndIndex(splitDocs, data.resolvedUrl());
 
-        if (!ready.isEmpty()) {
-            writer.write(ready);
-        }
+        if (!ready.isEmpty()) writer.write(ready);
     }
 
     private Document buildSourceDocument(WebSearchData data) {
@@ -188,16 +177,25 @@ public class WebSearchMemoryService {
         return new Document(cleaned, metadata);
     }
 
+    private static String normalizeTimestamps(String s) {
+        if (s == null || s.isBlank()) return "";
+        String out = ISO_DATE_TIME.matcher(s).replaceAll("$1");   // keep only the date
+        out = SLASH_DATE.matcher(out).replaceAll(" ($1)");        // " / 2024-05-16" -> " (2024-05-16)"
+        return out;
+    }
+
     private String sanitizeWebText(String raw) {
         if (raw == null || raw.isBlank()) return "";
 
-        // Normalize whitespace + remove NBSP
         String s = raw.replace('\u00A0', ' ');
+
+        // NEW: strip milliseconds / time part
+        s = normalizeTimestamps(s);
 
         // Remove raw URLs anywhere
         s = URL_PATTERN.matcher(s).replaceAll("");
 
-        // Line-based cleanup (kills banners/nav/link dumps)
+
         List<String> kept = new ArrayList<>();
         int emptyRun = 0;
 
@@ -217,9 +215,7 @@ public class WebSearchMemoryService {
             for (int i = 0; i < l.length(); i++) {
                 if (Character.isLetterOrDigit(l.charAt(i))) letters++;
             }
-            if ((double) letters / l.length() < 0.25 && l.length() < 120) {
-                continue;
-            }
+            if ((double) letters / l.length() < 0.25 && l.length() < 120) continue;
 
             kept.add(l);
         }
@@ -237,25 +233,18 @@ public class WebSearchMemoryService {
     }
 
     private List<Document> dedupeAndIndex(List<Document> docs, String sourceUrl) {
-        if (docs == null || docs.isEmpty()) {
-            return List.of();
-        }
+        if (docs == null || docs.isEmpty()) return List.of();
 
         List<Document> kept = new ArrayList<>(docs.size());
-
         for (Document d : docs) {
             String chunk = d.getText();
             if (chunk == null || chunk.isBlank()) continue;
 
-            if (!isDuplicateByVector(chunk, sourceUrl)) {
-                kept.add(d);
-            }
+            if (!isDuplicateByVector(chunk, sourceUrl)) kept.add(d);
         }
 
         int total = kept.size();
-        if (total == 0) {
-            return List.of();
-        }
+        if (total == 0) return List.of();
 
         List<Document> indexed = new ArrayList<>(total);
         for (int i = 0; i < total; i++) {
@@ -284,9 +273,7 @@ public class WebSearchMemoryService {
 
             for (Document m : matches) {
                 Object url = m.getMetadata().get("url");
-                if (sourceUrl != null && sourceUrl.equals(url)) {
-                    return true;
-                }
+                if (sourceUrl != null && sourceUrl.equals(url)) return true;
             }
 
             return true;
@@ -297,14 +284,13 @@ public class WebSearchMemoryService {
     }
 
     // -----------------------------
-    // Parsing (JSON preferred)
+    // Parsing using records (JSON preferred)
     // -----------------------------
 
     private List<WebSearchData> parse(String raw) {
         String trimmed = raw == null ? "" : raw.trim();
         if (trimmed.isEmpty()) return List.of();
 
-        // Preferred: JSON SEARCH_RESULTS from web_search tool
         if (looksLikeJsonSearchResults(trimmed)) {
             return parseJsonSearchResults(trimmed);
         }
@@ -319,8 +305,6 @@ public class WebSearchMemoryService {
     }
 
     /**
-     * Parses JSON output produced by your updated web_search tool.
-     *
      * Expected:
      * {
      *   "type":"SEARCH_RESULTS",
@@ -333,28 +317,22 @@ public class WebSearchMemoryService {
      */
     private List<WebSearchData> parseJsonSearchResults(String json) {
         try {
-            JsonNode root = objectMapper.readTree(json);
+            SearchResultsPayload payload = objectMapper.readValue(json, SearchResultsPayload.class);
 
-            String type = root.path("type").asText("");
-            if (!"SEARCH_RESULTS".equalsIgnoreCase(type)) {
-                // allow missing type if it clearly has results/status
-                if (!root.has("results") || !root.has("status")) return List.of();
-            }
+            if (!payload.isSearchResultsLike()) return List.of();
+            if (!"OK".equalsIgnoreCase(payload.status())) return List.of();
 
-            String status = root.path("status").asText("");
-            if (!"OK".equalsIgnoreCase(status)) return List.of();
-
-            String query = root.path("query").asText("");
-            JsonNode results = root.path("results");
-            if (!results.isArray() || results.isEmpty()) return List.of();
+            String query = safe(payload.query());
+            List<SearchResultItem> results = payload.results() == null ? List.of() : payload.results();
+            if (results.isEmpty()) return List.of();
 
             List<WebSearchData> out = new ArrayList<>();
 
-            for (JsonNode r : results) {
-                String title = r.path("title").asText("");
-                String url = r.path("url").asText("");
-                String snippet = r.path("snippet").asText("");
-                String excerpt = r.path("excerpt").asText("");
+            for (SearchResultItem r : results) {
+                String title = safe(r.title());
+                String url = safe(r.url());
+                String snippet = safe(r.snippet());
+                String excerpt = safe(r.excerpt());
 
                 if (url.isBlank()) continue;
                 if (isAdvertisementUrl(url)) continue;
@@ -374,21 +352,20 @@ public class WebSearchMemoryService {
     }
 
     private String buildEmbedContent(String query, String title, String snippet, String excerpt) {
-        String q = safe(query);
-        String t = safe(title);
-        String sn = safe(snippet);
-        String ex = safe(excerpt);
+        String q = normalizeTimestamps(safe(query));
+        String t = normalizeTimestamps(safe(title));
+        String sn = normalizeTimestamps(safe(snippet));
+        String ex = normalizeTimestamps(safe(excerpt));
 
-        // truncate excerpt to avoid embedding bloat
         if (ex.length() > 2000) ex = ex.substring(0, 2000) + "…";
         if (looksLikeFetchFailure(ex)) ex = "";
 
         StringBuilder sb = new StringBuilder(512);
-//        sb.append("WEB_SEARCH_RESULT\n");
-//        if (!q.isBlank()) sb.append("Query: ").append(q).append('\n');
-//        if (!t.isBlank()) sb.append("Title: ").append(t).append('\n');
-//        if (!sn.isBlank()) sb.append("Snippet: ").append(sn).append('\n');
-//        if (!ex.isBlank()) sb.append("Excerpt: ").append(ex).append('\n');
+
+        // If you want title included in the stored text (helps retrieval), keep these:
+        if (!t.isBlank()) sb.append(t).append('\n');
+        if (!q.isBlank()) sb.append(q).append('\n');
+
         if (!sn.isBlank()) sb.append(sn).append('\n');
         if (!ex.isBlank()) sb.append(ex).append('\n');
 
@@ -410,20 +387,15 @@ public class WebSearchMemoryService {
     }
 
     private String extractDomain(String urlString) {
-        if (urlString == null || urlString.isBlank()) {
-            return "";
-        }
+        if (urlString == null || urlString.isBlank()) return "";
 
         String s = urlString.trim();
-        if (!s.contains("://")) {
-            s = "https://" + s;
-        }
+        if (!s.contains("://")) s = "https://" + s;
 
         try {
             URI uri = new URI(s);
             String host = uri.getHost();
-            if (host == null || host.isBlank()) return "";
-            return host;
+            return (host == null || host.isBlank()) ? "" : host;
         } catch (URISyntaxException e) {
             return "";
         }
@@ -434,19 +406,53 @@ public class WebSearchMemoryService {
 
         String urlLower = url.toLowerCase(Locale.ROOT);
 
-        if (url.startsWith("/y.js") || urlLower.contains("duckduckgo.com/y.js")) {
-            return true;
-        }
-
-        if (AD_PARAMS.matcher(url).find()) {
-            return true;
-        }
+        if (url.startsWith("/y.js") || urlLower.contains("duckduckgo.com/y.js")) return true;
+        if (AD_PARAMS.matcher(url).find()) return true;
 
         return urlLower.contains("ad_click")
                 || urlLower.contains("advertisement")
                 || urlLower.contains("sponsored")
                 || urlLower.contains("promo");
     }
+
+    private static String toJson(Object o) {
+        try {
+            return new ObjectMapper().writeValueAsString(o);
+        } catch (Exception e) {
+            return String.valueOf(o);
+        }
+    }
+
+    // -----------------------------
+    // Records used for parsing tool output
+    // -----------------------------
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record SearchResultsPayload(
+            String type,
+            String query,
+            String status,
+            Integer count,
+            List<SearchResultItem> results,
+            List<String> failedUrls
+    ) {
+        boolean isSearchResultsLike() {
+            // allow missing/odd "type" as long as it smells like the payload
+            if (type == null || type.isBlank()) {
+                return results != null; // minimal
+            }
+            return "SEARCH_RESULTS".equalsIgnoreCase(type);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record SearchResultItem(
+            Integer rank,
+            String title,
+            String url,
+            String snippet,
+            String excerpt
+    ) {}
 
     private record WebSearchData(
             String status,

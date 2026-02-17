@@ -11,29 +11,35 @@ public final class WebSearchChunkMerger {
 
     private WebSearchChunkMerger() {}
 
+    // --- Records (typed output) ---
+
+    public record MergedWebResults(
+            String type,
+            int count,
+            List<MergedWebResultItem> results
+    ) {
+        public static MergedWebResults empty() {
+            return new MergedWebResults("MERGED_WEB_RESULTS", 0, List.of());
+        }
+    }
+
+    public record MergedWebResultItem(
+            int rank,
+            String title,
+            String domain,
+            String url,
+            String content
+    ) {}
+
     /**
-     * Merge chunked Documents into per-article JSON.
-     *
-     * Output:
-     * {
-     *   "type":"MERGED_WEB_RESULTS",
-     *   "count":N,
-     *   "results":[
-     *     {"rank":1,"title":"...","domain":"...","url":"...","content":"..."},
-     *     ...
-     *   ]
-     * }
+     * Merge chunked Documents into per-article typed result.
      */
-    public static String mergeByArticleToJson(List<Document> docs,
-                                              int maxArticles,
-                                              int maxCharsPerArticle) {
+    public static MergedWebResults mergeByArticle(List<Document> docs,
+                                                  int maxArticles,
+                                                  int maxCharsPerArticle) {
 
         if (docs == null || docs.isEmpty()) {
-            return toJson(Map.of(
-                    "type", "MERGED_WEB_RESULTS",
-                    "count", 0,
-                    "results", List.of()
-            ));
+            return MergedWebResults.empty();
         }
 
         // Preserve insertion order (similarity order)
@@ -58,7 +64,7 @@ public final class WebSearchChunkMerger {
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(d);
         }
 
-        List<Map<String, Object>> results = new ArrayList<>();
+        List<MergedWebResultItem> results = new ArrayList<>();
         int rank = 1;
 
         for (List<Document> group : grouped.values()) {
@@ -80,23 +86,28 @@ public final class WebSearchChunkMerger {
                 combined = combined.substring(0, maxCharsPerArticle) + "…";
             }
 
-            Map<String, Object> obj = new LinkedHashMap<>();
-            obj.put("rank", rank++);
-            obj.put("title", title);
-            obj.put("domain", domain);
-            obj.put("url", url);
-            obj.put("content", combined);
-
-            results.add(obj);
+            results.add(new MergedWebResultItem(
+                    rank++,
+                    title,
+                    domain,
+                    url,
+                    combined
+            ));
         }
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("type", "MERGED_WEB_RESULTS");
-        payload.put("count", results.size());
-        payload.put("results", results);
-
-        return toJson(payload);
+        return new MergedWebResults("MERGED_WEB_RESULTS", results.size(), List.copyOf(results));
     }
+
+    /**
+     * Optional: keep JSON boundary if some caller still expects JSON.
+     */
+    public static String mergeByArticleToJson(List<Document> docs,
+                                              int maxArticles,
+                                              int maxCharsPerArticle) {
+        return toJson(mergeByArticle(docs, maxArticles, maxCharsPerArticle));
+    }
+
+    // --- Helpers ---
 
     private static String combineTexts(List<Document> group) {
         StringBuilder sb = new StringBuilder();

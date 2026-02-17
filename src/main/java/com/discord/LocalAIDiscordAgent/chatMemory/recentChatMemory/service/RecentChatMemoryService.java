@@ -1,7 +1,7 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.service;
+package com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.model.RecentChatMemory;
-import com.discord.LocalAIDiscordAgent.chatMemory.repository.RecentChatMemoryRepository;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
@@ -32,16 +33,14 @@ public class RecentChatMemoryService {
 
     public Map<MessageType, List<RecentChatMemory>> sortRecentChatToMap(String username) {
         List<RecentChatMemory> memories = chatRepo.findAllByUsername(username);
+        var partitioned = memories.stream()
+                .filter(m -> m.getType() == USER || m.getType() == ASSISTANT )
+                .collect(Collectors.partitioningBy(
+                        m -> m.getType() == USER
+                ));
         return Map.of(
-                USER, splitMessageTypes(memories, USER),
-                ASSISTANT, splitMessageTypes(memories, ASSISTANT));
-    }
-
-    //----------------------------- SPLITTING LIST BY MESSAGE TYPE ------------------------------------
-    private List<RecentChatMemory> splitMessageTypes(List<RecentChatMemory> memories, MessageType messageType) {
-        return memories.stream()
-                .filter(m -> m.getType() == messageType)
-                .toList();
+                USER, partitioned.get(true),
+                ASSISTANT, partitioned.get(false));
     }
 
     //----------------------------- SAVING TO DB  ------------------------------------

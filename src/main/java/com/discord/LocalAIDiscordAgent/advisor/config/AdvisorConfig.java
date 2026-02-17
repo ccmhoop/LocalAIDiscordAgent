@@ -1,13 +1,14 @@
 package com.discord.LocalAIDiscordAgent.advisor.config;
 
 
-import com.discord.LocalAIDiscordAgent.advisor.advisors.RecentChatMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.advisor.advisors.WebMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.advisor.filters.ChunkMergeFilterWebSearchStore;
-import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
-import com.discord.LocalAIDiscordAgent.chatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor.RecentChatMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.advisor.WebMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.advisors.WebQuestionAnswerAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor.GroupChatMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
-import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -30,18 +31,28 @@ public class AdvisorConfig {
 //            VectorStore vectorStoreChatMemory,
             VectorStore vectorStoreWebSearchMemory,
             ChatMemory webMemory,
-            RecentChatMemoryService recentChatMemoryService
+            RecentChatMemoryService recentChatMemoryService,
+            GroupChatMemoryService groupChatMemoryAdvisor,
+            WebSearchMemoryService webSearchMemoryService
     ) {
         return List.of(
                 recentChatMemoryAdvisor(recentChatMemoryService),
+                groupChatMemoryAdvisor(groupChatMemoryAdvisor),
 //                longTermMemoryAdvisor(vectorStoreChatMemory),
-//                webSearchAdvisor(vectorStoreWebSearchMemory),
-                webMemoryAdvisor(webMemory));
+                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService),
+                webMemoryAdvisor(webMemory)
+        );
     }
 
     public RecentChatMemoryAdvisor recentChatMemoryAdvisor(RecentChatMemoryService recentChatMemoryService){
         return RecentChatMemoryAdvisor.builder(recentChatMemoryService)
                 .order(0)
+                .build();
+    }
+
+    public GroupChatMemoryAdvisor groupChatMemoryAdvisor (GroupChatMemoryService service){
+        return GroupChatMemoryAdvisor.builder(service)
+                .order(1)
                 .build();
     }
 
@@ -52,15 +63,14 @@ public class AdvisorConfig {
                 .build();
     }
 
-    public QuestionAnswerAdvisor webSearchAdvisor(VectorStore vectorStoreWebSearchMemory) {
-        return QuestionAnswerAdvisor.builder(new ChunkMergeFilterWebSearchStore(vectorStoreWebSearchMemory))
+    public WebQuestionAnswerAdvisor webSearchAdvisor(VectorStore vectorStoreWebSearchMemory, WebSearchMemoryService webSearchMemoryService) {
+        return WebQuestionAnswerAdvisor.builder( webSearchMemoryService, vectorStoreWebSearchMemory)
                 .order(2)
                 .searchRequest(SearchRequest.builder()
-                        .topK(1)
+                        .topK(2)
                         .similarityThreshold(0.70)
                         .filterExpression("tier == 'WEB_SEARCH'")
                         .build())
-                .promptTemplate(AdvisorTemplates.WEB_SEARCH_QUESTION_ANSWER)
                 .build();
     }
 

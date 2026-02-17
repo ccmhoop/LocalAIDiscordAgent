@@ -1,5 +1,6 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.model;
+package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model;
 
+import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.ai.chat.messages.MessageType;
@@ -9,9 +10,10 @@ import java.time.LocalDateTime;
 @Entity
 @Builder
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class RecentChatMemory{
+public class GroupChatMemory implements ChatMemoryINTF {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,4 +27,3 @@ public class RecentChatMemory{
     private LocalDateTime timestamp;
 
 }
-

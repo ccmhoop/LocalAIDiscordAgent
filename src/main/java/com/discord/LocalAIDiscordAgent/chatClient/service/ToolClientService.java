@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
+import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.tools.webSearch.service.WebSearchMemoryService;
 import com.discord.LocalAIDiscordAgent.tools.webSearch.tools.DirectLinkTool;
 import com.discord.LocalAIDiscordAgent.tools.webSearch.tools.WebSearchTool;
@@ -43,12 +44,12 @@ public class ToolClientService {
         this.chatModel = ollamaQwenModelConfig;
     }
 
-    public String generateToolResponse(String userMessage, Map<String, String> metadata, boolean isWebSearch) {
+    public String generateToolResponse(String userMessage, Map<DiscDataKey, String> discDataMap, boolean isWebSearch) {
 
-        String conversationId = ChatClientHelpers.buildMetaDataConversationId(metadata);
+        String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
 
         try {
-            ChatResponse chatResponse = toolChatResponse(metadata.get("username"), userMessage, isWebSearch);
+            ChatResponse chatResponse = toolChatResponse(discDataMap.get(DiscDataKey.USERNAME), userMessage, isWebSearch);
 
             return ChatClientHelpers.extractOutputTextAsString(chatResponse);
 

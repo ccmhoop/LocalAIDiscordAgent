@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
+import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
@@ -19,6 +20,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 
 @Slf4j
 @Component
@@ -56,16 +59,16 @@ public abstract class MessageListener {
 
                     String finalContent = content;
 
-                    Map<String, String> metadata = Map.of("username", username, "guildId", guildId, "channelId", channelId);
+                    Map<DiscDataKey, String> discDataMap = Map.of(USERNAME, username, GUILD_ID, guildId, CHANNEL_ID, channelId);
 
                     Mono<String> responseMono =
                             Mono.fromCallable(() -> {
                                         if (toolClientService.shouldUseWebSearch(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, metadata, true);
+                                            return toolClientService.generateToolResponse(finalContent, discDataMap, true);
                                         } else if (toolClientService.shouldUseDirectLink(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, metadata, false);
+                                            return toolClientService.generateToolResponse(finalContent, discDataMap, false);
                                         } else {
-                                            return chatClientService.generateScottishResponse(finalContent, metadata);
+                                            return chatClientService.generateScottishResponse(finalContent, discDataMap);
                                         }
                                     })
                                     .subscribeOn(Schedulers.boundedElastic())

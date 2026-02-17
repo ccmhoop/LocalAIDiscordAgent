@@ -27,4 +27,5 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
     public Mono<Void> execute(MessageCreateEvent event) {
         return processCommandAI(event.getMessage(), chatClientService, toolClientService);
     }
+
 }

@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.jdbcDialects;
+package com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.jdbcDialects;
 
 import lombok.NonNull;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepositoryDialect;

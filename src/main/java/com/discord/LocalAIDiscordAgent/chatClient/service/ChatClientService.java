@@ -1,7 +1,8 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
-import com.discord.LocalAIDiscordAgent.chatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessChatClient;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -15,43 +16,35 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
+import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.USERNAME;
 
 @Slf4j
 @Service
 public class ChatClientService {
 
     private final ChatClient chatClient;
-    private final RecentChatMemoryService recentChatMemoryService;
+    private final ProcessChatClient process;
 
-    public ChatClientService(ChatClient advisorChatClient, RecentChatMemoryService recentChatMemoryService) {
+    public ChatClientService(ChatClient advisorChatClient, ProcessChatClient processChatClient) {
         this.chatClient = advisorChatClient;
-        this.recentChatMemoryService = recentChatMemoryService;
+        this.process = processChatClient;
     }
 
-    public String generateScottishResponse(String userMessage, Map<String, String> metadata) {
-
-        String conversationId = ChatClientHelpers.buildMetaDataConversationId(metadata);
-
+    public String generateScottishResponse(String userMessage, Map<DiscDataKey, String> discDataMap) {
+        String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
         try {
-            ChatResponse chatResponse =
-                    chatClient.prompt()
-                            .advisors(a ->
-                                    a.param(ChatMemory.CONVERSATION_ID, metadata.get("username"))
-                            )
-                            .user(userMessage)
-                            .call()
-                            .chatResponse();
 
-            String extractedResponse = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 
-            log.debug("Ollama response (conversationId={}, extractedResponse={}): ", conversationId, extractedResponse);
+            ChatResponse chatResponse = callLLM(userMessage, discDataMap);
+            String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 
-            List<Message> messages =  List.of(new UserMessage(userMessage), new AssistantMessage(extractedResponse));
+            log.debug("Ollama response (conversationId={}, extractedResponse={}): ", conversationId, assistantMessage);
 
-            recentChatMemoryService.processInteraction(conversationId, metadata.get("username"), messages);
+            List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
 
-            return extractedResponse;
+            process.saveInteraction(conversationId, discDataMap.get(USERNAME), messages);
 
+            return assistantMessage;
         } catch (Exception e) {
             log.error("Ollama error (conversationId={}): {}",
                     conversationId,
@@ -60,6 +53,16 @@ public class ChatClientService {
             );
             return "I had a problem generating a response. Please try again.";
         }
+    }
+
+    private ChatResponse callLLM(String userMessage, Map<DiscDataKey, String> discDataMap) {
+        return chatClient.prompt()
+                .advisors(a ->
+                        a.param(ChatMemory.CONVERSATION_ID, discDataMap.get(USERNAME))
+                )
+                .user(userMessage)
+                .call()
+                .chatResponse();
     }
 
 }

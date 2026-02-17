@@ -1,15 +1,14 @@
 package com.discord.LocalAIDiscordAgent.chatClient.helpers;
 
 import com.discord.LocalAIDiscordAgent.chatClient.exceptions.BlankModelResponseException;
+import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import org.springframework.ai.chat.model.ChatResponse;
 
 import java.util.Map;
 
-public final class ChatClientHelpers {
+import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 
-    private static final String USERNAME = "username";
-    private static final String GUILD_ID = "guildId";
-    private static final String CHANNEL_ID = "channelId";
+public final class ChatClientHelpers {
 
     public static String extractOutputTextAsString(ChatResponse chatResponse) {
         if (chatResponse == null
@@ -21,10 +20,10 @@ public final class ChatClientHelpers {
         return chatResponse.getResult().getOutput().getText().trim();
     }
 
-    public static String buildMetaDataConversationId(Map<String, String> metadata) {
-        String safeGuild = (metadata.get(GUILD_ID).isEmpty()) ? "dm" : metadata.get(GUILD_ID);
-        String safeChannel = (metadata.get(CHANNEL_ID).isEmpty()) ? "dm" : metadata.get(CHANNEL_ID);
-        String safeUser = (metadata.get(USERNAME).isEmpty()) ? "unknown-user" : metadata.get(USERNAME);
+    public static String buildConversationId(Map<DiscDataKey, String> discDataMap) {
+        String safeGuild = (discDataMap.get(GUILD_ID).isEmpty()) ? "dm" : discDataMap.get(GUILD_ID);
+        String safeChannel = (discDataMap.get(CHANNEL_ID).isEmpty()) ? "dm" : discDataMap.get(CHANNEL_ID);
+        String safeUser = (discDataMap.get(USERNAME).isEmpty()) ? "unknown-user" : discDataMap.get(USERNAME);
         return safeGuild + ":" + safeChannel + ":" + safeUser;
     }
 }

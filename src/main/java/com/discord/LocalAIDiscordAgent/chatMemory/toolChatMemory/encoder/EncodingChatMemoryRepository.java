@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.encoder;
+package com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.encoder;
 
 import lombok.NonNull;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;

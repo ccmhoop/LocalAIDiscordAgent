@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.advisor.advisors;
+package com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.advisor;
 
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import lombok.Getter;

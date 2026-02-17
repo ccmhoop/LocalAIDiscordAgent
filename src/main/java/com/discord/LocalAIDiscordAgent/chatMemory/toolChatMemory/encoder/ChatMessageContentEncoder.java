@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.encoder;
+package com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.encoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
