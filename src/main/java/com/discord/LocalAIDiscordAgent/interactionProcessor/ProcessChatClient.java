@@ -19,8 +19,8 @@ public class ProcessChatClient {
     }
 
     public void saveInteraction(String conversationId, String username, List<Message> messages){
-        recentService.processInteraction(conversationId, username, messages);
-        groupService.processInteraction(conversationId, username, messages);
+        recentService.saveAndTrim(conversationId, username, messages);
+        groupService.saveAndTrim(conversationId, username, messages);
     }
 
 }

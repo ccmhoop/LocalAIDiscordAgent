@@ -74,13 +74,10 @@ public class AdvisorConfig {
                 .build();
     }
 
-
     public WebMemoryAdvisor webMemoryAdvisor (ChatMemory webMemory){
         return WebMemoryAdvisor.builder(webMemory)
                 .order(3)
                 .build();
     }
-
-
 
 }

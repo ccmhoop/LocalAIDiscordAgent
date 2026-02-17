@@ -8,9 +8,9 @@ import org.springframework.ai.chat.messages.MessageType;
 import java.time.LocalDateTime;
 
 @Entity
-@Builder
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class GroupChatMemory implements ChatMemoryINTF {

@@ -40,7 +40,7 @@ public final class RecentChatMemoryAdvisor extends XmlAdvisor<RecentChatMemory> 
     @NonNull
     public ChatClientRequest before(ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
         String conversationId = this.getConversationId(chatClientRequest.context(), this.defaultConversationId);
-        Map<MessageType, List<RecentChatMemory>> chatMemories = service.sortRecentChatToMap(conversationId);
+        Map<MessageType, List<RecentChatMemory>> chatMemories = service.getChatMemoryAsMap(conversationId);
         if (chatMemories.isEmpty()) {
             return chatClientRequest;
         }

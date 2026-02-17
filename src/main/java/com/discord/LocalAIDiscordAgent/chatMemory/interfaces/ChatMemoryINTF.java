@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.interfaces;
 
+import com.discord.LocalAIDiscordAgent.webSearch.advisor.WebQuestionAnswerAdvisor.Builder;
 import org.springframework.ai.chat.messages.MessageType;
 
 import java.time.LocalDateTime;
@@ -16,5 +17,6 @@ public interface ChatMemoryINTF {
     void setContent(String content);
     void setType(MessageType type);
     void setTimestamp(LocalDateTime timestamp);
+
 
 }

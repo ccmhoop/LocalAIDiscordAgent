@@ -39,7 +39,7 @@ public class GroupChatMemoryAdvisor extends XmlAdvisor<GroupChatMemory> implemen
     @Override
     @NonNull
     public ChatClientRequest before(@NonNull ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
-        Map<MessageType, List<GroupChatMemory>> chatMemories = service.getGroupChatToMap();
+        Map<MessageType, List<GroupChatMemory>> chatMemories = service.getChatMemoryAsMap();
         if (chatMemories.isEmpty()) {
             return chatClientRequest;
         }
