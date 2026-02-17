@@ -81,7 +81,6 @@ public class WebQuestionAnswerAdvisor implements BaseAdvisor {
 
     private String buildPromptTemplate(String query) {
 
-        System.out.println("Query: " + query);
         WebSearchChunkMerger.MergedWebResults merged = service.searchExistingContent(query);
 
         StringBuilder sb = new StringBuilder();

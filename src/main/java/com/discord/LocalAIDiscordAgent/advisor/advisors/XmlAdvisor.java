@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 
@@ -12,12 +11,11 @@ import java.util.Map;
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
 
-public class XmlAdvisor<T extends ChatMemoryINTF>  {
-
-    private final String template;
+public class XmlAdvisor<T extends ChatMemoryINTF> {
 
     @Getter
     private String augmentedSystemMsg;
+    private final String template;
 
     public XmlAdvisor(PromptTemplate template) {
         this.template = template.getTemplate();
@@ -73,25 +71,15 @@ public class XmlAdvisor<T extends ChatMemoryINTF>  {
 
     private String createMessagePairBlock(String userId, T userChat, T assistantChat) {
         return """
-            <message_pair>
-            \t<note>
-            \t\t<date>%s</date>
-            \t\t<to>assistant</to>
-            \t\t<from>%s</from>
-            \t\t<body>
-            %s
-            \t\t</body>
-            \t</note>
-            \t<note>
-            \t\t<date>%s</date>
-            \t\t<to>%s</to>
-            \t\t<from>assistant</from>
-            \t\t<body>
-            %s
-            \t\t</body>
-            \t</note>
-            </message_pair>
-            """
+                <message_pair>
+                \t<message date="%s" from="%s" to="assistant">
+                %s
+                \t</message>
+                \t<message date="%s" from="assistant" to="%s">
+                %s
+                \t</message>
+                </message_pair>
+                """
                 .formatted(
                         xml(userChat.getTimestamp()),
                         xml(userId),
@@ -108,7 +96,7 @@ public class XmlAdvisor<T extends ChatMemoryINTF>  {
         StringBuilder out = new StringBuilder();
         for (String line : lines) {
             if (line.isBlank()) continue;
-            out.append("\t\t\t")
+            out.append("\t\t")
                     .append(xml(line.stripLeading()))
                     .append("\n");
         }

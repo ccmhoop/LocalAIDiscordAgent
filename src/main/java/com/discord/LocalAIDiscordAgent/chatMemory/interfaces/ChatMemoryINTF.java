@@ -1,6 +1,5 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.interfaces;
 
-import com.discord.LocalAIDiscordAgent.webSearch.advisor.WebQuestionAnswerAdvisor.Builder;
 import org.springframework.ai.chat.messages.MessageType;
 
 import java.time.LocalDateTime;

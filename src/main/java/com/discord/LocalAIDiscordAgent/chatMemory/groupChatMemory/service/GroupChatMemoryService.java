@@ -23,9 +23,6 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 @Slf4j
 @Service
 public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
-//
-//    @Value("${group.chat.memory.message.limit}")
-//    private int messageLimit;
 
     @Value("${group.chat.time.window.minutes}")
     private long minutesWindow;

@@ -33,8 +33,6 @@ public class ChatClientService {
     public String generateScottishResponse(String userMessage, Map<DiscDataKey, String> discDataMap) {
         String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
         try {
-
-
             ChatResponse chatResponse = callLLM(userMessage, discDataMap);
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 

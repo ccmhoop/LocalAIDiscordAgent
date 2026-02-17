@@ -15,7 +15,8 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:30b")
+                                .model("qwen3:30b-thinking")
+                                .enableThinking()
                                 .temperature(1.5)
                                 .numCtx(32768)      // context window (input+output+history)
                                 .numPredict(4096)   // max generated tokens
