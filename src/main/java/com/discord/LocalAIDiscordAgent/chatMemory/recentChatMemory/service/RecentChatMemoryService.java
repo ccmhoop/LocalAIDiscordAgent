@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,7 +55,7 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 .username(username)
                 .content(message.getText())
                 .type(message.getMessageType())
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
                 .build();
     }
 

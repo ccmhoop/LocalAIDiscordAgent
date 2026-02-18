@@ -24,6 +24,8 @@ public class RecentChatMemory implements ChatMemoryINTF {
     private String content;
     @Enumerated(EnumType.STRING)
     private MessageType type;
+
+    @Column(precision = 0)
     private LocalDateTime timestamp;
 
 }

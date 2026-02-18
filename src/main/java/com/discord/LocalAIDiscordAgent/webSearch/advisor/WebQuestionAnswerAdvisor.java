@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.webSearch.advisor;
 
+import com.discord.LocalAIDiscordAgent.advisor.advisors.QwenVectorAdvisor;
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.webSearch.helpers.WebSearchChunkMerger;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
@@ -25,7 +26,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.*;
 
 @Getter
-public class WebQuestionAnswerAdvisor implements BaseAdvisor {
+public class WebQuestionAnswerAdvisor extends QwenVectorAdvisor implements BaseAdvisor {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -44,6 +45,7 @@ public class WebQuestionAnswerAdvisor implements BaseAdvisor {
     private final int order;
 
     WebQuestionAnswerAdvisor(WebSearchMemoryService webSearchMemoryService, VectorStore vectorStore, SearchRequest searchRequest, @Nullable PromptTemplate promptTemplate, @Nullable Scheduler scheduler, int order) {
+        super(AdvisorTemplates.WEB_SEARCH_QUESTION_ANSWER);
         this.service = webSearchMemoryService;
         Assert.notNull(vectorStore, "vectorStore cannot be null");
         Assert.notNull(searchRequest, "searchRequest cannot be null");
@@ -61,11 +63,16 @@ public class WebQuestionAnswerAdvisor implements BaseAdvisor {
     @Override
     @NonNull
     public ChatClientRequest before(ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
-        SearchRequest searchRequestToUse = SearchRequest.from(this.searchRequest).query(chatClientRequest.prompt().getUserMessage().getText()).filterExpression(this.doGetFilterExpression(chatClientRequest.context())).build();
+//        SearchRequest searchRequestToUse = SearchRequest.from(this.searchRequest).query(chatClientRequest.prompt().getUserMessage().getText()).filterExpression(this.doGetFilterExpression(chatClientRequest.context())).build();
         String userMessage = chatClientRequest.prompt().getUserMessage().getText();
-        SystemMessage previousSystemMsg = chatClientRequest.prompt().getSystemMessage();
-        String newSystemMessage = previousSystemMsg.getText() + buildPromptTemplate(userMessage);
-        return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(newSystemMessage)).build();
+        WebSearchChunkMerger.MergedWebResults merged = service.searchExistingContent(userMessage);
+        if (merged == null || merged.count() == 0) {
+            return chatClientRequest;
+        }
+        augmentSystemMsg(merged, chatClientRequest.prompt().getSystemMessage().getText());
+        System.out.println(getAugmentedSystemMsg());
+
+        return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(getAugmentedSystemMsg())).build();
     }
 
     @Override
@@ -79,49 +86,6 @@ public class WebQuestionAnswerAdvisor implements BaseAdvisor {
         return context.containsKey("qa_filter_expression") && StringUtils.hasText(context.get("qa_filter_expression").toString()) ? (new FilterExpressionTextParser()).parse(context.get("qa_filter_expression").toString()) : this.searchRequest.getFilterExpression();
     }
 
-    private String buildPromptTemplate(String query) {
-
-        WebSearchChunkMerger.MergedWebResults merged = service.searchExistingContent(query);
-
-        StringBuilder sb = new StringBuilder();
-
-        if (merged == null || merged.count() == 0) {return ""; }
-
-        for (var item : merged.results()) {
-            sb.append(createNotes(item.rank(),item.content()));
-        }
-
-        return PromptTemplate.builder()
-                .template(AdvisorTemplates.WEB_SEARCH_QUESTION_ANSWER.getTemplate())
-                .variables(Map.of(
-                        "web_notes", sb.toString().stripTrailing()
-                ))
-                .build()
-                .render();
-    }
-
-    private String createNotes(int rank, String content) {
-        return """
-                <note>
-                \t<rank>%d</rank>
-                \t<body>
-                %s
-                \t</body>
-                /<note>
-                """
-                .formatted(rank,indentBlock(content));
-    }
-
-    private static String indentBlock(String s) {
-        if (s == null || s.isBlank()) return "";
-        String[] lines = s.split("\\R", -1);
-        StringBuilder out = new StringBuilder();
-        for (String line : lines) {
-            if (line.isBlank()) continue;
-            out.append("\t\t").append(line.stripLeading()).append("\n");
-        }
-        return out.toString().stripTrailing();
-    }
 
     public static final class Builder {
         private final VectorStore vectorStore;

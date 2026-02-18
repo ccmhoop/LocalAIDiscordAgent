@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.repository.GroupChatMemoryRepository;
-import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +47,11 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
     @Override
     public Map<MessageType, List<GroupChatMemory>> sortAndMap(List<GroupChatMemory> memories) {
         LocalDateTime timeWindow = LocalDateTime.now().minusMinutes(this.minutesWindow);
+
+        if (memories.size() <=2){
+            return Collections.emptyMap();
+        }
+
         var partitioned = memories.stream()
                 .filter(m -> (m.getType() == USER || m.getType() == ASSISTANT) && m.getTimestamp().isAfter(timeWindow))
                 .collect(Collectors.partitioningBy(
@@ -70,7 +75,7 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
                 .username(username)
                 .content(message.getText())
                 .type(message.getMessageType())
-                .timestamp(LocalDateTime.now())
+                .timestamp(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
                 .build();
     }
 

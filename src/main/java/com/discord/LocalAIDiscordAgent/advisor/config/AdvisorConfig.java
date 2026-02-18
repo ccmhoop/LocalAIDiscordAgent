@@ -39,8 +39,8 @@ public class AdvisorConfig {
                 recentChatMemoryAdvisor(recentChatMemoryService),
                 groupChatMemoryAdvisor(groupChatMemoryAdvisor),
 //                longTermMemoryAdvisor(vectorStoreChatMemory),
-                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService),
-                webMemoryAdvisor(webMemory)
+                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService)
+//                webMemoryAdvisor(webMemory)
         );
     }
 

@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor;
 
 import java.util.*;
 
-import com.discord.LocalAIDiscordAgent.advisor.advisors.XmlAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.advisors.QwenAdvisor;
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
@@ -19,7 +19,7 @@ import reactor.core.scheduler.Scheduler;
 
 
 @Getter
-public final class RecentChatMemoryAdvisor extends XmlAdvisor<RecentChatMemory> implements BaseChatMemoryAdvisor {
+public final class RecentChatMemoryAdvisor extends QwenAdvisor<RecentChatMemory> implements BaseChatMemoryAdvisor {
 
     private final String defaultConversationId;
     private final RecentChatMemoryService service;

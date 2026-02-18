@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor;
 
-import com.discord.LocalAIDiscordAgent.advisor.advisors.XmlAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.advisors.QwenAdvisor;
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
-public class GroupChatMemoryAdvisor extends XmlAdvisor<GroupChatMemory> implements BaseChatMemoryAdvisor {
+public class GroupChatMemoryAdvisor extends QwenAdvisor<GroupChatMemory> implements BaseChatMemoryAdvisor {
 
     private final String defaultConversationId;
     private final GroupChatMemoryService service;
