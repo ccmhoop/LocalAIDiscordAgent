@@ -3,7 +3,10 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.UserService;
 import discord4j.common.util.Snowflake;
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +33,7 @@ public abstract class MessageListener {
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
 
-    public Mono<Void> processCommandAI(Message eventMessage, ChatClientService chatClientService, ToolClientService toolClientService) {
+    public Mono<Void> processCommandAI(Message eventMessage, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService) {
         return Mono.just(eventMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .flatMap(message -> {
@@ -56,23 +59,50 @@ public abstract class MessageListener {
                     String username = message.getAuthor().map(User::getUsername).orElse("unknown-user");
                     String guildId = message.getGuildId().map(Snowflake::asString).orElse("dm");
                     String channelId = message.getChannelId().asString();
+                    String userGlobalName = message.getAuthor().get().getGlobalName().orElse("unknown-user");
+                    String userId = message.getAuthor().get().getId().asString().trim();
+                    String nickname = message.getAuthorAsMember()
+                            .map(Member::getDisplayName)
+                            .blockOptional()
+                            .orElseGet(() -> message.getAuthor().map(User::getUsername).orElse("unknown"));
+
+                    System.out.println(nickname);
 
                     String finalContent = content;
 
-                    Map<DiscDataKey, String> discDataMap = Map.of(USERNAME, username, GUILD_ID, guildId, CHANNEL_ID, channelId);
+                    Map<DiscDataKey, String> discDataMap = Map.of(
+                            GUILD_ID, guildId,
+                            CHANNEL_ID, channelId,
+                            USER_ID, userId,
+                            USERNAME, username,
+                            USER_GLOBAL, userGlobalName,
+                            SERVER_NICKNAME, nickname
+                    );
+
+
+                    UserEntity user = userService.getUser(discDataMap);
+
+                    if (user == null) {
+                        user = userService.buildUser(discDataMap);
+                        userService.saveUser(user);
+                    }
+
+                    UserEntity finalUser = user;
 
                     Mono<String> responseMono =
                             Mono.fromCallable(() -> {
                                         if (toolClientService.shouldUseWebSearch(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, discDataMap, true);
+                                            return toolClientService.generateToolResponse(finalContent, discDataMap, finalUser, true);
                                         } else if (toolClientService.shouldUseDirectLink(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, discDataMap, false);
+                                            return toolClientService.generateToolResponse(finalContent, discDataMap, finalUser, false);
                                         } else {
-                                            return chatClientService.generateScottishResponse(finalContent, discDataMap);
+                                            return chatClientService.generateLLMResponse(finalContent, discDataMap, finalUser);
                                         }
                                     })
                                     .subscribeOn(Schedulers.boundedElastic())
                                     .cache();
+
+
 
                     return message.getChannel()
                             .flatMap(channel ->
@@ -92,8 +122,8 @@ public abstract class MessageListener {
                                             })
                                             .then()
                             );
-                })
-                .then();
+
+                }).then();
     }
 
     public Mono<Void> processCommand(Message eventMessage) {

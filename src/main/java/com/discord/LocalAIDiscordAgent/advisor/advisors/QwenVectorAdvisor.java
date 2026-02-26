@@ -1,12 +1,13 @@
 package com.discord.LocalAIDiscordAgent.advisor.advisors;
 
+import com.discord.LocalAIDiscordAgent.advisor.helpers.AdvisorHelper;
 import com.discord.LocalAIDiscordAgent.webSearch.helpers.WebSearchChunkMerger.MergedWebResults;
 import lombok.Getter;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 
 import java.util.Map;
 
-public class QwenVectorAdvisor extends AbstractQwenAdvisor {
+public class QwenVectorAdvisor {
 
     @Getter
     private String augmentedSystemMsg;
@@ -31,18 +32,16 @@ public class QwenVectorAdvisor extends AbstractQwenAdvisor {
                 .render();
     }
 
-
     private String createDataBlock(int rank, String content) {
         return """
                 {
-                    similarity.score: "%s",
-                    content: "%s",
+                similarity.score: "%d",
+                content: "%s",
                 },
                 """.formatted(
                 rank,
-                indentBlock(content)
+                AdvisorHelper.indentLines(content, 0)
         ).stripTrailing();
     }
-
 
 }

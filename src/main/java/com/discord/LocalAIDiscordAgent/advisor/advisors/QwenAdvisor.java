@@ -11,7 +11,7 @@ import java.util.Map;
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
 
-public class QwenAdvisor<T extends ChatMemoryINTF> extends AbstractQwenAdvisor {
+public abstract class QwenAdvisor<T extends ChatMemoryINTF>{
 
     @Getter
     private String augmentedSystemMsg;
@@ -21,6 +21,10 @@ public class QwenAdvisor<T extends ChatMemoryINTF> extends AbstractQwenAdvisor {
         this.template = template.getTemplate();
     }
 
+    public abstract String chatMemoryBody(T user, String chatMemoryData);
+    public abstract String chatMemoryData(T userMsg, T assistantMsg);
+
+
     public void augmentSystemMsg(Map<MessageType, List<T>> chatMemories, String beforeSystemMsg) {
         this.augmentedSystemMsg = beforeSystemMsg + PromptTemplate.builder()
                 .template(template)
@@ -29,6 +33,8 @@ public class QwenAdvisor<T extends ChatMemoryINTF> extends AbstractQwenAdvisor {
                 ))
                 .build()
                 .render();
+
+        System.out.println(augmentedSystemMsg);
     }
 
     private String buildChatData(Map<MessageType, List<T>> chatMemories) {
@@ -57,30 +63,16 @@ public class QwenAdvisor<T extends ChatMemoryINTF> extends AbstractQwenAdvisor {
         }
 
         StringBuilder sb = new StringBuilder();
+
         for (int i = 0; i < size; i++) {
-            sb.append(createDataBlock(
-                    userList.get(i).getUsername(),
-                    userList.get(i),
-                    assistantList.get(i)
-            )).append(i == size - 1 ? "" : "\n");
+            sb.append(
+                    chatMemoryData(
+                            userList.get(i),
+                            assistantList.get(i)
+                    )
+            );
         }
 
-        return sb.substring(0, sb.length() - 1).stripTrailing();
-    }
-
-    private String createDataBlock(String userId, T userChat, T assistantChat) {
-        return """
-                {
-                    date: "%s",
-                    user.name: "%s",
-                    user.sent: "%s",
-                    assistant.respond: respond: "%s",
-                },
-                """.formatted(
-                indentBlock(userChat.getTimestamp().toString()),
-                indentBlock(userId),
-                indentBlock(userChat.getContent()),
-                indentBlock(assistantChat.getContent())
-        ).stripTrailing();
+        return chatMemoryBody(userList.getFirst(), sb.toString());
     }
 }

@@ -3,6 +3,7 @@ package com.discord.LocalAIDiscordAgent.chatClient.service;
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessChatClient;
+import com.discord.LocalAIDiscordAgent.user.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.ai.chat.client.ChatClient;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.USERNAME;
+import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 
 @Slf4j
 @Service
@@ -30,22 +31,23 @@ public class ChatClientService {
         this.process = processChatClient;
     }
 
-    public String generateScottishResponse(String userMessage, Map<DiscDataKey, String> discDataMap) {
-        String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
+    public String generateLLMResponse(String userMessage, Map<DiscDataKey, String> discDataMap, UserEntity userEntity) {
         try {
             ChatResponse chatResponse = callLLM(userMessage, discDataMap);
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
+            log.debug("Ollama response (extractedResponse={}): ",  assistantMessage);
 
-            log.debug("Ollama response (conversationId={}, extractedResponse={}): ", conversationId, assistantMessage);
-
-            List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
-
-            process.saveInteraction(conversationId, discDataMap.get(USERNAME), messages);
-
+            try {
+                List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
+                process.saveInteraction(discDataMap, messages, userEntity);
+                log.debug("Successfully saved chat interaction for user: {}", discDataMap.get(USER_ID));
+            } catch (Exception saveException) {
+                log.error("Failed to save chat memory for user: {} - Error: {}",
+                    discDataMap.get(USER_ID), saveException.getMessage(), saveException);
+            }
             return assistantMessage;
         } catch (Exception e) {
-            log.error("Ollama error (conversationId={}): {}",
-                    conversationId,
+            log.error("Ollama error ({}",
                     e.getMessage(),
                     e
             );
@@ -54,9 +56,16 @@ public class ChatClientService {
     }
 
     private ChatResponse callLLM(String userMessage, Map<DiscDataKey, String> discDataMap) {
+
+        Map<String, Object> advisorParams = Map.of(
+                "chat_memory_conversation_id", discDataMap.get(USER_ID),
+                "guild_id", discDataMap.get(GUILD_ID)
+        );
+
+
         return chatClient.prompt()
                 .advisors(a ->
-                        a.param(ChatMemory.CONVERSATION_ID, discDataMap.get(USERNAME))
+                        a.params(advisorParams)
                 )
                 .user(userMessage)
                 .call()

@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor;
 
 import com.discord.LocalAIDiscordAgent.advisor.advisors.QwenAdvisor;
+import com.discord.LocalAIDiscordAgent.advisor.helpers.AdvisorHelper;
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
@@ -40,7 +41,9 @@ public class GroupChatMemoryAdvisor extends QwenAdvisor<GroupChatMemory> impleme
     @Override
     @NonNull
     public ChatClientRequest before(@NonNull ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
-        Map<MessageType, List<GroupChatMemory>> chatMemories = service.getChatMemoryAsMap();
+        Map<String, Object> context = chatClientRequest.context();
+        String guildId = context.get("guild_id").toString();
+        Map<MessageType, List<GroupChatMemory>> chatMemories = service.getChatMemoryAsMap(guildId);
         if (chatMemories.isEmpty()) {
             return chatClientRequest;
         }
@@ -52,6 +55,37 @@ public class GroupChatMemoryAdvisor extends QwenAdvisor<GroupChatMemory> impleme
     @NonNull
     public ChatClientResponse after(@NonNull ChatClientResponse chatClientResponse, @NonNull AdvisorChain advisorChain) {
         return chatClientResponse;
+    }
+
+    @Override
+    public String chatMemoryBody(GroupChatMemory user, String chatMemoryData) {
+        return chatMemoryData.substring(0, chatMemoryData.length() - 2);
+    }
+
+    @Override
+    public String chatMemoryData(GroupChatMemory user, GroupChatMemory assistant) {
+        String dateTime = user.getTimestamp().toString();
+        return """
+                {
+                "user.globalName": "%s",
+                "user.nickname": "%s",
+                "user.mention": "<@%s>",
+                "message.data":{
+                    "date": "%s",
+                    "time": "%s",
+                    "user.sent": "%s",
+                    "assistant.respond": respond: "%s"
+                    }
+                },
+                """.formatted(
+                user.getUser().getUserGlobal(),
+                user.getUser().getServerNickname(),
+                user.getUser().getUserId(),
+                dateTime.substring(0, dateTime.indexOf("T")),
+                dateTime.substring(dateTime.indexOf("T") + 1),
+                AdvisorHelper.indentLines(assistant.getContent(),0),
+                AdvisorHelper.indentLines(assistant.getContent(),0)
+        );
     }
 
     public static Builder builder(GroupChatMemoryService service) {

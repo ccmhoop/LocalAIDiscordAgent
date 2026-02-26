@@ -1,6 +1,8 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessToolClient;
+import com.discord.LocalAIDiscordAgent.user.UserEntity;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.tools.DirectLinkTool;
 import com.discord.LocalAIDiscordAgent.webSearch.tools.WebSearchTool;
@@ -30,28 +32,38 @@ import java.util.*;
 public class ToolClientService {
 
     private final WebSearchMemoryService webSearchMemoryService;
-    private final ChatMemory webMemory;
     private final ChatModel chatModel;
+    private final ProcessToolClient process;
 
 
     public ToolClientService(
             OllamaChatModel ollamaQwenModelConfig,
             WebSearchMemoryService webSearchMemoryService,
-            ChatMemory webMemory
+            ProcessToolClient process
     ) {
-        this.webMemory = webMemory;
         this.webSearchMemoryService = webSearchMemoryService;
         this.chatModel = ollamaQwenModelConfig;
+        this.process = process;
     }
 
-    public String generateToolResponse(String userMessage, Map<DiscDataKey, String> discDataMap, boolean isWebSearch) {
+    public String generateToolResponse(String userMessage, Map<DiscDataKey, String> discDataMap, UserEntity user, boolean isWebSearch) {
 
         String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
 
         try {
             ChatResponse chatResponse = toolChatResponse(discDataMap.get(DiscDataKey.USERNAME), userMessage, isWebSearch);
+            String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 
-            return ChatClientHelpers.extractOutputTextAsString(chatResponse);
+            try {
+                List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
+                process.saveInteraction(discDataMap, messages, user);
+                log.debug("Successfully saved chat interaction for user: {}", discDataMap.get(DiscDataKey.USER_ID));
+            }catch (Exception saveException) {
+                log.error("Failed to save chat memory for user: {} - Error: {}",
+                    discDataMap.get(DiscDataKey.USER_ID), saveException.getMessage(), saveException);
+            }
+
+            return assistantMessage;
 
         } catch (Exception e) {
             log.error("Ollama error (conversationId={}): {}",
@@ -87,14 +99,6 @@ public class ToolClientService {
 
             response = chatModel.call(new Prompt(hist));
 
-            if (!webMemory.get(username).isEmpty()) {
-                webMemory.clear(username);
-            }
-
-            if (!Objects.requireNonNull(response.getResult().getOutput().getText()).isEmpty()) {
-                webMemory.add(username, List.of(userMsg, response.getResult().getOutput()));
-            }
-
         }
 
         return response;
@@ -123,21 +127,8 @@ public class ToolClientService {
     }
 
     private SystemMessage generateSystemMessage(String username, boolean isWebSearch) {
+        return new SystemMessage(SystemMsg.SystemMsgWebTools(LocalDate.now()));
 
-        if (!isWebSearch && webMemory.get(username).isEmpty()) {
-            return new SystemMessage(SystemMsg.SystemMsgWebTools(LocalDate.now()));
-        }
-
-        List<Message> toolMessages = webMemory.get(username);
-        Map<MessageType, String> followUpContext = new HashMap<>();
-
-        for (Message message : toolMessages) {
-            if (message.getMessageType() == MessageType.USER || message.getMessageType() == MessageType.ASSISTANT) {
-                followUpContext.put(message.getMessageType(), message.getText());
-            }
-        }
-
-        return new SystemMessage(SystemMsg.SystemMsgWebTools(LocalDate.now(), followUpContext));
     }
 
     private ToolCallback[] handleWebTools(boolean isWebSearch) {

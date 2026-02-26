@@ -2,7 +2,8 @@ package com.discord.LocalAIDiscordAgent.advisor.config;
 
 
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor.RecentChatMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.chatMemory.toolChatMemory.advisor.WebMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.advisor.WebMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.service.WebChatMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.advisor.WebQuestionAnswerAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor.GroupChatMemoryAdvisor;
@@ -30,7 +31,7 @@ public class AdvisorConfig {
     public List<Advisor> agentChatAdvisors(
 //            VectorStore vectorStoreChatMemory,
             VectorStore vectorStoreWebSearchMemory,
-            ChatMemory webMemory,
+            WebChatMemoryService webChatMemoryService,
             RecentChatMemoryService recentChatMemoryService,
             GroupChatMemoryService groupChatMemoryAdvisor,
             WebSearchMemoryService webSearchMemoryService
@@ -39,33 +40,32 @@ public class AdvisorConfig {
                 recentChatMemoryAdvisor(recentChatMemoryService),
                 groupChatMemoryAdvisor(groupChatMemoryAdvisor),
 //                longTermMemoryAdvisor(vectorStoreChatMemory),
-                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService)
-//                webMemoryAdvisor(webMemory)
+                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService),
+                webMemoryAdvisor(webChatMemoryService)
         );
     }
 
-    public RecentChatMemoryAdvisor recentChatMemoryAdvisor(RecentChatMemoryService recentChatMemoryService){
+    private RecentChatMemoryAdvisor recentChatMemoryAdvisor(RecentChatMemoryService recentChatMemoryService){
         return RecentChatMemoryAdvisor.builder(recentChatMemoryService)
                 .order(0)
                 .build();
     }
 
-    public GroupChatMemoryAdvisor groupChatMemoryAdvisor (GroupChatMemoryService service){
+    private GroupChatMemoryAdvisor groupChatMemoryAdvisor (GroupChatMemoryService service){
         return GroupChatMemoryAdvisor.builder(service)
                 .order(1)
                 .build();
     }
 
-    public VectorStoreChatMemoryAdvisor longTermMemoryAdvisor(VectorStore vectorStoreChatMemory) {
-        return VectorStoreChatMemoryAdvisor.builder(vectorStoreChatMemory)
-                .order(1)
-                .defaultTopK(2)
+    private WebMemoryAdvisor webMemoryAdvisor (WebChatMemoryService service){
+        return WebMemoryAdvisor.builder(service)
+                .order(2)
                 .build();
     }
 
-    public WebQuestionAnswerAdvisor webSearchAdvisor(VectorStore vectorStoreWebSearchMemory, WebSearchMemoryService webSearchMemoryService) {
+    private WebQuestionAnswerAdvisor webSearchAdvisor(VectorStore vectorStoreWebSearchMemory, WebSearchMemoryService webSearchMemoryService) {
         return WebQuestionAnswerAdvisor.builder( webSearchMemoryService, vectorStoreWebSearchMemory)
-                .order(2)
+                .order(3)
                 .searchRequest(SearchRequest.builder()
                         .topK(2)
                         .similarityThreshold(0.70)
@@ -74,10 +74,15 @@ public class AdvisorConfig {
                 .build();
     }
 
-    public WebMemoryAdvisor webMemoryAdvisor (ChatMemory webMemory){
-        return WebMemoryAdvisor.builder(webMemory)
-                .order(3)
+    private VectorStoreChatMemoryAdvisor longTermMemoryAdvisor(VectorStore vectorStoreChatMemory) {
+        return VectorStoreChatMemoryAdvisor.builder(vectorStoreChatMemory)
+                .order(1)
+                .defaultTopK(2)
                 .build();
     }
+
+
+
+
 
 }

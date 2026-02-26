@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
+import com.discord.LocalAIDiscordAgent.user.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.ai.chat.messages.MessageType;
@@ -19,14 +20,19 @@ public class RecentChatMemory implements ChatMemoryINTF {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String conversationId;
-    private String username;
     @Column(columnDefinition = "TEXT")
     private String content;
     @Enumerated(EnumType.STRING)
     private MessageType type;
 
+    private String guildId;
+    private String channelId;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
+
     @Column(precision = 0)
     private LocalDateTime timestamp;
 
 }
-
