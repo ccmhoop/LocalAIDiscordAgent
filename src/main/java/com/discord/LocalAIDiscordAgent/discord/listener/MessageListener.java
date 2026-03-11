@@ -78,7 +78,8 @@ public abstract class MessageListener {
                             USER_ID, userId,
                             USERNAME, username,
                             USER_GLOBAL, userGlobalName,
-                            SERVER_NICKNAME, nickname
+                            SERVER_NICKNAME, nickname,
+                            USER_MESSAGE, finalContent
                     );
 
 
@@ -100,7 +101,7 @@ public abstract class MessageListener {
                                         } else if (toolClientService.shouldUseDirectLink(finalContent)) {
                                             return toolClientService.generateToolResponse(finalContent, discDataMap, finalUser, false);
                                         } else {
-                                            return chatClientService.generateLLMResponse(finalContent, discDataMap, finalUser);
+                                            return chatClientService.generateLLMResponse(discDataMap, finalUser);
                                         }
                                     })
                                     .subscribeOn(Schedulers.boundedElastic())

@@ -13,6 +13,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
@@ -36,14 +37,14 @@ public class ChatClientService {
         this.promptService = promptService;
     }
 
-    public String generateLLMResponse(String userMessage, Map<DiscDataKey, String> discDataMap, UserEntity userEntity) {
+    public String generateLLMResponse(Map<DiscDataKey, String> discDataMap, UserEntity userEntity) {
         try {
-            ChatResponse chatResponse = callLLM(userMessage, discDataMap);
+            ChatResponse chatResponse = callLLM(discDataMap);
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
             log.debug("Ollama response (extractedResponse={}): ", assistantMessage);
 
             try {
-                List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
+                List<Message> messages = List.of(new UserMessage(discDataMap.get(USER_MESSAGE)), new AssistantMessage(assistantMessage));
                 process.saveInteraction(discDataMap, messages, userEntity);
                 log.debug("Successfully saved chat interaction for user: {}", discDataMap.get(USER_ID));
             } catch (Exception saveException) {
@@ -60,18 +61,14 @@ public class ChatClientService {
         }
     }
 
-    private ChatResponse callLLM(String userMessage, Map<DiscDataKey, String> discDataMap) {
-
+    private ChatResponse callLLM(Map<DiscDataKey, String> discDataMap) {
         String systemPrompt = promptService.buildSystemMsgJson(discDataMap);
-
         log.info("Ollama prompt: {}", systemPrompt);
+        Prompt prompt = Prompt.builder()
+                .content(systemPrompt)
+                .build();
 
-        return chatClient.prompt()
-                .options(OllamaChatOptions.builder()
-                        .temperature(0.5)
-                        .build())
-                .system(systemPrompt)
-                .user(userMessage)
+        return chatClient.prompt(prompt)
                 .call()
                 .chatResponse();
     }

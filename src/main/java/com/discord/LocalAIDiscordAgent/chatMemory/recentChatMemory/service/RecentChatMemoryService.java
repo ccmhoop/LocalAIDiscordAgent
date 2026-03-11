@@ -5,7 +5,6 @@ import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentC
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.ChatSummary;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
@@ -44,13 +42,12 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
         trimDbToMessagesLimit(discDataMap);
     }
 
-    public RecentMemory buildMessageMemory(String conversationId, Function<String, ChatSummary> buildChatSummary ){
+    public List<RecentMessage>  buildMessageMemory(String conversationId){
         List<RecentMessage> recentMessages = sortedRecentMessageList(conversationId);
         if (recentMessages.isEmpty()) {
             return null;
         }
-        ChatSummary summary = buildChatSummary.apply(conversationId);
-        return new RecentMemory(summary, recentMessages);
+        return new ArrayList<>(recentMessages);
     }
 
     private List<RecentMessage> sortedRecentMessageList(String conversationId) {

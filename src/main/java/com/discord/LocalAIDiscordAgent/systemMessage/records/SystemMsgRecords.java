@@ -12,9 +12,12 @@ public class SystemMsgRecords {
             DecisionPolicy decisionPolicy,
             TechnicalResponsePolicy technicalResponsePolicy,
             MemoryRules memoryRules,
+            AntiRepetitionRules antiRepetitionRules,
             UserProfile userProfile,
-            RecentMemory recentMemory,
+            Memory memory,
+            List<RecentMessage> recentMessages,
             GroupMemory groupMemory,
+            String currentUserMessage,
             ResponseContract responseContract
     ) {
     }
@@ -27,7 +30,6 @@ public class SystemMsgRecords {
             boolean doNotQuestionIdentity
     ) {
     }
-
 
     public record Personality(
             List<String> tone,
@@ -80,8 +82,16 @@ public class SystemMsgRecords {
     public record MemoryRules(
             boolean useMemoryOnlyWhenRelevant,
             boolean preferSummaryOverVerbatimHistory,
-            boolean neverReusAssistantMemoryVerbatim,
+            boolean neverReuseAssistantMemoryVerbatim,
             boolean preferUserIntentOverAssistantWording
+    ) {
+    }
+
+    public record AntiRepetitionRules(
+            boolean doNotEchoRecentAssistantPhrasing,
+            boolean doNotReuseOpeningHooksFromRecentAssistantMessages,
+            boolean preferNewWordingEachTurn,
+            String ifUserMessageIsShortOrAffirmative
     ) {
     }
 
@@ -93,12 +103,11 @@ public class SystemMsgRecords {
     }
 
     public record RecentMemory(
-            ChatSummary chatSummary,
             List<RecentMessage> messages
     ) {
     }
 
-    public record ChatSummary(
+    public record Memory(
             String summary,
             List<FactsMemory> facts
     ){
@@ -120,7 +129,6 @@ public class SystemMsgRecords {
 
     public record GroupMemory(
             List<UserProfile> participants,
-            ChatSummary chatSummary,
             List<GroupMessage> messages
     ) {
     }
@@ -136,7 +144,7 @@ public class SystemMsgRecords {
     public record ResponseContract(
             String goal,
             String format,
-            Integer maxSentence
+            Integer maxSentences
     ) {
     }
 }

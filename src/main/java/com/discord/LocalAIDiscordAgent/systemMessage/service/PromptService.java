@@ -9,7 +9,6 @@ import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.Recen
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,18 +53,27 @@ public class PromptService {
 
         UserProfile userProfile = buildUserProfile(discDataMap);
 
-        RecentMemory recentChatMemory = recentChatService.buildMessageMemory(
-                recentConversationId,
-                s -> buildChatSummary(recentConversationId)
+        List<RecentMessage> recentMessages = recentChatService.buildMessageMemory(recentConversationId);
+        GroupMemory groupChatMemory = groupChatService.buildMessageMemory(groupConversationId);
+
+        Memory baseMemory;
+
+        if (groupChatMemory == null) {
+            baseMemory = buildMemory(groupConversationId);
+        }else{
+            baseMemory = buildMemory(recentConversationId);
+        }
+
+        baseConfig = SystemMessagePresets.withMessageMemory(
+                baseConfig,
+                userProfile,
+                baseMemory,
+                recentMessages,
+                groupChatMemory,
+                discDataMap.get(DiscDataKey.USER_MESSAGE)
         );
 
-        GroupMemory groupChatMemory = groupChatService.buildMessageMemory(
-                groupConversationId,
-                s -> buildChatSummary(groupConversationId)
-        );
-
-        baseConfig = SystemMessagePresets.withMessageMemory(baseConfig, userProfile, recentChatMemory, groupChatMemory);
-        return "The following is your Operational Contract in JSON format. Adhere to all rules strictly:\n" + systemMessageFactory.buildSystemMessage(baseConfig);
+        return systemMessageFactory.buildSystemMessage(baseConfig);
 
     }
 
@@ -76,7 +84,7 @@ public class PromptService {
                 discDataMap.get(DiscDataKey.SERVER_NICKNAME));
     }
 
-    private SystemMsgRecords.ChatSummary buildChatSummary(String conversationId) {
+    private Memory buildMemory(String conversationId) {
         try {
             Optional<ChatSummary> mem = repo.findById(conversationId);
             if (mem.isEmpty()) {
@@ -87,7 +95,7 @@ public class PromptService {
             String factsJson = mem.get().getFactsJson();
             List<FactsMemory> factsMemory = getFactsMemoryList(factsJson);
 
-            return new SystemMsgRecords.ChatSummary(summaryText, factsMemory);
+            return new Memory(summaryText, factsMemory);
         } catch (Exception e) {
             log.error("Failed to build chat summary: {}", e.getMessage(), e);
             return null;

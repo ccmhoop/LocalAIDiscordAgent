@@ -40,7 +40,7 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         this.chatRepo = groupChatMemoryRepository;
     }
 
-    public GroupMemory buildMessageMemory(String conversationId, Function<String, ChatSummary> buildChatSummary )  {
+    public GroupMemory buildMessageMemory(String conversationId)  {
         Map<MessageType, List<GroupChatMemory>> sortedGroupMap = getChatMemoryAsMap(conversationId);
         if (sortedGroupMap.isEmpty()) {
             return null;
@@ -53,10 +53,9 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         }
 
         List<UserProfile> participantProfiles = buildParticipantList(users);
-        ChatSummary summary = buildChatSummary.apply(conversationId);
         List<GroupMessage> groupMessages = buildSGroupMessages(users, assistants, size);
 
-        return new GroupMemory(participantProfiles , summary, groupMessages);
+        return new GroupMemory(participantProfiles, groupMessages);
     }
 
 

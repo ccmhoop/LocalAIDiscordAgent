@@ -30,9 +30,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
 
         );
@@ -57,9 +60,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -82,9 +88,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -105,9 +114,12 @@ public final class SystemMessagePresets {
                         base.technicalResponsePolicy().mayUseListsOrStepsWhenUseful()
                 ),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -126,12 +138,15 @@ public final class SystemMessagePresets {
                 new MemoryRules(
                         base.memoryRules().useMemoryOnlyWhenRelevant(),
                         base.memoryRules().preferSummaryOverVerbatimHistory(),
-                        base.memoryRules().neverReusAssistantMemoryVerbatim(),
+                        base.memoryRules().neverReuseAssistantMemoryVerbatim(),
                         base.memoryRules().preferUserIntentOverAssistantWording()
                 ),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -159,9 +174,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -184,9 +202,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 base.userProfile(),
-                base.recentMemory(),
+                base.memory(),
+                base.recentMessages(),
                 base.groupMemory(),
+                base.currentUserMessage(),
                 base.responseContract()
         );
     }
@@ -195,8 +216,10 @@ public final class SystemMessagePresets {
     public static SystemMessageConfig withMessageMemory(
             SystemMessageConfig base,
             UserProfile userProfile,
-            RecentMemory recentMemory,
-            GroupMemory groupMemory
+            Memory memory,
+            List<RecentMessage> recentMemory,
+            GroupMemory groupMemory,
+            String userMessage
     ) {
         return new SystemMessageConfig(
                 base.systemContract(),
@@ -206,9 +229,12 @@ public final class SystemMessagePresets {
                 base.decisionPolicy(),
                 base.technicalResponsePolicy(),
                 base.memoryRules(),
+                base.antiRepetitionRules(),
                 userProfile,
+                memory,
                 recentMemory,
                 groupMemory,
+                userMessage,
                 base.responseContract()
         );
     }

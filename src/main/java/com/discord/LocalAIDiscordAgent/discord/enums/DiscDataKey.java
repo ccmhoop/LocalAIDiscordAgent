@@ -8,5 +8,6 @@ public enum DiscDataKey {
     USER_GLOBAL,
     SERVER_NICKNAME,
     CONVERSATION_ID,
+    USER_MESSAGE,
     USER
 }

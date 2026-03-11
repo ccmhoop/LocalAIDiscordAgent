@@ -85,6 +85,13 @@ public final class SystemMessageFactory {
                         true,
                         true
                 ),
+                new AntiRepetitionRules(
+                        true,
+                        true,
+                        true,
+                        "respond_by_advancing_topic_not_by_restating_context"),
+                null,
+                null,
                 null,
                 null,
                 null,
