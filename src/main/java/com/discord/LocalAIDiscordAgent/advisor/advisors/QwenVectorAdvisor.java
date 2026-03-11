@@ -17,6 +17,7 @@ public class QwenVectorAdvisor {
         this.template = template.getTemplate();
     }
 
+
     public void augmentSystemMsg(MergedWebResults merged, String beforeSystemMsg) {
         StringBuilder sb = new StringBuilder();
         for (var item : merged.results()) {

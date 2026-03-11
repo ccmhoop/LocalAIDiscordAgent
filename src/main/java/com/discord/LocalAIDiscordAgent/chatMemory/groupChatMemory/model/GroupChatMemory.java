@@ -1,7 +1,7 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.ai.chat.messages.MessageType;

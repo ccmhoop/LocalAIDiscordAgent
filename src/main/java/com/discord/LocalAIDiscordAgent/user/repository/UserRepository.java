@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.user.repository;
 
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

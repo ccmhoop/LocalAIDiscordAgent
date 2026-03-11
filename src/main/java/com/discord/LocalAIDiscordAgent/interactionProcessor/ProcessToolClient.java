@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.interactionProcessor;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.service.WebChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.stereotype.Component;
 

@@ -1,17 +1,14 @@
 package com.discord.LocalAIDiscordAgent.advisor.config;
 
 
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor.RecentChatMemoryAdvisor;
-import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.advisor.WebMemoryAdvisor;
+import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.advisor.WebChatMemoryAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.service.WebChatMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.advisor.WebQuestionAnswerAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.advisor.GroupChatMemoryAdvisor;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.context.annotation.Bean;
@@ -37,28 +34,15 @@ public class AdvisorConfig {
             WebSearchMemoryService webSearchMemoryService
     ) {
         return List.of(
-                recentChatMemoryAdvisor(recentChatMemoryService),
-                groupChatMemoryAdvisor(groupChatMemoryAdvisor),
 //                longTermMemoryAdvisor(vectorStoreChatMemory),
-                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService),
-                webMemoryAdvisor(webChatMemoryService)
+                webSearchAdvisor(vectorStoreWebSearchMemory, webSearchMemoryService)
+//                webMemoryAdvisor(webChatMemoryService)
         );
     }
 
-    private RecentChatMemoryAdvisor recentChatMemoryAdvisor(RecentChatMemoryService recentChatMemoryService){
-        return RecentChatMemoryAdvisor.builder(recentChatMemoryService)
-                .order(0)
-                .build();
-    }
 
-    private GroupChatMemoryAdvisor groupChatMemoryAdvisor (GroupChatMemoryService service){
-        return GroupChatMemoryAdvisor.builder(service)
-                .order(1)
-                .build();
-    }
-
-    private WebMemoryAdvisor webMemoryAdvisor (WebChatMemoryService service){
-        return WebMemoryAdvisor.builder(service)
+    private WebChatMemoryAdvisor webMemoryAdvisor (WebChatMemoryService service){
+        return WebChatMemoryAdvisor.builder(service)
                 .order(2)
                 .build();
     }

@@ -1,12 +1,12 @@
-package com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.advisor;
-
-import java.util.*;
+package com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.advisor;
 
 import com.discord.LocalAIDiscordAgent.advisor.advisors.QwenAdvisor;
 import com.discord.LocalAIDiscordAgent.advisor.helpers.AdvisorHelper;
 import com.discord.LocalAIDiscordAgent.advisor.templates.AdvisorTemplates;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatSummary.model.ChatSummary;
+import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.model.WebChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.service.WebChatMemoryService;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.Getter;
 import lombok.NonNull;
 import org.springframework.ai.chat.client.ChatClientRequest;
@@ -18,24 +18,28 @@ import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.util.Assert;
 import reactor.core.scheduler.Scheduler;
 
+import java.util.List;
+import java.util.Map;
 
 @Getter
-public final class RecentChatMemoryAdvisor extends QwenAdvisor<RecentChatMemory> implements BaseChatMemoryAdvisor {
+public class WebChatMemoryAdvisor extends QwenAdvisor<WebChatMemory> implements BaseChatMemoryAdvisor {
 
+    private final WebChatMemoryService service;
     private final String defaultConversationId;
-    private final RecentChatMemoryService service;
     private final int order;
     private final Scheduler scheduler;
 
-    private RecentChatMemoryAdvisor(String defaultConversationId, RecentChatMemoryService service, int order, Scheduler scheduler) {
-        super(AdvisorTemplates.SHORT_TERM_MEMORY);
-        this.service = service;
-        Assert.notNull(service, "recentChatMemoryService cannot be null");
+    private WebChatMemoryAdvisor(WebChatMemoryService service, String defaultConversationId, int order, Scheduler scheduler) {
+        super(AdvisorTemplates.WEB_SEARCH_MEMORY_TEMPLATE);
+        Assert.notNull(service, "service cannot be null");
         Assert.hasText(defaultConversationId, "defaultConversationId cannot be null or empty");
         Assert.notNull(scheduler, "scheduler cannot be null");
+        this.service = service;
         this.defaultConversationId = defaultConversationId;
         this.order = order;
         this.scheduler = scheduler;
+        setHeader("<BEGIN_WEB_SEARCH_MEMORY>");
+        setFooter("</END_WEB_SEARCH_MEMORY>");
     }
 
     @Override
@@ -43,14 +47,22 @@ public final class RecentChatMemoryAdvisor extends QwenAdvisor<RecentChatMemory>
     public ChatClientRequest before(ChatClientRequest chatClientRequest, @NonNull AdvisorChain advisorChain) {
         Map<String, Object> context = chatClientRequest.context();
         String userId = this.getConversationId(chatClientRequest.context(), this.defaultConversationId);
-        String guildId = context.get("guild_id").toString();
-        Map<MessageType, List<RecentChatMemory>> chatMemories = service.getChatMemoryAsMap(guildId, userId);
+        Map<MessageType, List<WebChatMemory>> chatMemories = service.getChatMemoryAsMap(userId);
         if (chatMemories.isEmpty()) {
             return chatClientRequest;
         }
-        augmentSystemMsg(chatMemories, chatClientRequest.prompt().getSystemMessage().getText());
+        UserEntity entity = context.get("user") != null ? (UserEntity) context.get("user") : null;
+        ChatSummary chatSummary = null;
+        Object summaryObj = context.get("summary");
+        if (summaryObj instanceof ChatSummary) {
+            chatSummary = (ChatSummary) summaryObj;
+        }
+
+        setSummary(chatSummary);
+        augmentSystemMsg(chatMemories, chatClientRequest.prompt().getSystemMessage().getText(), entity);
         return chatClientRequest.mutate().prompt(chatClientRequest.prompt().augmentSystemMessage(getAugmentedSystemMsg())).build();
     }
+
 
     @Override
     @NonNull
@@ -59,55 +71,40 @@ public final class RecentChatMemoryAdvisor extends QwenAdvisor<RecentChatMemory>
     }
 
     @Override
-    public String chatMemoryBody(RecentChatMemory user, String chatMemoryData){
-        chatMemoryData = chatMemoryData.substring(0, chatMemoryData.length() - 2);
-        return """
-                {
-                "user.globalName": "%s",
-                "user.nickname": "%s",
-                "user.mention": "<@%s>",
-                "message.data":[
-                %s
-                ]
-                }""".formatted(
-                user.getUser().getUserGlobal(),
-                user.getUser().getServerNickname(),
-                user.getUser().getUserId(),
-                AdvisorHelper.indentBlock(chatMemoryData, 1, true)
-        );
+    public String chatJsonBody(UserEntity userEntity, String chatMemoryData) {
+        return chatMemoryData.substring(0, chatMemoryData.length() - 1);
     }
 
     @Override
-    public String chatMemoryData(RecentChatMemory user, RecentChatMemory assistant){
-        String dateTime = user.getTimestamp().toString();
-        return """
-                {
-                "date": "%s",
-                "time": "%s",
-                "user.sent": "%s",
-                "assistant".respond: "%s"
-                },
-                """.formatted(
-                dateTime.substring(0, dateTime.indexOf("T")),
-                dateTime.substring(dateTime.indexOf("T") + 1),
-                AdvisorHelper.indentLines(assistant.getContent(),0),
-                AdvisorHelper.indentLines(assistant.getContent(), 0)
-        );
+    public String chatJsonMemory() {
+        return "";
     }
 
-    public static Builder builder(RecentChatMemoryService recentChatMemoryService) {
-        return new Builder(recentChatMemoryService);
+    @Override
+    public String chatJsonTurns(WebChatMemory user, WebChatMemory assistant) {
+        return """
+                {
+                "user.sent": "%s",
+                "assistant".respond: "%s"
+                }
+                """.formatted(
+                AdvisorHelper.indentLines(user.getContent(),0),
+                AdvisorHelper.indentLines(assistant.getContent(),0));
+    }
+
+    public static Builder builder(WebChatMemoryService service) {
+        return new Builder(service);
     }
 
     public static final class Builder {
         private String conversationId = "default";
         private int order = -2147482648;
         private Scheduler scheduler;
-        private final RecentChatMemoryService service;
+        private final WebChatMemoryService service;
 
-        private Builder(RecentChatMemoryService service) {
-            this.service = service;
+        private Builder(WebChatMemoryService service) {
             this.scheduler = BaseAdvisor.DEFAULT_SCHEDULER;
+            this.service = service;
         }
 
         public Builder conversationId(String conversationId) {
@@ -125,8 +122,9 @@ public final class RecentChatMemoryAdvisor extends QwenAdvisor<RecentChatMemory>
             return this;
         }
 
-        public RecentChatMemoryAdvisor build() {
-            return new RecentChatMemoryAdvisor(this.conversationId, this.service, this.order, this.scheduler);
+        public WebChatMemoryAdvisor build() {
+            return new WebChatMemoryAdvisor(this.service, this.conversationId, this.order, this.scheduler);
         }
     }
+
 }

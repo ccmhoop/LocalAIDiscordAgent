@@ -23,24 +23,12 @@ public class AdvisorHelper {
         return out.toString();
     }
 
-//    public static String indentBlock(String s, int indentAmount) {
-//        if (s == null || s.isBlank()) return "";
-//        StringBuilder out = new StringBuilder();
-//        String indents = "\t".repeat(indentAmount);
-//        out.append(indents);
-//        return  """
-//                """
-//                + indents + "%s".formatted(s) +
-//                """
-//                 """;
-//    }
-
     public static String indentBlock(String s, int indentAmount, boolean isTabIndent) {
         if (s == null || s.isBlank()) return "";
         if (isTabIndent) {
-            return  s.indent(indentAmount*4).stripTrailing();
+            return  s.indent(indentAmount*4);
         }
-        return  s.indent(indentAmount).stripTrailing();
+        return  s.indent(indentAmount);
     }
 }
 

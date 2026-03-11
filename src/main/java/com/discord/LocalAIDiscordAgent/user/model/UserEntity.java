@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.user;
+package com.discord.LocalAIDiscordAgent.user.model;
 
 
 import jakarta.persistence.*;

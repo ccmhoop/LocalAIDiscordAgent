@@ -23,7 +23,13 @@ public final class ChatClientHelpers {
     public static String buildConversationId(Map<DiscDataKey, String> discDataMap) {
         String safeGuild = (discDataMap.get(GUILD_ID).isEmpty()) ? "dm" : discDataMap.get(GUILD_ID);
         String safeChannel = (discDataMap.get(CHANNEL_ID).isEmpty()) ? "dm" : discDataMap.get(CHANNEL_ID);
-        String safeUser = (discDataMap.get(USERNAME).isEmpty()) ? "unknown-user" : discDataMap.get(USERNAME);
-        return safeGuild + ":" + safeChannel + ":" + safeUser;
+        String safeUserId = (discDataMap.get(USERNAME).isEmpty()) ? "unknown-user" : discDataMap.get(USER_ID);
+        return safeGuild + ":" + safeChannel + ":" + safeUserId;
+    }
+
+    public static String buildGroupConversationId(Map<DiscDataKey, String> discDataMap) {
+        String safeGuild = (discDataMap.get(GUILD_ID).isEmpty()) ? "dm" : discDataMap.get(GUILD_ID);
+        String safeChannel = (discDataMap.get(CHANNEL_ID).isEmpty()) ? "dm" : discDataMap.get(CHANNEL_ID);
+        return safeGuild + ":" + safeChannel;
     }
 }

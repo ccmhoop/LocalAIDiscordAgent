@@ -1,17 +1,19 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
+import com.discord.LocalAIDiscordAgent.chatSummary.repository.ChatSummaryRepository;
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessChatClient;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.systemMessage.service.PromptService;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,17 +27,20 @@ public class ChatClientService {
 
     private final ChatClient chatClient;
     private final ProcessChatClient process;
+    private final PromptService promptService;
 
-    public ChatClientService(ChatClient advisorChatClient, ProcessChatClient processChatClient) {
+
+    public ChatClientService(ChatClient advisorChatClient, ProcessChatClient processChatClient, ChatSummaryRepository repo, PromptService promptService) {
         this.chatClient = advisorChatClient;
         this.process = processChatClient;
+        this.promptService = promptService;
     }
 
     public String generateLLMResponse(String userMessage, Map<DiscDataKey, String> discDataMap, UserEntity userEntity) {
         try {
             ChatResponse chatResponse = callLLM(userMessage, discDataMap);
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
-            log.debug("Ollama response (extractedResponse={}): ",  assistantMessage);
+            log.debug("Ollama response (extractedResponse={}): ", assistantMessage);
 
             try {
                 List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
@@ -43,7 +48,7 @@ public class ChatClientService {
                 log.debug("Successfully saved chat interaction for user: {}", discDataMap.get(USER_ID));
             } catch (Exception saveException) {
                 log.error("Failed to save chat memory for user: {} - Error: {}",
-                    discDataMap.get(USER_ID), saveException.getMessage(), saveException);
+                        discDataMap.get(USER_ID), saveException.getMessage(), saveException);
             }
             return assistantMessage;
         } catch (Exception e) {
@@ -57,16 +62,15 @@ public class ChatClientService {
 
     private ChatResponse callLLM(String userMessage, Map<DiscDataKey, String> discDataMap) {
 
-        Map<String, Object> advisorParams = Map.of(
-                "chat_memory_conversation_id", discDataMap.get(USER_ID),
-                "guild_id", discDataMap.get(GUILD_ID)
-        );
+        String systemPrompt = promptService.buildSystemMsgJson(discDataMap);
 
+        log.info("Ollama prompt: {}", systemPrompt);
 
         return chatClient.prompt()
-                .advisors(a ->
-                        a.params(advisorParams)
-                )
+                .options(OllamaChatOptions.builder()
+                        .temperature(0.5)
+                        .build())
+                .system(systemPrompt)
                 .user(userMessage)
                 .call()
                 .chatResponse();

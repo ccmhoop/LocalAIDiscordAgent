@@ -63,6 +63,14 @@ public class WebSearchMemoryService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final TokenTextSplitter textSplitter = TokenTextSplitter.builder()
+            .withChunkSize(CHUNK_SIZE_TOKENS)
+            .withMinChunkSizeChars(MIN_CHUNK_SIZE_CHARS)
+            .withMinChunkLengthToEmbed(MIN_CHUNK_LENGTH_TO_EMBED)
+            .withMaxNumChunks(MAX_NUM_CHUNKS)
+            .withKeepSeparator(KEEP_SEPARATOR)
+            .build();
+
     public WebSearchMemoryService(VectorStore vectorStoreWebSearchMemory) {
         this.vectorStore = vectorStoreWebSearchMemory;
         this.writer = vectorStoreWebSearchMemory;

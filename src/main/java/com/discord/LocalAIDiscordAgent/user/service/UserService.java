@@ -1,6 +1,7 @@
-package com.discord.LocalAIDiscordAgent.user;
+package com.discord.LocalAIDiscordAgent.user.service;
 
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
@@ -22,6 +23,11 @@ public class UserService {
     public UserEntity getUser(Map<DiscDataKey, String> discDataMap) {
         Long userId = Long.parseLong(discDataMap.get(DiscDataKey.USER_ID));
         return userRepository.findByUserId(userId);
+    }
+
+    public void updateUser(UserEntity userEntity , String nickname) {
+        userEntity.setServerNickname(nickname);
+        userRepository.saveAndFlush(userEntity);
     }
 
     public void saveUser (UserEntity userEntity) {

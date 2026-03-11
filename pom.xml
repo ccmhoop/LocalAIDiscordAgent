@@ -105,6 +105,43 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- main dependency -->
+		<dependency>
+			<groupId>org.pitest.voices</groupId>
+			<artifactId>chorus</artifactId>
+			<version>0.0.9</version>
+		</dependency>
+		<!-- a prepackaged model -->
+		<dependency>
+			<groupId>org.pitest.voices</groupId>
+			<artifactId>alba</artifactId>
+			<version>0.0.9</version>
+		</dependency>
+		<!-- dictionary of pronunciations -->
+		<dependency>
+			<groupId>org.pitest.voices</groupId>
+			<artifactId>en_uk</artifactId> <!-- or en_us -->
+			<version>0.0.9</version>
+		</dependency>
+		<!-- runtime for onnx models -->
+		<dependency>
+			<groupId>com.microsoft.onnxruntime</groupId>
+			<artifactId>onnxruntime</artifactId> <!-- or onnxruntime_gpu -->
+			<version>1.22.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.pitest.voices</groupId>
+			<artifactId>model-downloader</artifactId>
+			<version>0.0.9</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.pitest.voices</groupId>
+			<artifactId>kokoro-runtime</artifactId>
+			<version>0.0.9</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

@@ -5,4 +5,5 @@ public class BlankModelResponseException extends RuntimeException{
     public BlankModelResponseException(String errorMessage) {
         super(errorMessage);
     }
+
 }

@@ -6,7 +6,7 @@ import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,6 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -31,8 +30,6 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
 
     private final JpaRepository<T, Long> repo;
     private final Class<T> modelClass;
-
-    @Setter
     private int messageLimit;
 
     public ChatMemoryService(JpaRepository<T, Long> repo, int messageLimit, Class<T> modelClass) {
@@ -40,32 +37,11 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
         this.modelClass = modelClass;
         this.messageLimit = messageLimit;
     }
-
-    //----------------------------- GET CHAT MEMORY FROM DB  ------------------------------------
-    public Map<MessageType, List<T>> getChatMemoryAsMap(String guildId) {
-        Assert.isTrue(modelClass.equals(GroupChatMemory.class), "GroupChatMemory is required for this method");
-        Assert.isTrue(repo instanceof GroupChatMemoryRepository, "GroupChatMemoryRepository is required for this method");
-        List<T> memories = repo.findAll().stream().filter(m -> m.getGuildId().equals(guildId)).collect(Collectors.toList());
-        if (memories.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return sortAndMap(memories);
-    }
-
-    public Map<MessageType, List<T>> getChatMemoryAsMap(String guildId ,String userId) {
-        Assert.isTrue(modelClass.equals(RecentChatMemory.class), "RecentChatMemory is required for this method");
-        Assert.isTrue(repo instanceof RecentChatMemoryRepository, "RecentChatMemoryRepository is required for this method");
-        List<T> memories = repo.findAll().stream().filter(m ->  m.getGuildId().equals(guildId) && m.getUser().getUserId().toString().equals(userId)).collect(Collectors.toList());
-        if (memories.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return sortAndMap(memories);
-    }
-
-    public abstract Map<MessageType, List<T>> sortAndMap(List<T> memories);
-
-    //----------------------------- ABSTRACT SAVE AND TRIM ------------------------------------
     public abstract void saveAndTrim(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user);
+    public abstract Map<MessageType, List<T>> sortAndMap(List<T> memories);
+    public abstract T buildChatEntity(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user);
+    public abstract Map<MessageType, List<T>> getChatMemoryAsMap(String conversationId);
+
 
     //----------------------------- SAVING TO DB  ------------------------------------
     public void saveAll(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
@@ -99,12 +75,10 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
         repo.flush();
     }
 
-
     private List<T> createSaveAllList(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
-        return messages.stream().map(m -> buildChatMemory(discDataMap, m, user )).collect(Collectors.toCollection(ArrayList::new));
+        return messages.stream().map(m -> buildChatEntity(discDataMap, m, user )).collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public abstract T buildChatMemory(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user);
 
     //----------------------------- DB TRIM TO ROW LIMIT------------------------------------
     public void trimDbToMessagesLimit(Map<DiscDataKey, String> discDataMap) {

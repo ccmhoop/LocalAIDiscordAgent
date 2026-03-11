@@ -3,13 +3,16 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
-import com.discord.LocalAIDiscordAgent.user.UserService;
+import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
+import com.discord.LocalAIDiscordAgent.textToSpeech.VoiceMain;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.common.util.Snowflake;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,8 +35,9 @@ public abstract class MessageListener {
 
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
+    private Map<DiscDataKey, String> discDataMap;
 
-    public Mono<Void> processCommandAI(Message eventMessage, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService) {
+    public Mono<Void> processCommandAI(Message eventMessage, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient) {
         return Mono.just(eventMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .flatMap(message -> {
@@ -66,11 +70,9 @@ public abstract class MessageListener {
                             .blockOptional()
                             .orElseGet(() -> message.getAuthor().map(User::getUsername).orElse("unknown"));
 
-                    System.out.println(nickname);
-
                     String finalContent = content;
 
-                    Map<DiscDataKey, String> discDataMap = Map.of(
+                    discDataMap = Map.of(
                             GUILD_ID, guildId,
                             CHANNEL_ID, channelId,
                             USER_ID, userId,
@@ -85,6 +87,8 @@ public abstract class MessageListener {
                     if (user == null) {
                         user = userService.buildUser(discDataMap);
                         userService.saveUser(user);
+                    }else if (!nickname.equals(user.getServerNickname())){
+                        userService.updateUser(user, nickname);
                     }
 
                     UserEntity finalUser = user;
@@ -103,13 +107,14 @@ public abstract class MessageListener {
                                     .cache();
 
 
-
                     return message.getChannel()
                             .flatMap(channel ->
                                     responseMono
                                             .flatMapMany(response -> {
                                                 String cleanedResponse = cleanResponse(response);
                                                 List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
+//                                                generateAndSaveAudio(cleanedResponse, userId);
+                                                VoiceMain.generateAndSaveAudio(cleanedResponse, userId);
 
                                                 return Flux.fromIterable(chunks)
                                                         .concatMap(chunk -> channel.createMessage(chunk)
@@ -120,7 +125,19 @@ public abstract class MessageListener {
                                                                                 rs.totalRetries() + 1
                                                                         ))));
                                             })
-                                            .then()
+                                            .then(Mono.fromRunnable(() -> {
+                                                try {
+                                                    processSummaryClient.saveInteraction(discDataMap);
+                                                } catch (ObjectOptimisticLockingFailureException e) {
+                                                    log.warn("Failed to save interaction summary due to concurrent modification for conversation: {}:{}",
+                                                            guildId, userId, e);
+                                                    // Don't propagate this error as it's not critical to the user experience
+                                                } catch (Exception e) {
+                                                    log.error("Unexpected error saving interaction summary for conversation: {}:{}",
+                                                            guildId, userId, e);
+                                                }
+                                            }))
+
                             );
 
                 }).then();

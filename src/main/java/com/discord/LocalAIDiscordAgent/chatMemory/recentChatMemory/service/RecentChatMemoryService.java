@@ -5,7 +5,10 @@ import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentC
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.ChatSummary;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMemory;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
@@ -24,17 +28,76 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 @Slf4j
 @Service
 public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>  {
+    private final RecentChatMemoryRepository chatRepo;
 
     public RecentChatMemoryService(
             RecentChatMemoryRepository recentChatMemoryRepository,
             @Value("${recent.chat.memory.message.limit}") int messageLimit) {
         super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class);
+        this.chatRepo = recentChatMemoryRepository;
     }
+
 
     @Override
     public void saveAndTrim(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
         saveAll(discDataMap, messages, user);
         trimDbToMessagesLimit(discDataMap);
+    }
+
+    public RecentMemory buildMessageMemory(String conversationId, Function<String, ChatSummary> buildChatSummary ){
+        List<RecentMessage> recentMessages = sortedRecentMessageList(conversationId);
+        if (recentMessages.isEmpty()) {
+            return null;
+        }
+        ChatSummary summary = buildChatSummary.apply(conversationId);
+        return new RecentMemory(summary, recentMessages);
+    }
+
+    private List<RecentMessage> sortedRecentMessageList(String conversationId) {
+        Map<MessageType, List<RecentChatMemory>> recentMap = getChatMemoryAsMap(conversationId);
+
+        if (recentMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<RecentChatMemory> userMessages = recentMap.get(USER);
+        List<RecentChatMemory> assistantMessages = recentMap.get(ASSISTANT);
+
+        int size = Math.min(userMessages.size(), assistantMessages.size());
+
+        return orderAndBuildRecentMessages(size, userMessages, assistantMessages);
+    }
+
+    private static List<RecentMessage> orderAndBuildRecentMessages(int size, List<RecentChatMemory> userMessages, List<RecentChatMemory> assistantMessages) {
+        List<RecentMessage> recentMessages = new ArrayList<>(size);
+
+        for (int i = 0; i < size; i++) {
+            RecentChatMemory user = userMessages.get(i);
+            RecentChatMemory assistant = assistantMessages.get(i);
+
+            recentMessages.add(new RecentMessage(
+                    user.getTimestamp().toString(),
+                    "user",
+                    user.getContent()
+            ));
+
+            recentMessages.add(new RecentMessage(
+                    assistant.getTimestamp().toString(),
+                    "assistant",
+                    assistant.getContent()
+            ));
+        }
+        return recentMessages;
+    }
+
+
+    @Override
+    public Map<MessageType, List<RecentChatMemory>> getChatMemoryAsMap(String conversationId) {
+        List<RecentChatMemory> memories = new ArrayList<>(chatRepo.findAllByConversationId(conversationId));
+        if (memories.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return sortAndMap(memories);
     }
 
     @Override
@@ -54,8 +117,9 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 ASSISTANT, partitioned.get(false));
     }
 
+
     @Override
-    public RecentChatMemory buildChatMemory(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user) {
+    public RecentChatMemory buildChatEntity(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user) {
         if (discDataMap == null || message == null) {
             throw new IllegalArgumentException("discDataMap and message cannot be null");
         }
@@ -70,6 +134,5 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 .timestamp(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
                 .build();
     }
-
 
 }

@@ -2,14 +2,13 @@ package com.discord.LocalAIDiscordAgent.chatClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessToolClient;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.tools.DirectLinkTool;
 import com.discord.LocalAIDiscordAgent.webSearch.tools.WebSearchTool;
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatClient.systemMsg.SystemMsg;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.ChatModel;

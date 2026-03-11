@@ -1,7 +1,7 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.repository;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.model.WebChatMemory;
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,12 +1,13 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.interfaces;
 
-import com.discord.LocalAIDiscordAgent.user.UserEntity;
+import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import org.springframework.ai.chat.messages.MessageType;
 
 import java.time.LocalDateTime;
 
 public interface ChatMemoryINTF {
 
+    Long getId();
     String getConversationId();
     String getContent();
     MessageType getType();
