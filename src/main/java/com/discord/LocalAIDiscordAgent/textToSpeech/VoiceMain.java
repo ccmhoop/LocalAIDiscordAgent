@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.textToSpeech;
 
+import lombok.extern.slf4j.Slf4j;
 import org.pitest.voices.*;
 import org.pitest.voices.audio.Audio;
 import org.pitest.voices.g2p.core.Dictionary;
@@ -20,6 +21,7 @@ import java.util.regex.Pattern;
 import static org.pitest.voices.ChorusConfig.chorusConfig;
 
 
+@Slf4j
 public class VoiceMain {
 
     private static final Pattern MULTI_SPACE = Pattern.compile("\\s+");
@@ -28,9 +30,9 @@ public class VoiceMain {
     private static final Pattern SPACED_HYPHEN = Pattern.compile("\\s-\\s");
     private static final Pattern MULTI_DASH = Pattern.compile("\\s--+\\s");
     private static final Pattern TRAILING_G_DROPPING = Pattern.compile("\\b([A-Za-z]{3,})in'\\b");
-    private static final Pattern CURLY_APOS = Pattern.compile("[\u2018\u2019\u02BC\u2032]");
-    private static final Pattern CURLY_QUOTES = Pattern.compile("[\u201C\u201D]");
-    private static final Pattern UNICODE_DASHES = Pattern.compile("[\u2012\u2013\u2014\u2212]"); // figure/en/em/minus
+    private static final Pattern CURLY_APOS = Pattern.compile("[‘’ʼ′]");
+    private static final Pattern CURLY_QUOTES = Pattern.compile("[“”]");
+    private static final Pattern UNICODE_DASHES = Pattern.compile("[‒–—−]"); // figure/en/em/minus
     private static final Pattern S_ENDING_POSSESSIVE = Pattern.compile("\\b([A-Za-z]+s)'s\\b");
 
     public static void main(String[] args) {
@@ -41,7 +43,7 @@ public class VoiceMain {
     public static void generateAndSaveAudio(String text, String userId) {
         try {
             // Use the specified desktop directory
-            Path audioDir = Paths.get("C:\\Users\\conner\\Desktop\\kierstem");
+            Path audioDir = Paths.get("savedSpeech");
 
             // Create directory if it doesn't exist
             if (!Files.exists(audioDir)) {
@@ -72,7 +74,9 @@ public class VoiceMain {
                 pitchedAndSlower.save(audioPath);
             }
         } catch (IOException e) {
+            log.error("Error saving audio file: {}", e.getMessage(), e);
         } catch (Exception e) {
+            log.error("Error generating audio: {}", e.getMessage(), e);
         }
     }
 
@@ -125,9 +129,9 @@ public class VoiceMain {
         }
         return out;
     }
-    public static String sanitizeForTts(String raw) {
-        return sanitizeForTts(raw, false, true);
-    }
+//    public static String sanitizeForTts(String raw) {
+//        return sanitizeForTts(raw, false, true);
+//    }
 
     /**
      * @param preferDialectDa  if true, keep "da"; if false, map "da" -> "the"
