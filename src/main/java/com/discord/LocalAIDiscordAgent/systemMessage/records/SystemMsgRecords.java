@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
 
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
-import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
 
 import java.util.List;
 
@@ -115,7 +114,6 @@ public class SystemMsgRecords {
             GroupMemory groupMemory,
             String currentUserMessage,
             ResponseContract responseContract
-
     ) {
     }
 
@@ -135,11 +133,6 @@ public class SystemMsgRecords {
     public record RetrievedContext(
             List<MergedWebQAItem> webResults
             ){
-    }
-
-    public record RecentMemory(
-            List<RecentMessage> messages
-    ) {
     }
 
     public record FactsMemory(

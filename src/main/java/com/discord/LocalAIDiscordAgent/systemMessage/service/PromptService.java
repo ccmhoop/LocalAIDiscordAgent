@@ -62,6 +62,10 @@ public class PromptService {
             baseMemory = buildMemory(discGlobalData.getConversationId());
         }
 
+        if (baseMemory == null) {
+            return "";
+        }
+
         RuntimeContext runtimeContext = new RuntimeContext(
                 buildUserProfile(),
                 baseMemory,
@@ -76,8 +80,8 @@ public class PromptService {
         baseConfig = SystemMessagePresets.withMessageMemory(
                 baseConfig,
                 runtimeContext
-
         );
+
         return systemMessageFactory.buildSystemMessage(baseConfig);
     }
 

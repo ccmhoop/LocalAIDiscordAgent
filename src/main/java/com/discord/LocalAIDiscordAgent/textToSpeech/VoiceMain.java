@@ -35,11 +35,6 @@ public class VoiceMain {
     private static final Pattern UNICODE_DASHES = Pattern.compile("[‒–—−]"); // figure/en/em/minus
     private static final Pattern S_ENDING_POSSESSIVE = Pattern.compile("\\b([A-Za-z]+s)'s\\b");
 
-    public static void main(String[] args) {
-        String text = "Not having it for shite, homie - ketamine twins are screamin' in da bathroom, and Calli's chewin' Chris's bomb off da floor!";
-        generateAndSaveAudio(text, LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
-    }
-
     public static void generateAndSaveAudio(String text, String userId) {
         try {
             // Use the specified desktop directory

@@ -4,9 +4,6 @@ import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
 
 public final class SystemMessagePresets {
 
-    private SystemMessagePresets() {
-    }
-
     public static SystemMessageConfig qwenFriendlyDefault() {
         return SystemMessageFactory.defaultConfig();
     }
