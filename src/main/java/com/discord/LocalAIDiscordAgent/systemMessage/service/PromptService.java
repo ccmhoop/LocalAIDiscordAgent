@@ -66,10 +66,16 @@ public class PromptService {
             return "";
         }
 
+        RetrievedContext retrievedContext = new RetrievedContext(webQAService.getWebQAResults());
+
+        if (retrievedContext.webResults() == null || retrievedContext.webResults().isEmpty()) {
+            retrievedContext = null;
+        }
+
         RuntimeContext runtimeContext = new RuntimeContext(
                 buildUserProfile(),
                 baseMemory,
-                new RetrievedContext(webQAService.getWebQAResults()),
+                retrievedContext,
                 recentMessages,
                 groupChatMemory,
                 discGlobalData.getUserMessage(),

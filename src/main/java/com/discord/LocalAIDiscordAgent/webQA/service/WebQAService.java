@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.webQA.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,22 @@ public class WebQAService {
     }
 
     public List<MergedWebQAItem> getWebQAResults(){
-        return webSearchMemoryService.searchExistingContent(discGlobalData.getUserMessage()).results();
+        WebQAMemory webQAMemory = webSearchMemoryService.searchExistingContent(discGlobalData.getUserMessage());
+
+        // Check if webQAMemory is null before accessing its results
+        if (webQAMemory == null) {
+            return null;
+        }
+
+        List<MergedWebQAItem> results = webQAMemory.results();
+
+        // Check if results list is empty
+        if (results == null || results.isEmpty()){
+            return null;
+        }
+
+        return results;
     }
+
 
 }
