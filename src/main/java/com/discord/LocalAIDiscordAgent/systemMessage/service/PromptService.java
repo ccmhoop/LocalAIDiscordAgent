@@ -62,18 +62,23 @@ public class PromptService {
             baseMemory = buildMemory(discGlobalData.getConversationId());
         }
 
-        baseConfig = SystemMessagePresets.withMessageMemory(
-                baseConfig,
+        RuntimeContext runtimeContext = new RuntimeContext(
                 buildUserProfile(),
                 baseMemory,
-                webQAService.getWebQAResults(),
+                new RetrievedContext(webQAService.getWebQAResults()),
                 recentMessages,
                 groupChatMemory,
-                discGlobalData.getUserMessage()
+                discGlobalData.getUserMessage(),
+                baseConfig.runtimeContext().responseContract()
+
         );
 
-        return systemMessageFactory.buildSystemMessage(baseConfig);
+        baseConfig = SystemMessagePresets.withMessageMemory(
+                baseConfig,
+                runtimeContext
 
+        );
+        return systemMessageFactory.buildSystemMessage(baseConfig);
     }
 
     private UserProfile buildUserProfile(){

@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
 
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
 
 import java.util.List;
@@ -8,61 +9,68 @@ import java.util.List;
 public class SystemMsgRecords {
 
     public record SystemMessageConfig(
-            Identity systemContract,
-            Personality personality,
-            Rules rules,
-            Style style,
+            SystemBehavior systemBehavior,
+            ConversationRules conversationRules,
             DecisionPolicy decisionPolicy,
             TechnicalResponsePolicy technicalResponsePolicy,
-            MemoryRules memoryRules,
-            AntiRepetitionRules antiRepetitionRules,
-            UserProfile userProfile,
-            Memory memory,
-            WebQAMemory webSearchMemory,
-            List<RecentMessage> recentMessages,
-            GroupMemory groupMemory,
-            String currentUserMessage,
-            ResponseContract responseContract
+            MemoryPolicy memoryPolicy,
+            AntiRepetitionPolicy antiRepetitionPolicy,
+            RuntimeContext runtimeContext
+
     ) {
+    }
+
+    public record SystemBehavior(
+            Identity assistantProfile,
+            Personality personality,
+            Style style
+
+    ){
     }
 
     public record Identity(
             String name,
             String role,
-            boolean speakInFirstPerson,
-            boolean humanIdentity,
-            boolean doNotQuestionIdentity
+            boolean speakInFirstPerson
     ) {
     }
 
     public record Personality(
             List<String> tone,
-            boolean edgyHumor,
-            boolean keepHumorSociallyAcceptable,
-            boolean allowProfanityIfUserUsesIt,
-            boolean neverMoralize,
-            boolean neverLecture
+            Humor humor,
+            String profanityPolicy,
+            List<String> avoid
     ) {
     }
 
-    public record Rules(
-            List<String> neverMention,
-            List<String> forbiddenOutput,
-            boolean neverNarrateActions,
-            boolean neverUseThirdPersonSelfDescription,
-            boolean neverRepeatUserMessage,
-            boolean neverRepeatPreviousResponse,
-            List<String> neverCommentOn
-    ) {
-    }
+    public record Humor(
+            boolean edgy,
+            boolean sociallyAcceptable
+            ){
 
+    }
     public record Style(
-            boolean beDirect,
-            boolean beNatural,
+            boolean direct,
+            boolean natural,
             boolean avoidRoboticPhrasing,
             List<String> avoidFillerPhrases,
-            boolean onlyIncludeValueAddingInformation
+            boolean preferValueDenseResponse
     ) {
+    }
+    public record ConversationRules(
+            List<String> avoidUnsolicitedMeta,
+            List<String> forbiddenOutput,
+            boolean avoidActionNarration,
+            boolean avoidThirdPersonSelfReference,
+            AvoidRepetition avoidUnnecessaryRepetition,
+            List<String> doNotCommentOn
+    ) {
+    }
+
+    public record AvoidRepetition(
+            boolean userMessage,
+            boolean assistantMessage
+    ){
     }
 
     public record DecisionPolicy(
@@ -83,20 +91,38 @@ public class SystemMsgRecords {
     ) {
     }
 
-    public record MemoryRules(
-            boolean useMemoryOnlyWhenRelevant,
+    public record MemoryPolicy(
+            boolean useOnlyWhenRelevant,
             boolean preferSummaryOverVerbatimHistory,
-            boolean neverReuseAssistantMemoryVerbatim,
+            boolean neverReuseMemoryVerbatim,
             boolean preferUserIntentOverAssistantWording
     ) {
     }
 
-    public record AntiRepetitionRules(
-            boolean doNotEchoRecentAssistantPhrasing,
-            boolean doNotReuseOpeningHooksFromRecentAssistantMessages,
+    public record AntiRepetitionPolicy(
+            boolean avoidEchoRecentAssistantPhrasing,
+            boolean avoidReusingRecentOpeningHooks,
             boolean preferNewWordingEachTurn,
-            String ifUserMessageIsShortOrAffirmative
+            String shortUserMessagesShould
     ) {
+    }
+
+    public record RuntimeContext(
+            UserProfile userProfile,
+            Memory memory,
+            RetrievedContext retrievedContext,
+            List<RecentMessage> recentMessages,
+            GroupMemory groupMemory,
+            String currentUserMessage,
+            ResponseContract responseContract
+
+    ) {
+    }
+
+    public record Memory(
+            String summary,
+            List<FactsMemory> facts
+    ){
     }
 
     public record UserProfile(
@@ -106,15 +132,14 @@ public class SystemMsgRecords {
     ) {
     }
 
+    public record RetrievedContext(
+            List<MergedWebQAItem> webResults
+            ){
+    }
+
     public record RecentMemory(
             List<RecentMessage> messages
     ) {
-    }
-
-    public record Memory(
-            String summary,
-            List<FactsMemory> facts
-    ){
     }
 
     public record FactsMemory(
