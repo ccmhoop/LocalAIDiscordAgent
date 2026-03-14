@@ -1,12 +1,9 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service;
 
-import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +17,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
 

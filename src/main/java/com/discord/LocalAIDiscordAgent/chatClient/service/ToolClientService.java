@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessToolClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;

@@ -2,17 +2,11 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
-import com.discord.LocalAIDiscordAgent.discord.data.DiscDataRecord;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
-import com.discord.LocalAIDiscordAgent.textToSpeech.VoiceMain;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
-import discord4j.common.util.Snowflake;
-import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.User;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
@@ -26,10 +20,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 
 @Slf4j
 @Component
@@ -37,7 +29,6 @@ public abstract class MessageListener {
 
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
-    private Map<DiscDataKey, String> discDataMap;
 
     public Mono<Void> processCommandAI(Message eventMessage, DiscGlobalData discGlobalData, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient) {
         return Mono.just(eventMessage)

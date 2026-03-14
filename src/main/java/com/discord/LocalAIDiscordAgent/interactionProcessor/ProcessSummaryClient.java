@@ -2,13 +2,11 @@ package com.discord.LocalAIDiscordAgent.interactionProcessor;
 
 import com.discord.LocalAIDiscordAgent.chatSummary.service.ChatSummaryService;
 import com.discord.LocalAIDiscordAgent.chatSummary.records.SummaryRecords.Turn;
-import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.MessageType;

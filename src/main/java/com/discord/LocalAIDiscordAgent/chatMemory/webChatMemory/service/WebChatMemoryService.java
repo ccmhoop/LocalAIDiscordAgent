@@ -1,10 +1,8 @@
 package com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.service;
 
-import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.model.WebChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.webChatMemory.repository.WebChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.repository.UserRepository;
 import org.springframework.ai.chat.messages.Message;

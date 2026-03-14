@@ -1,14 +1,12 @@
 package com.discord.LocalAIDiscordAgent.user.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 
 @Slf4j
 @Service
