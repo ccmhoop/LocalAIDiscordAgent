@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.chatClient.service;
 
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessToolClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
@@ -33,33 +34,39 @@ public class ToolClientService {
     private final WebSearchMemoryService webSearchMemoryService;
     private final ChatModel chatModel;
     private final ProcessToolClient process;
+    private final DiscGlobalData discGlobalData;
 
 
     public ToolClientService(
             OllamaChatModel ollamaQwenModelConfig,
             WebSearchMemoryService webSearchMemoryService,
-            ProcessToolClient process
+            ProcessToolClient process, DiscGlobalData discGlobalData
     ) {
         this.webSearchMemoryService = webSearchMemoryService;
         this.chatModel = ollamaQwenModelConfig;
         this.process = process;
+        this.discGlobalData = discGlobalData;
     }
 
-    public String generateToolResponse(String userMessage, Map<DiscDataKey, String> discDataMap, UserEntity user, boolean isWebSearch) {
+    public String generateToolResponse(UserEntity user, boolean isWebSearch) {
 
-        String conversationId = ChatClientHelpers.buildConversationId(discDataMap);
+        String conversationId = discGlobalData.getConversationId();
 
         try {
-            ChatResponse chatResponse = toolChatResponse(discDataMap.get(DiscDataKey.USERNAME), userMessage, isWebSearch);
+            ChatResponse chatResponse = toolChatResponse(isWebSearch);
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
 
             try {
-                List<Message> messages = List.of(new UserMessage(userMessage), new AssistantMessage(assistantMessage));
-                process.saveInteraction(discDataMap, messages, user);
-                log.debug("Successfully saved chat interaction for user: {}", discDataMap.get(DiscDataKey.USER_ID));
+                List<Message> messages = List.of(
+                        new UserMessage(discGlobalData.getUserMessage()),
+                        new AssistantMessage(assistantMessage)
+                );
+
+                process.saveInteraction(messages, user);
+                log.debug("Successfully saved chat interaction for user: {}", discGlobalData.getUserId());
             }catch (Exception saveException) {
                 log.error("Failed to save chat memory for user: {} - Error: {}",
-                    discDataMap.get(DiscDataKey.USER_ID), saveException.getMessage(), saveException);
+                    discGlobalData.getUserId(), saveException.getMessage(), saveException);
             }
 
             return assistantMessage;
@@ -75,7 +82,7 @@ public class ToolClientService {
 
     }
 
-    private ChatResponse toolChatResponse(String username, String userMessage, boolean isWebSearch) {
+    private ChatResponse toolChatResponse(boolean isWebSearch) {
 
         ToolCallingManager toolCallingManager = ToolCallingManager.builder().build();
 
@@ -85,8 +92,8 @@ public class ToolClientService {
                 .build();
 
 
-        SystemMessage system = generateSystemMessage(username, isWebSearch);
-        UserMessage userMsg = new UserMessage(userMessage);
+        SystemMessage system = generateSystemMessage(discGlobalData.getUserMessage(), isWebSearch);
+        UserMessage userMsg = new UserMessage(discGlobalData.getUserMessage());
 
         Prompt prompt = new Prompt(List.of(system, userMsg), chatOptions);
 
@@ -103,8 +110,8 @@ public class ToolClientService {
         return response;
     }
 
-    public boolean shouldUseWebSearch(String userMessage) {
-        String t = userMessage.toLowerCase();
+    public boolean shouldUseWebSearch() {
+        String t = discGlobalData.getUserMessage().toLowerCase();
 
         return t.contains("search online")
                 || t.contains("websearch")
@@ -117,9 +124,8 @@ public class ToolClientService {
                 || t.contains("search");
     }
 
-    public boolean shouldUseDirectLink(String userMessage) {
-        String t = userMessage.toLowerCase();
-
+    public boolean shouldUseDirectLink() {
+        String t = discGlobalData.getUserMessage().toLowerCase();
         return t.contains("http://")
                 || t.contains("https://")
                 || t.contains("www.");

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 import java.util.List;
-import java.util.Map;
 
 public final class SystemMessageFactory {
 
@@ -90,6 +89,7 @@ public final class SystemMessageFactory {
                         true,
                         true,
                         "respond_by_advancing_topic_not_by_restating_context"),
+                null,
                 null,
                 null,
                 null,

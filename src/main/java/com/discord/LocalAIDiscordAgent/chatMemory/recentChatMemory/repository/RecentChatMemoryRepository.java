@@ -10,5 +10,4 @@ import java.util.List;
 @Repository
 public interface RecentChatMemoryRepository extends JpaRepository<RecentChatMemory, Long> {
     List<RecentChatMemory> findAllByConversationId(String conversationId);
-
 }

@@ -1,5 +1,8 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
+
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
+
 import java.util.List;
 
 public class SystemMsgRecords {
@@ -15,6 +18,7 @@ public class SystemMsgRecords {
             AntiRepetitionRules antiRepetitionRules,
             UserProfile userProfile,
             Memory memory,
+            WebQAMemory webSearchMemory,
             List<RecentMessage> recentMessages,
             GroupMemory groupMemory,
             String currentUserMessage,

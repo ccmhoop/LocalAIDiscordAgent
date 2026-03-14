@@ -17,7 +17,6 @@ public class OllamaModelConfig {
                 .defaultOptions(
                         OllamaChatOptions.builder()
                                 .model("qwen3:30b-thinking")
-//                                .model("qwen3:8b")
                                 .enableThinking()
                                 .temperature(0.5)
                                 .topP(0.92)

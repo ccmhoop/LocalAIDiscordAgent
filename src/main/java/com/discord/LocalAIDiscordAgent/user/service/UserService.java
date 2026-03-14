@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.user.service;
 
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.repository.UserRepository;
@@ -14,14 +15,15 @@ import java.util.Map;
 public class UserService {
 
     public final UserRepository userRepository;
+    public final DiscGlobalData discGlobalData;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, DiscGlobalData discGlobalData) {
         this.userRepository = userRepository;
+        this.discGlobalData = discGlobalData;
     }
 
-
-    public UserEntity getUser(Map<DiscDataKey, String> discDataMap) {
-        Long userId = Long.parseLong(discDataMap.get(DiscDataKey.USER_ID));
+    public UserEntity getUser() {
+        Long userId = Long.parseLong(discGlobalData.getUserId());
         return userRepository.findByUserId(userId);
     }
 
@@ -38,12 +40,12 @@ public class UserService {
         }
     }
 
-    public UserEntity buildUser(Map<DiscDataKey, String> discDataMap) {
+    public UserEntity buildUser() {
         return UserEntity.builder()
-                .userId(Long.parseLong(discDataMap.get(DiscDataKey.USER_ID)))
-                .userGlobal(discDataMap.get(DiscDataKey.USER_GLOBAL))
-                .serverNickname(discDataMap.get(DiscDataKey.SERVER_NICKNAME))
-                .username(discDataMap.get(DiscDataKey.USERNAME))
+                .userId(Long.parseLong(discGlobalData.getUserId()))
+                .userGlobal(discGlobalData.getUserGlobal())
+                .serverNickname(discGlobalData.getServerNickname())
+                .username(discGlobalData.getUsername())
                 .build();
 
     }

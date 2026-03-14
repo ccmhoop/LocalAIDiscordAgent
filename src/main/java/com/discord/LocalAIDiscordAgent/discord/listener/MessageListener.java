@@ -2,6 +2,8 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscDataRecord;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.textToSpeech.VoiceMain;
@@ -37,71 +39,30 @@ public abstract class MessageListener {
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
     private Map<DiscDataKey, String> discDataMap;
 
-    public Mono<Void> processCommandAI(Message eventMessage, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient) {
+    public Mono<Void> processCommandAI(Message eventMessage, DiscGlobalData discGlobalData, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient) {
         return Mono.just(eventMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .flatMap(message -> {
-                    String content = message.getContent();
 
-                    boolean mentioned =
-                            content.toLowerCase().contains("@kier") ||
-                                    content.contains("<@1379869980123992274>");
-                    if (!mentioned) return Mono.empty();
-
-                    content = content.replace("<@1379869980123992274>", "").trim();
-
-                    if (content.isEmpty()) return Mono.empty();
-
-                    if (content.length() > MAX_INPUT_LENGTH) {
-                        return message.getChannel()
-                                .flatMap(channel -> channel.createMessage(
-                                        "I apologize, but your message is too long. Please limit your input to "
-                                                + MAX_INPUT_LENGTH + " characters."))
-                                .then();
-                    }
-
-                    String username = message.getAuthor().map(User::getUsername).orElse("unknown-user");
-                    String guildId = message.getGuildId().map(Snowflake::asString).orElse("dm");
-                    String channelId = message.getChannelId().asString();
-                    String userGlobalName = message.getAuthor().get().getGlobalName().orElse("unknown-user");
-                    String userId = message.getAuthor().get().getId().asString().trim();
-                    String nickname = message.getAuthorAsMember()
-                            .map(Member::getDisplayName)
-                            .blockOptional()
-                            .orElseGet(() -> message.getAuthor().map(User::getUsername).orElse("unknown"));
-
-                    String finalContent = content;
-
-                    discDataMap = Map.of(
-                            GUILD_ID, guildId,
-                            CHANNEL_ID, channelId,
-                            USER_ID, userId,
-                            USERNAME, username,
-                            USER_GLOBAL, userGlobalName,
-                            SERVER_NICKNAME, nickname,
-                            USER_MESSAGE, finalContent
-                    );
-
-
-                    UserEntity user = userService.getUser(discDataMap);
+                    UserEntity user = userService.getUser();
 
                     if (user == null) {
-                        user = userService.buildUser(discDataMap);
+                        user = userService.buildUser();
                         userService.saveUser(user);
-                    }else if (!nickname.equals(user.getServerNickname())){
-                        userService.updateUser(user, nickname);
+                    }else if (!discGlobalData.getServerNickname().equals(user.getServerNickname())){
+                        userService.updateUser(user, discGlobalData.getServerNickname());
                     }
 
                     UserEntity finalUser = user;
 
                     Mono<String> responseMono =
                             Mono.fromCallable(() -> {
-                                        if (toolClientService.shouldUseWebSearch(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, discDataMap, finalUser, true);
-                                        } else if (toolClientService.shouldUseDirectLink(finalContent)) {
-                                            return toolClientService.generateToolResponse(finalContent, discDataMap, finalUser, false);
+                                        if (toolClientService.shouldUseWebSearch()) {
+                                            return toolClientService.generateToolResponse(finalUser, true);
+                                        } else if (toolClientService.shouldUseDirectLink()) {
+                                            return toolClientService.generateToolResponse(finalUser, false);
                                         } else {
-                                            return chatClientService.generateLLMResponse(discDataMap, finalUser);
+                                            return chatClientService.generateLLMResponse(finalUser);
                                         }
                                     })
                                     .subscribeOn(Schedulers.boundedElastic())
@@ -115,7 +76,7 @@ public abstract class MessageListener {
                                                 String cleanedResponse = cleanResponse(response);
                                                 List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
 //                                                generateAndSaveAudio(cleanedResponse, userId);
-                                                VoiceMain.generateAndSaveAudio(cleanedResponse, userId);
+//                                                VoiceMain.generateAndSaveAudio(cleanedResponse, discGlobalData.getUserId());
 
                                                 return Flux.fromIterable(chunks)
                                                         .concatMap(chunk -> channel.createMessage(chunk)
@@ -128,14 +89,14 @@ public abstract class MessageListener {
                                             })
                                             .then(Mono.fromRunnable(() -> {
                                                 try {
-                                                    processSummaryClient.saveInteraction(discDataMap);
+                                                    processSummaryClient.saveInteraction();
                                                 } catch (ObjectOptimisticLockingFailureException e) {
                                                     log.warn("Failed to save interaction summary due to concurrent modification for conversation: {}:{}",
-                                                            guildId, userId, e);
+                                                            discGlobalData.getGuildId(), discGlobalData.getUserId(), e);
                                                     // Don't propagate this error as it's not critical to the user experience
                                                 } catch (Exception e) {
                                                     log.error("Unexpected error saving interaction summary for conversation: {}:{}",
-                                                            guildId, userId, e);
+                                                            discGlobalData.getGuildId(), discGlobalData.getUserId(), e);
                                                 }
                                             }))
 

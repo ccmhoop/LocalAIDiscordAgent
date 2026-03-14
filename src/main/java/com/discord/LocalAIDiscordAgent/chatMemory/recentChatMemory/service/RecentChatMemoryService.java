@@ -4,6 +4,7 @@ import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
@@ -25,33 +26,34 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 
 @Slf4j
 @Service
-public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>  {
+public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory> {
+
     private final RecentChatMemoryRepository chatRepo;
+    private final DiscGlobalData discGlobalData;
 
-    public RecentChatMemoryService(
-            RecentChatMemoryRepository recentChatMemoryRepository,
-            @Value("${recent.chat.memory.message.limit}") int messageLimit) {
-        super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class);
+    public RecentChatMemoryService(RecentChatMemoryRepository recentChatMemoryRepository,
+                                   @Value("${recent.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
+        super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class, discGlobalData);
         this.chatRepo = recentChatMemoryRepository;
+        this.discGlobalData = discGlobalData;
     }
-
 
     @Override
-    public void saveAndTrim(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
-        saveAll(discDataMap, messages, user);
-        trimDbToMessagesLimit(discDataMap);
+    public void saveAndTrim( List<Message> messages, UserEntity user) {
+        saveAll( messages, user);
+        trimDbToMessagesLimit();
     }
 
-    public List<RecentMessage>  buildMessageMemory(String conversationId){
-        List<RecentMessage> recentMessages = sortedRecentMessageList(conversationId);
+    public List<RecentMessage> buildMessageMemory() {
+        List<RecentMessage> recentMessages = sortedRecentMessageList();
         if (recentMessages.isEmpty()) {
             return null;
         }
         return new ArrayList<>(recentMessages);
     }
 
-    private List<RecentMessage> sortedRecentMessageList(String conversationId) {
-        Map<MessageType, List<RecentChatMemory>> recentMap = getChatMemoryAsMap(conversationId);
+    private List<RecentMessage> sortedRecentMessageList() {
+        Map<MessageType, List<RecentChatMemory>> recentMap = getChatMemoryAsMap();
 
         if (recentMap.isEmpty()) {
             return Collections.emptyList();
@@ -74,23 +76,22 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
 
             recentMessages.add(new RecentMessage(
                     user.getTimestamp().toString(),
-                    "user",
+                    MessageType.USER.toString(),
                     user.getContent()
             ));
 
             recentMessages.add(new RecentMessage(
                     assistant.getTimestamp().toString(),
-                    "assistant",
+                    MessageType.ASSISTANT.toString(),
                     assistant.getContent()
             ));
         }
         return recentMessages;
     }
 
-
     @Override
-    public Map<MessageType, List<RecentChatMemory>> getChatMemoryAsMap(String conversationId) {
-        List<RecentChatMemory> memories = new ArrayList<>(chatRepo.findAllByConversationId(conversationId));
+    public Map<MessageType, List<RecentChatMemory>> getChatMemoryAsMap() {
+        List<RecentChatMemory> memories = new ArrayList<>(chatRepo.findAllByConversationId(discGlobalData.getConversationId()));
         if (memories.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -100,7 +101,7 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
     @Override
     public Map<MessageType, List<RecentChatMemory>> sortAndMap(List<RecentChatMemory> memories) {
         var partitioned = memories.stream()
-                .filter(m -> m.getType() == USER || m.getType() == ASSISTANT )
+                .filter(m -> m.getType() == USER || m.getType() == ASSISTANT)
                 .collect(Collectors.partitioningBy(
                         m -> m.getType() == USER
                 ));
@@ -114,17 +115,12 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 ASSISTANT, partitioned.get(false));
     }
 
-
     @Override
-    public RecentChatMemory buildChatEntity(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user) {
-        if (discDataMap == null || message == null) {
-            throw new IllegalArgumentException("discDataMap and message cannot be null");
-        }
-
+    public RecentChatMemory buildChatEntity(Message message, UserEntity user) {
         return RecentChatMemory.builder()
-                .guildId(discDataMap.get(GUILD_ID))
-                .channelId(discDataMap.get(CHANNEL_ID))
-                .conversationId(ChatClientHelpers.buildConversationId(discDataMap))
+                .guildId(discGlobalData.getGuildId())
+                .channelId(discGlobalData.getChannelId())
+                .conversationId(discGlobalData.getConversationId())
                 .user(user)
                 .content(message.getText())
                 .type(message.getMessageType())

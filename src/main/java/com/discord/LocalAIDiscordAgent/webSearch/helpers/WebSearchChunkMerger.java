@@ -1,45 +1,20 @@
 package com.discord.LocalAIDiscordAgent.webSearch.helpers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
 import org.springframework.ai.document.Document;
 
 import java.util.*;
 
 public final class WebSearchChunkMerger {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     private WebSearchChunkMerger() {}
 
-    // --- Records (typed output) ---
-
-    public record MergedWebResults(
-            String type,
-            int count,
-            List<MergedWebResultItem> results
-    ) {
-        public static MergedWebResults empty() {
-            return new MergedWebResults("MERGED_WEB_RESULTS", 0, List.of());
-        }
-    }
-
-    public record MergedWebResultItem(
-            int rank,
-            String title,
-            String domain,
-            String url,
-            String content
-    ) {}
-
-    /**
-     * Merge chunked Documents into per-article typed result.
-     */
-    public static MergedWebResults mergeByArticle(List<Document> docs,
-                                                  int maxArticles,
-                                                  int maxCharsPerArticle) {
-
+    public static WebQAMemory mergeByArticle(List<Document> docs,
+                                             int maxArticles,
+                                             int maxCharsPerArticle) {
         if (docs == null || docs.isEmpty()) {
-            return MergedWebResults.empty();
+            return WebQAMemory.empty();
         }
 
         // Preserve insertion order (similarity order)
@@ -64,7 +39,7 @@ public final class WebSearchChunkMerger {
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(d);
         }
 
-        List<MergedWebResultItem> results = new ArrayList<>();
+        List<MergedWebQAItem> results = new ArrayList<>();
         int rank = 1;
 
         for (List<Document> group : grouped.values()) {
@@ -86,7 +61,7 @@ public final class WebSearchChunkMerger {
                 combined = combined.substring(0, maxCharsPerArticle) + "…";
             }
 
-            results.add(new MergedWebResultItem(
+            results.add(new MergedWebQAItem(
                     rank++,
                     title,
                     domain,
@@ -95,19 +70,9 @@ public final class WebSearchChunkMerger {
             ));
         }
 
-        return new MergedWebResults("MERGED_WEB_RESULTS", results.size(), List.copyOf(results));
+        return new WebQAMemory("MERGED_WEB_RESULTS", results.size(), List.copyOf(results));
     }
 
-    /**
-     * Optional: keep JSON boundary if some caller still expects JSON.
-     */
-    public static String mergeByArticleToJson(List<Document> docs,
-                                              int maxArticles,
-                                              int maxCharsPerArticle) {
-        return toJson(mergeByArticle(docs, maxArticles, maxCharsPerArticle));
-    }
-
-    // --- Helpers ---
 
     private static String combineTexts(List<Document> group) {
         StringBuilder sb = new StringBuilder();
@@ -140,11 +105,4 @@ public final class WebSearchChunkMerger {
         return o == null ? "" : String.valueOf(o);
     }
 
-    private static String toJson(Object o) {
-        try {
-            return MAPPER.writeValueAsString(o);
-        } catch (Exception e) {
-            return String.valueOf(o);
-        }
-    }
 }

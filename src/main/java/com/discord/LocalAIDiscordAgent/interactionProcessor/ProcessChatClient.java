@@ -21,9 +21,9 @@ public class ProcessChatClient {
         this.groupService = groupChatMemoryService;
     }
 
-    public void saveInteraction(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity userEntity) {
-        recentService.saveAndTrim(discDataMap, messages, userEntity);
-        groupService.saveAndTrim(discDataMap, messages, userEntity);
+    public void saveInteraction(List<Message> messages, UserEntity userEntity) {
+        recentService.saveAndTrim(messages, userEntity);
+        groupService.saveAndTrim(messages, userEntity);
     }
 
 }

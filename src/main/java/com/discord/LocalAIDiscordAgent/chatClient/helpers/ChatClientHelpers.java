@@ -1,12 +1,7 @@
 package com.discord.LocalAIDiscordAgent.chatClient.helpers;
 
 import com.discord.LocalAIDiscordAgent.chatClient.exceptions.BlankModelResponseException;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import org.springframework.ai.chat.model.ChatResponse;
-
-import java.util.Map;
-
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 
 public final class ChatClientHelpers {
 
@@ -20,16 +15,4 @@ public final class ChatClientHelpers {
         return chatResponse.getResult().getOutput().getText().trim();
     }
 
-    public static String buildConversationId(Map<DiscDataKey, String> discDataMap) {
-        String safeGuild = (discDataMap.get(GUILD_ID).isEmpty()) ? "dm" : discDataMap.get(GUILD_ID);
-        String safeChannel = (discDataMap.get(CHANNEL_ID).isEmpty()) ? "dm" : discDataMap.get(CHANNEL_ID);
-        String safeUserId = (discDataMap.get(USERNAME).isEmpty()) ? "unknown-user" : discDataMap.get(USER_ID);
-        return safeGuild + ":" + safeChannel + ":" + safeUserId;
-    }
-
-    public static String buildGroupConversationId(Map<DiscDataKey, String> discDataMap) {
-        String safeGuild = (discDataMap.get(GUILD_ID).isEmpty()) ? "dm" : discDataMap.get(GUILD_ID);
-        String safeChannel = (discDataMap.get(CHANNEL_ID).isEmpty()) ? "dm" : discDataMap.get(CHANNEL_ID);
-        return safeGuild + ":" + safeChannel;
-    }
 }

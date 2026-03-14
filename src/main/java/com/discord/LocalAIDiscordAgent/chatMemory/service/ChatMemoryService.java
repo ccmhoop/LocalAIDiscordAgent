@@ -5,7 +5,7 @@ import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.repository.Gro
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,8 +18,6 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.GUILD_ID;
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.USER_ID;
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 
 @Slf4j
@@ -31,27 +29,24 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
     private final JpaRepository<T, Long> repo;
     private final Class<T> modelClass;
     private int messageLimit;
+    private final DiscGlobalData discGlobalData;
 
-    public ChatMemoryService(JpaRepository<T, Long> repo, int messageLimit, Class<T> modelClass) {
+
+    public ChatMemoryService(JpaRepository<T, Long> repo, int messageLimit, Class<T> modelClass, DiscGlobalData discGlobalData) {
         this.repo = repo;
         this.modelClass = modelClass;
         this.messageLimit = messageLimit;
+        this.discGlobalData = discGlobalData;
     }
-    public abstract void saveAndTrim(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user);
+    public abstract void saveAndTrim( List<Message> messages, UserEntity user);
     public abstract Map<MessageType, List<T>> sortAndMap(List<T> memories);
-    public abstract T buildChatEntity(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user);
-    public abstract Map<MessageType, List<T>> getChatMemoryAsMap(String conversationId);
-
+    public abstract T buildChatEntity(Message message, UserEntity user);
+    public abstract Map<MessageType, List<T>> getChatMemoryAsMap();
 
     //----------------------------- SAVING TO DB  ------------------------------------
-    public void saveAll(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
+    public void saveAll(List<Message> messages, UserEntity user) {
         if (messages == null || messages.isEmpty()) {
             log.warn("Cannot save chat memory: messages list is null or empty");
-            return;
-        }
-
-        if (discDataMap == null || discDataMap.isEmpty()) {
-            log.warn("Cannot save chat memory: discDataMap is null or empty");
             return;
         }
 
@@ -66,7 +61,6 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
 
         repo.saveAll(
                 createSaveAllList(
-                        discDataMap,
                         messages,
                         user
                 )
@@ -75,17 +69,16 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
         repo.flush();
     }
 
-    private List<T> createSaveAllList(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
-        return messages.stream().map(m -> buildChatEntity(discDataMap, m, user )).collect(Collectors.toCollection(ArrayList::new));
+    private List<T> createSaveAllList(List<Message> messages, UserEntity user) {
+        return messages.stream().map(m -> buildChatEntity( m, user )).collect(Collectors.toCollection(ArrayList::new));
     }
 
-
     //----------------------------- DB TRIM TO ROW LIMIT------------------------------------
-    public void trimDbToMessagesLimit(Map<DiscDataKey, String> discDataMap) {
+    public void trimDbToMessagesLimit() {
         List<T> memories = Collections.emptyList();
         try {
             if (repo instanceof RecentChatMemoryRepository && modelClass.equals(RecentChatMemory.class)) {
-                memories = repo.findAll().stream().filter(m -> m.getUser().getUserId().toString().equals(discDataMap.get(USER_ID)) && m.getGuildId().equals(discDataMap.get(GUILD_ID))).toList();
+                memories = repo.findAll().stream().filter(m -> m.getUser().getUserId().toString().equals(discGlobalData.getUserId()) && m.getGuildId().equals(discGlobalData.getGuildId())).toList();
             }else if (repo instanceof GroupChatMemoryRepository && modelClass.equals(GroupChatMemory.class)){
                 memories = repo.findAll();
             }

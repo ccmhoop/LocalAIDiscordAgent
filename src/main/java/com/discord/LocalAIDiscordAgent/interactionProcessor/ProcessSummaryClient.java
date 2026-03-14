@@ -7,6 +7,7 @@ import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupCha
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -26,16 +27,18 @@ public class ProcessSummaryClient {
     private final ChatSummaryService chatSummaryService;
     private final RecentChatMemoryService recentService;
     private final GroupChatMemoryService groupService;
+    private final DiscGlobalData discGlobalData;
 
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final long BASE_DELAY_MS = 100;
 
     public ProcessSummaryClient(ChatSummaryService chatSummaryService,
                                 RecentChatMemoryService recentService,
-                                GroupChatMemoryService groupService) {
+                                GroupChatMemoryService groupService, DiscGlobalData discGlobalData) {
         this.chatSummaryService = chatSummaryService;
         this.recentService = recentService;
         this.groupService = groupService;
+        this.discGlobalData = discGlobalData;
     }
 
     /**
@@ -45,9 +48,9 @@ public class ProcessSummaryClient {
      *
      * IMPORTANT: turns use STABLE ids (DB id / snowflake), not array indices.
      */
-    public void saveInteraction(Map<DiscDataKey, String> discDataMap) {
-        String userConversationId = ChatClientHelpers.buildConversationId(discDataMap);
-        String groupConversationId = ChatClientHelpers.buildGroupConversationId(discDataMap);
+    public void saveInteraction() {
+        String userConversationId = discGlobalData.getConversationId();
+        String groupConversationId = discGlobalData.getGroupConversationId();
 
         int attempts = 0;
         while (attempts < MAX_RETRY_ATTEMPTS) {
@@ -81,7 +84,7 @@ public class ProcessSummaryClient {
         // --------------------
         // 1) Per-user summary
         // --------------------
-        Map<MessageType, List<RecentChatMemory>> recentMap = recentService.getChatMemoryAsMap(userConversationId);
+        Map<MessageType, List<RecentChatMemory>> recentMap = recentService.getChatMemoryAsMap();
 
         List<RecentChatMemory> recentUsers = recentMap.getOrDefault(USER, List.of());
         List<RecentChatMemory> recentAssistants = recentMap.getOrDefault(ASSISTANT, List.of());
@@ -95,7 +98,7 @@ public class ProcessSummaryClient {
         // 2) Group/channel summary
         // --------------------
         // NOTE: GroupChatMemoryAdvisor expects this service method signature.
-        Map<MessageType, List<GroupChatMemory>> groupMap = groupService.getChatMemoryAsMap(groupConversationId);
+        Map<MessageType, List<GroupChatMemory>> groupMap = groupService.getChatMemoryAsMap();
         List<GroupChatMemory> groupUsers = groupMap.getOrDefault(USER, List.of());
         List<GroupChatMemory> groupAssistants = groupMap.getOrDefault(ASSISTANT, List.of());
 

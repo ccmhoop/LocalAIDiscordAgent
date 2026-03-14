@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.webSearch.service;
 
 import com.discord.LocalAIDiscordAgent.webSearch.helpers.WebSearchChunkMerger;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.WebQAMemory;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -63,13 +64,6 @@ public class WebSearchMemoryService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final TokenTextSplitter textSplitter = TokenTextSplitter.builder()
-            .withChunkSize(CHUNK_SIZE_TOKENS)
-            .withMinChunkSizeChars(MIN_CHUNK_SIZE_CHARS)
-            .withMinChunkLengthToEmbed(MIN_CHUNK_LENGTH_TO_EMBED)
-            .withMaxNumChunks(MAX_NUM_CHUNKS)
-            .withKeepSeparator(KEEP_SEPARATOR)
-            .build();
 
     public WebSearchMemoryService(VectorStore vectorStoreWebSearchMemory) {
         this.vectorStore = vectorStoreWebSearchMemory;
@@ -88,7 +82,7 @@ public class WebSearchMemoryService {
      * Record-based retrieval: returns a typed object (not JSON).
      * @return Merged results or null if nothing relevant.
      */
-    public WebSearchChunkMerger.MergedWebResults searchExistingContent(String query) {
+    public WebQAMemory searchExistingContent(String query) {
         if (query == null || query.isBlank()) return null;
 
         try {
@@ -119,7 +113,7 @@ public class WebSearchMemoryService {
      * Backward-compatible wrapper if some tool boundary still expects a string.
      */
     public String searchExistingContentJson(String query) {
-        WebSearchChunkMerger.MergedWebResults merged = searchExistingContent(query);
+        WebQAMemory merged = searchExistingContent(query);
         if (merged == null) return null;
         return toJson(merged);
     }

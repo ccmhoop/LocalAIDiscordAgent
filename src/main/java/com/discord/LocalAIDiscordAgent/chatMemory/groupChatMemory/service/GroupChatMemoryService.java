@@ -4,7 +4,7 @@ package com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.repository.GroupChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.service.ChatMemoryService;
-import com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +19,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static com.discord.LocalAIDiscordAgent.discord.enums.DiscDataKey.*;
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
 
@@ -34,14 +32,16 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
     private long minutesWindow;
 
     private final GroupChatMemoryRepository chatRepo;
+    private final DiscGlobalData discGlobalData;
 
-    public GroupChatMemoryService(GroupChatMemoryRepository groupChatMemoryRepository, @Value("${group.chat.memory.message.limit}") int messageLimit) {
-        super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class);
+    public GroupChatMemoryService(GroupChatMemoryRepository groupChatMemoryRepository, @Value("${group.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
+        super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class, discGlobalData);
         this.chatRepo = groupChatMemoryRepository;
+        this.discGlobalData = discGlobalData;
     }
 
-    public GroupMemory buildMessageMemory(String conversationId)  {
-        Map<MessageType, List<GroupChatMemory>> sortedGroupMap = getChatMemoryAsMap(conversationId);
+    public GroupMemory buildMessageMemory()  {
+        Map<MessageType, List<GroupChatMemory>> sortedGroupMap = getChatMemoryAsMap();
         if (sortedGroupMap.isEmpty()) {
             return null;
         }
@@ -58,37 +58,32 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         return new GroupMemory(participantProfiles, groupMessages);
     }
 
-
     @Override
-    public void saveAndTrim(Map<DiscDataKey, String> discDataMap, List<Message> messages, UserEntity user) {
-        if (discDataMap == null || discDataMap.get(USERNAME) == null) {
-            log.warn("Cannot save and trim group chat memory: discDataMap or username is null");
-            return;
-        }
+    public void saveAndTrim( List<Message> messages, UserEntity user) {
 
         try {
             LocalDateTime timeWindow = LocalDateTime.now().minusMinutes(this.minutesWindow);
-            List<GroupChatMemory> memories = chatRepo.findAllByGuildId(discDataMap.get(GUILD_ID)).stream()
-                    .filter(m -> LocalDateTime.now().isBefore(timeWindow) || m.getUser().getUserId().toString().equals(discDataMap.get(USER_ID))
+            List<GroupChatMemory> memories = chatRepo.findAllByGuildId(discGlobalData.getGuildId()).stream()
+                    .filter(m -> LocalDateTime.now().isBefore(timeWindow) || m.getUser().getUserId().toString().equals(discGlobalData.getUserId())
                     ).toList();
 
             chatRepo.deleteAll(memories);
             chatRepo.flush();
 
-            saveAll(discDataMap, messages, user);
+            saveAll(messages, user);
             chatRepo.flush();
 
-            trimDbToMessagesLimit(discDataMap);
-            log.debug("Successfully saved and trimmed group chat memory for user: {}", discDataMap.get(USERNAME));
+            trimDbToMessagesLimit();
+            log.debug("Successfully saved and trimmed group chat memory for user: {}", discGlobalData.getUsername());
         } catch (Exception e) {
-            log.error("Error in saveAndTrim for user {}: {}", discDataMap.get(USERNAME), e.getMessage(), e);
+            log.error("Error in saveAndTrim for user {}: {}", discGlobalData.getUsername(), e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Map<MessageType, List<GroupChatMemory>> getChatMemoryAsMap(String conversationId) {
-        List<GroupChatMemory> memories = chatRepo.findAll().stream().filter(m -> m.getConversationId().equals(conversationId)).collect(Collectors.toList());
+    public Map<MessageType, List<GroupChatMemory>> getChatMemoryAsMap() {
+        List<GroupChatMemory> memories = chatRepo.findAll().stream().filter(m -> m.getConversationId().equals(discGlobalData.getGroupConversationId())).collect(Collectors.toList());
 //        if (memories.isEmpty() || memories.size() <= 2) {
 //            return Collections.emptyMap();
 //        }
@@ -131,7 +126,6 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
          return userProfiles;
     }
 
-
     public List<GroupMessage> buildSGroupMessages(List<GroupChatMemory> users, List<GroupChatMemory> assistants, int size) {
 
         List<GroupMessage> groupMessages = new ArrayList<>(size);
@@ -163,18 +157,13 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         return groupMessages;
     }
 
-
-
     @Override
-    public GroupChatMemory buildChatEntity(Map<DiscDataKey, String> discDataMap, Message message, UserEntity user) {
-        if (discDataMap == null || message == null) {
-            throw new IllegalArgumentException("discDataMap and message cannot be null");
-        }
-        String groupConversationId = discDataMap.get(GUILD_ID) + ":" + discDataMap.get(CHANNEL_ID);
+    public GroupChatMemory buildChatEntity(Message message, UserEntity user) {
+
         return GroupChatMemory.builder()
-                .guildId(discDataMap.get(GUILD_ID))
-                .channelId(discDataMap.get(CHANNEL_ID))
-                .conversationId(groupConversationId)
+                .guildId(discGlobalData.getGuildId())
+                .channelId(discGlobalData.getChannelId())
+                .conversationId(discGlobalData.getGroupConversationId())
                 .user(user)
                 .content(message.getText())
                 .type(message.getMessageType())
