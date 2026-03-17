@@ -38,7 +38,7 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
 
         discGlobalData.setDiscData(event);
 
-        if (discGlobalData.dataIsEmptyOrNull()){
+        if (discGlobalData.dataIsEmptyOrNull() || discGlobalData.getUserMessage().isBlank()){
             return Mono.empty();
         }
 

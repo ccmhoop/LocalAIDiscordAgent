@@ -9,13 +9,18 @@ import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
+import com.discord.LocalAIDiscordAgent.toolSummary.ToolSummaryService;
 import com.discord.LocalAIDiscordAgent.webQA.service.WebQAService;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,23 +29,40 @@ import java.util.Optional;
 @Service
 public class PromptService {
 
-    private final SystemMessageFactory systemMessageFactory;
-    private final RecentChatMemoryService recentChatService;
-    private final GroupChatMemoryService groupChatService;
     private final WebQAService webQAService;
     private final ChatSummaryRepository repo;
     private final DiscGlobalData discGlobalData;
+    private final ToolSummaryService toolSummaryService;
+    private final GroupChatMemoryService groupChatService;
+    private final RecentChatMemoryService recentChatService;
+    private final SystemMessageFactory systemMessageFactory;
+
+    private List<RecentMessage> recentMessages;
+    private RetrievedContext retrievedContext;
+    private GroupMemory groupChatMemory;
+    private UserProfile userProfile;
+    private Memory baseMemory;
+
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 
-    public PromptService(SystemMessageFactory systemMessageFactory, RecentChatMemoryService recentChatMemoryService, GroupChatMemoryService groupChatMemoryService, WebQAService webQAService, ChatSummaryRepository repo, DiscGlobalData discGlobalData) {
+    public PromptService(
+            WebQAService webQAService,
+            ChatSummaryRepository repo,
+            DiscGlobalData discGlobalData,
+            ToolSummaryService toolSummaryService,
+            SystemMessageFactory systemMessageFactory,
+            GroupChatMemoryService groupChatMemoryService,
+            RecentChatMemoryService recentChatMemoryService
+    ) {
         this.systemMessageFactory = systemMessageFactory;
         this.recentChatService = recentChatMemoryService;
         this.groupChatService = groupChatMemoryService;
+        this.toolSummaryService = toolSummaryService;
+        this.discGlobalData = discGlobalData;
         this.webQAService = webQAService;
         this.repo = repo;
-        this.discGlobalData = discGlobalData;
     }
 
     public String buildSystemPrompt() {
@@ -48,50 +70,60 @@ public class PromptService {
         return systemMessageFactory.buildSystemMessage(config);
     }
 
-    public String buildSystemMsgJson() {
-        SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
+    public String getSystemPromptAsJson() {
+        this.userProfile = buildUserProfile();
+        this.recentMessages = recentChatService.buildMessageMemory();
+        this.groupChatMemory = groupChatService.buildMessageMemory();
 
-        List<RecentMessage> recentMessages = recentChatService.buildMessageMemory();
-        GroupMemory groupChatMemory = groupChatService.buildMessageMemory();
-
-        Memory baseMemory;
-
-        if (groupChatMemory == null) {
-            baseMemory = buildMemory(discGlobalData.getGroupConversationId());
-        }else{
-            baseMemory = buildMemory(discGlobalData.getConversationId());
+        if (groupChatMemory != null) {
+            this.baseMemory = buildMemory(discGlobalData.getConversationId());
+        } else {
+            this.baseMemory = buildMemory(discGlobalData.getGroupConversationId());
         }
 
-        if (baseMemory == null) {
-            return "";
-        }
 
-        RetrievedContext retrievedContext = new RetrievedContext(webQAService.getWebQAResults());
+        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults();
+        String toolSummary = toolSummaryService.processToolResults(userProfile, getLastAssistantMsg(), webQAResults);
 
-        if (retrievedContext.webResults() == null || retrievedContext.webResults().isEmpty()) {
+
+        if (toolSummary == null || toolSummary.isBlank()) {
             retrievedContext = null;
+        }else{
+            this.retrievedContext = new RetrievedContext(null, toolSummary);
         }
 
-        RuntimeContext runtimeContext = new RuntimeContext(
-                buildUserProfile(),
-                baseMemory,
-                retrievedContext,
-                recentMessages,
-                groupChatMemory,
-                discGlobalData.getUserMessage(),
-                baseConfig.runtimeContext().responseContract()
-
-        );
-
-        baseConfig = SystemMessagePresets.withMessageMemory(
-                baseConfig,
-                runtimeContext
-        );
-
-        return systemMessageFactory.buildSystemMessage(baseConfig);
+        return systemMessageFactory.buildSystemMessage(buildSystemMessageConfig());
     }
 
-    private UserProfile buildUserProfile(){
+    public String buildSystemPromptJson(SystemMessageConfig config) {
+        return systemMessageFactory.buildSystemMessage(config);
+    }
+
+    private SystemMessageConfig buildSystemMessageConfig() {
+        SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
+        RuntimeContext runtimeContext = new RuntimeContext(
+                LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
+                this.userProfile,
+                this.baseMemory,
+                this.retrievedContext,
+                this.recentMessages,
+                this.groupChatMemory,
+                baseConfig.runtimeContext().responseContract()
+        );
+
+        return SystemMessagePresets.withMessageMemory(baseConfig, runtimeContext);
+    }
+
+    private RecentMessage getLastAssistantMsg() {
+        if (this.recentMessages == null || this.recentMessages.isEmpty()) return null;
+        return new RecentMessage(
+                this.recentMessages.getLast().timestamp(),
+                MessageType.ASSISTANT.toString(),
+                this.recentMessages.getLast().content()
+        );
+    }
+
+    private UserProfile buildUserProfile() {
         return new UserProfile(
                 discGlobalData.getUserId(),
                 discGlobalData.getUsername(),

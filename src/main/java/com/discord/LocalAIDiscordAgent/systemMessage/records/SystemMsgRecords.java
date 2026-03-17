@@ -1,6 +1,5 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
-
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;
@@ -14,8 +13,8 @@ public class SystemMsgRecords {
             TechnicalResponsePolicy technicalResponsePolicy,
             MemoryPolicy memoryPolicy,
             AntiRepetitionPolicy antiRepetitionPolicy,
+            SensitiveTopicPolicy sensitiveTopicPolicy,
             RuntimeContext runtimeContext
-
     ) {
     }
 
@@ -43,7 +42,7 @@ public class SystemMsgRecords {
     }
 
     public record Humor(
-            boolean edgy,
+            List<String> style,
             boolean sociallyAcceptable
             ){
 
@@ -106,13 +105,29 @@ public class SystemMsgRecords {
     ) {
     }
 
+    public record SensitiveTopicPolicy(
+            List<String> topics,
+            ToneOverride toneOverride,
+            List<String> prioritize
+
+    ){
+        public record ToneOverride(
+            Boolean witty,
+            boolean edgy,
+            List<String> style
+        ) {
+        }
+    }
+
+
     public record RuntimeContext(
+            String Date,
             UserProfile userProfile,
             Memory memory,
             RetrievedContext retrievedContext,
             List<RecentMessage> recentMessages,
             GroupMemory groupMemory,
-            String currentUserMessage,
+//            String currentUserMessage,
             ResponseContract responseContract
     ) {
     }
@@ -131,7 +146,8 @@ public class SystemMsgRecords {
     }
 
     public record RetrievedContext(
-            List<MergedWebQAItem> webResults
+            List<MergedWebQAItem> webResults,
+            String toolSummary
             ){
     }
 
