@@ -17,8 +17,8 @@ import java.util.Map;
 @Service
 public class ToolSummaryService {
 
-    private final ChatClient structuredToolClient;
     private final DiscGlobalData discGlobalData;
+    private final ChatClient structuredToolClient;
     private final WebSearchMemoryService webSearchMemoryService;
 
     private RecentMessage recentAssistantMsg;

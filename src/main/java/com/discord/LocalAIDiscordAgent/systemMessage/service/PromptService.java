@@ -81,7 +81,7 @@ public class PromptService {
             this.baseMemory = buildMemory(discGlobalData.getGroupConversationId());
         }
 
-        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults();
+        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults(recentMessages);
 
         String toolSummary = toolService.executeTools(userProfile, getLastAssistantMsg(), webQAResults);
 

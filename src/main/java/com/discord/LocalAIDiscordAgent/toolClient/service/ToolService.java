@@ -168,7 +168,6 @@ public class ToolService {
             log.error("Error processing JSON: {}", e.getMessage(), e);
             return "";
         }
-
         return contextBuilder.toString();
     }
 

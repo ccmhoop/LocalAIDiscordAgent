@@ -72,8 +72,7 @@ public class ChatClientService {
                         )
                 )
                 .build();
-//        log.info("Ollama prompt: {}", prompt);
-
+        log.info("Ollama prompt: {}", prompt);
 
         return chatClient.prompt(prompt)
                 .call()
