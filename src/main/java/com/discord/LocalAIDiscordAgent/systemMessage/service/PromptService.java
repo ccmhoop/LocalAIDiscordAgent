@@ -9,7 +9,7 @@ import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.toolSummary.ToolSummaryService;
+import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
 import com.discord.LocalAIDiscordAgent.webQA.service.WebQAService;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,10 +29,10 @@ import java.util.Optional;
 @Service
 public class PromptService {
 
+    private final ToolService toolService;
     private final WebQAService webQAService;
     private final ChatSummaryRepository repo;
     private final DiscGlobalData discGlobalData;
-    private final ToolSummaryService toolSummaryService;
     private final GroupChatMemoryService groupChatService;
     private final RecentChatMemoryService recentChatService;
     private final SystemMessageFactory systemMessageFactory;
@@ -48,10 +48,10 @@ public class PromptService {
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 
     public PromptService(
+            ToolService toolService,
             WebQAService webQAService,
             ChatSummaryRepository repo,
             DiscGlobalData discGlobalData,
-            ToolSummaryService toolSummaryService,
             SystemMessageFactory systemMessageFactory,
             GroupChatMemoryService groupChatMemoryService,
             RecentChatMemoryService recentChatMemoryService
@@ -59,9 +59,9 @@ public class PromptService {
         this.systemMessageFactory = systemMessageFactory;
         this.recentChatService = recentChatMemoryService;
         this.groupChatService = groupChatMemoryService;
-        this.toolSummaryService = toolSummaryService;
         this.discGlobalData = discGlobalData;
         this.webQAService = webQAService;
+        this.toolService = toolService;
         this.repo = repo;
     }
 
@@ -81,10 +81,9 @@ public class PromptService {
             this.baseMemory = buildMemory(discGlobalData.getGroupConversationId());
         }
 
-
         List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults();
-        String toolSummary = toolSummaryService.processToolResults(userProfile, getLastAssistantMsg(), webQAResults);
 
+        String toolSummary = toolService.executeTools(userProfile, getLastAssistantMsg(), webQAResults);
 
         if (toolSummary == null || toolSummary.isBlank()) {
             retrievedContext = null;

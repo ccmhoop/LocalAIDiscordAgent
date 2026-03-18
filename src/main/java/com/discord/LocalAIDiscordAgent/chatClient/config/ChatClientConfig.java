@@ -16,9 +16,8 @@ public class ChatClientConfig {
             OllamaChatModel ollamaQwenModelConfig,
             SystemMessageFactory systemMessageFactory
     ) {
-        String systemMessage = systemMessageFactory.buildDefaultSystemMessage();
         return ChatClient.builder(ollamaQwenModelConfig)
-                .defaultSystem(systemMessage)
+                .defaultSystem(systemMessageFactory.buildDefaultSystemMessage())
                 .build();
     }
 
@@ -28,19 +27,5 @@ public class ChatClientConfig {
                 .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .build();
     }
-
-    @Bean
-    public ChatClient toolCallingLLM(OllamaChatModel llmToolThinkingConfig) {
-        return ChatClient.builder(llmToolThinkingConfig)
-                .build();
-    }
-
-    @Bean
-    public ChatClient toolClientLLM(OllamaChatModel llmToolConfig) {
-        return ChatClient.builder(llmToolConfig)
-                .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
-                .build();
-    }
-
 
 }

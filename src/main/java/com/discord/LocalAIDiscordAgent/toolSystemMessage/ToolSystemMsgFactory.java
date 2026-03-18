@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.systemMessage;
+package com.discord.LocalAIDiscordAgent.toolSystemMessage;
 
-import com.discord.LocalAIDiscordAgent.systemMessage.records.ToolSystemMsgRecords;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.ToolSystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.ToolSystemMsgRecords.ToolCall.AllowedOnlyWhen;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.*;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.ToolCall.AllowedOnlyWhen;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 

@@ -1,7 +1,7 @@
-package com.discord.LocalAIDiscordAgent.systemMessage;
+package com.discord.LocalAIDiscordAgent.toolSystemMessage;
 
-import com.discord.LocalAIDiscordAgent.systemMessage.records.ToolSystemMsgRecords;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.ToolSystemMsgRecords.ToolRuntimeContext;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.ToolRuntimeContext;
 
 public class ToolSystemMsgPresets {
 

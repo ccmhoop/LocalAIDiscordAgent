@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.chatClient.config;
+package com.discord.LocalAIDiscordAgent.ollama;
 
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -48,7 +48,7 @@ public class OllamaModelConfig {
     }
 
     @Bean
-    public OllamaChatModel llmToolConfig(OllamaApi ollamaApi) {
+    public OllamaChatModel summerizeToolModel(OllamaApi ollamaApi) {
         return OllamaChatModel.builder()
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
@@ -68,7 +68,7 @@ public class OllamaModelConfig {
     }
 
     @Bean
-    public OllamaChatModel llmToolThinkingConfig(OllamaApi ollamaApi) {
+    public OllamaChatModel executeToolsModel(OllamaApi ollamaApi) {
         return OllamaChatModel.builder()
                 .ollamaApi(ollamaApi)
                 .defaultOptions(

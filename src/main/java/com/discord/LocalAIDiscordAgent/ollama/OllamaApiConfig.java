@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.chatClient.config;
+package com.discord.LocalAIDiscordAgent.ollama;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;

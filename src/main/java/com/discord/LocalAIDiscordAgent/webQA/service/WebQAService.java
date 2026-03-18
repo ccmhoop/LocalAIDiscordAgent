@@ -22,14 +22,12 @@ public class WebQAService {
     public List<MergedWebQAItem> getWebQAResults(){
         WebQAMemory webQAMemory = webSearchMemoryService.searchExistingContent(discGlobalData.getUserMessage());
 
-        // Check if webQAMemory is null before accessing its results
         if (webQAMemory == null) {
             return null;
         }
 
         List<MergedWebQAItem> results = webQAMemory.results();
 
-        // Check if results list is empty
         if (results == null || results.isEmpty()){
             return null;
         }

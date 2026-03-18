@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.vectorStoreEmbedding.config;
+package com.discord.LocalAIDiscordAgent.ollama;
 
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class EmbeddingModelConfig {
+public class OllamaEmbeddingConfig {
 
     @Bean
     public EmbeddingModel embeddingModel(OllamaApi ollamaBasicApiConfig) {

@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.systemMessage.records;
+package com.discord.LocalAIDiscordAgent.toolSystemMessage.records;
 
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
