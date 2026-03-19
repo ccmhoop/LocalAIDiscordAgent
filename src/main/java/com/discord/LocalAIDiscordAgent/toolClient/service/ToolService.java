@@ -107,13 +107,14 @@ public class ToolService {
 
         if (toolResponse != null && toolResponse.hasToolCalls()){
             toolsResults = handleToolCalls(prompt, toolResponse);
+            log.info("sumerizeData with web_search: {}", toolsResults);
         }
 
         if (this.webQAResults != null && toolsResults.isEmpty()) {
             toolsResults = webQAResults.toString();
+            log.info("sumerizeData with vector_memory: {}", toolsResults);
         }
 
-        log.info("sumerizeData: {}", toolsResults);
         return toolsResults;
     }
 
@@ -131,6 +132,7 @@ public class ToolService {
                 .messages(
                         List.of(
                                 new SystemMessage(toolInstructions),
+                                //place holder
                                 new UserMessage("Current_date : "+ LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)+ "\n user_message: " +discGlobalData.getUserMessage())
                         )
                 )
@@ -157,13 +159,11 @@ public class ToolService {
                     for (ToolResponse toolContent : toolResponseMessage.getResponses()) {
                         String responseData = toolContent.responseData();
 
-                        // Add validation and logging
                         if (responseData.trim().isEmpty()) {
                             log.warn("Tool response data is null or empty for tool: {}", toolContent.name());
                             continue;
                         }
 
-                        // Log the response data length and a sample for debugging
                         log.debug("Tool response data length: {} chars", responseData.length());
                         if (responseData.length() > 4000) {
                             log.debug("Response data sample around position 4000: {}",
@@ -174,12 +174,10 @@ public class ToolService {
                             JsonNode root = objectMapper.readTree(responseData);
 
                             if (root.isTextual()) {
-                                // Try to parse the text content as JSON
                                 String textContent = root.asText();
                                 if (isValidJson(textContent)) {
                                     root = objectMapper.readTree(textContent);
                                 } else {
-                                    // If it's not valid JSON, treat it as plain text
                                     log.warn("Tool response contains non-JSON text content: {}",
                                             textContent.length() > 100 ? textContent.substring(0, 100) + "..." : textContent);
                                     contextBuilder.append(textContent).append("\n");
@@ -187,20 +185,15 @@ public class ToolService {
                                 }
                             }
 
-                            // Process the results array
                             JsonNode resultsNode = root.path("results");
                             if (resultsNode.isMissingNode()) {
                                 log.warn("No 'results' field found in tool response");
-                                // Fallback: append the entire response if no results field
                                 contextBuilder.append(root).append("\n");
                             } else {
                                 StreamSupport.stream(resultsNode.spliterator(), false)
                                         .filter(Objects::nonNull)
-                                        .forEach(result -> {
-                                            contextBuilder.append(result).append("\n");
-                                        });
+                                        .forEach(result -> contextBuilder.append(result).append("\n"));
                             }
-
 
                         } catch (JsonProcessingException jsonEx) {
                             log.error("Failed to parse tool response as JSON for tool: {}. Error: {}. " +
@@ -210,7 +203,6 @@ public class ToolService {
                                     responseData.length(),
                                     responseData.length() > 200 ? responseData.substring(0, 200) + "..." : responseData);
 
-                            // Fallback: treat as plain text
                             contextBuilder.append(responseData).append("\n");
                         }
                     }
@@ -224,9 +216,6 @@ public class ToolService {
         return contextBuilder.toString();
     }
 
-    /**
-     * Helper method to validate if a string is valid JSON
-     */
     private boolean isValidJson(String jsonString) {
         try {
             ObjectMapper mapper = new ObjectMapper();

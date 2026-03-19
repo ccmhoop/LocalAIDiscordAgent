@@ -1,6 +1,5 @@
 package com.discord.LocalAIDiscordAgent.discord.service;
 
-import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;
@@ -15,17 +14,21 @@ import reactor.core.publisher.Mono;
 public class MessageCreateListenerINTF extends MessageListener implements EventListenerINTF<MessageCreateEvent> {
 
     private final UserService userService;
-    private final ChatClientService chatClientService;
-    private final ToolClientService toolClientService;
-    private final ProcessSummaryClient processSummaryClient;
     private final DiscGlobalData discGlobalData;
+    private final ChatClientService chatClientService;
+    private final ProcessSummaryClient processSummaryClient;
 
-    public MessageCreateListenerINTF(UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient, DiscGlobalData discGlobalData) {
-        this.userService = userService;
-        this.chatClientService = chatClientService;
-        this.toolClientService = toolClientService;
+    public MessageCreateListenerINTF(
+            UserService userService,
+            DiscGlobalData discGlobalData,
+            ChatClientService chatClientService,
+            ProcessSummaryClient processSummaryClient
+    ) {
         this.processSummaryClient = processSummaryClient;
+        this.chatClientService = chatClientService;
         this.discGlobalData = discGlobalData;
+        this.userService = userService;
+
     }
 
     @Override
@@ -43,7 +46,7 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
         }
 
 
-        return processCommandAI(event.getMessage(), discGlobalData, userService, chatClientService, toolClientService, processSummaryClient);
+        return processCommandAI(event.getMessage(), discGlobalData, userService, chatClientService, processSummaryClient);
     }
 
 }

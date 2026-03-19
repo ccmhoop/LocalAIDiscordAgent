@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
-import com.discord.LocalAIDiscordAgent.chatClient.service.ToolClientService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
@@ -30,7 +29,7 @@ public abstract class MessageListener {
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
 
-    public Mono<Void> processCommandAI(Message eventMessage, DiscGlobalData discGlobalData, UserService userService, ChatClientService chatClientService, ToolClientService toolClientService, ProcessSummaryClient processSummaryClient) {
+    public Mono<Void> processCommandAI(Message eventMessage, DiscGlobalData discGlobalData, UserService userService, ChatClientService chatClientService, ProcessSummaryClient processSummaryClient) {
         return Mono.just(eventMessage)
                 .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
                 .flatMap(message -> {

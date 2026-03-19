@@ -10,7 +10,9 @@ import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
-import com.discord.LocalAIDiscordAgent.webQA.service.WebQAService;
+import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService;
+import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.vectorMemory.webQAMemory.WebQAService;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +38,9 @@ public class PromptService {
     private final GroupChatMemoryService groupChatService;
     private final RecentChatMemoryService recentChatService;
     private final SystemMessageFactory systemMessageFactory;
+    private final LongTermMemoryService longTermMemoryService;
 
+    private List<LongTermMemoryData> longTermMemoryData;
     private List<RecentMessage> recentMessages;
     private RetrievedContext retrievedContext;
     private GroupMemory groupChatMemory;
@@ -54,8 +58,10 @@ public class PromptService {
             DiscGlobalData discGlobalData,
             SystemMessageFactory systemMessageFactory,
             GroupChatMemoryService groupChatMemoryService,
-            RecentChatMemoryService recentChatMemoryService
+            RecentChatMemoryService recentChatMemoryService,
+            LongTermMemoryService longTermMemoryService
     ) {
+        this.longTermMemoryService = longTermMemoryService;
         this.systemMessageFactory = systemMessageFactory;
         this.recentChatService = recentChatMemoryService;
         this.groupChatService = groupChatMemoryService;
@@ -81,7 +87,8 @@ public class PromptService {
             this.baseMemory = buildMemory(discGlobalData.getGroupConversationId());
         }
 
-        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults( baseMemory, recentMessages);
+        this.longTermMemoryData = longTermMemoryService.getLongTermMemory();
+        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults(recentMessages);
 
         String toolSummary = toolService.executeTools(userProfile, getLastAssistantMsg(), webQAResults);
 
@@ -105,6 +112,7 @@ public class PromptService {
                 this.userProfile,
                 this.baseMemory,
                 this.retrievedContext,
+                longTermMemoryData,
                 this.recentMessages,
                 this.groupChatMemory,
                 baseConfig.runtimeContext().responseContract()

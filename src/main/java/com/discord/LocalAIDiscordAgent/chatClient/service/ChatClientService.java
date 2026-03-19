@@ -44,8 +44,11 @@ public class ChatClientService {
             log.debug("Ollama response (extractedResponse={}): ", assistantMessage);
 
             try {
-                List<Message> messages = List.of(new UserMessage(discGlobalData.getUserMessage()), new AssistantMessage(assistantMessage));
-                process.saveInteraction(messages, userEntity);
+                process.saveInteraction(
+                        new UserMessage(discGlobalData.getUserMessage()),
+                        new AssistantMessage(assistantMessage),
+                        userEntity
+                );
                 log.debug("Successfully saved chat interaction for user: {}", discGlobalData.getUserId());
             } catch (Exception saveException) {
                 log.error("Failed to save chat memory for user: {} - Error: {}",

@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.systemMessage;
 
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
+import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 
 import java.util.List;
 
@@ -15,7 +16,8 @@ public final class SystemMessagePresets {
     public static SystemMessageConfig withContext(
             SystemMessageConfig base,
             RetrievedContext retrievedContext,
-            List<RecentMessage> recentMessage
+            List<RecentMessage> recentMessage,
+            List<LongTermMemoryData> longTermMemory
 
     ) {
         return new SystemMessageConfig(
@@ -31,6 +33,7 @@ public final class SystemMessagePresets {
                         base.runtimeContext().userProfile(),
                         base.runtimeContext().memory(),
                         retrievedContext,
+                        longTermMemory,
                         recentMessage,
                         base.runtimeContext().groupMemory(),
                         base.runtimeContext().responseContract()

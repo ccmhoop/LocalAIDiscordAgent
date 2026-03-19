@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.toolSystemMessage;
 
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.ToolCall.AllowedOnlyWhen;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -75,78 +74,9 @@ public class ToolSystemMsgFactory {
                         "answer_directly_from_retrieved_context",
                         "emit_tool_call"
                 ),
-                new AssistantDecision(
-                        true,
-                        List.of(
-                                "current_user_message",
-                                "recent_messages",
-                                "memory_summary",
-                                "memory_facts",
-                                "retrieved_documents"
-                        ),
-                        new AssistantDecision.FieldsRecord(
-                                new FieldTypes(
-                                        "boolean",
-                                        null,
-                                        true
-                                ),
-                                new FieldTypes(
-                                        "string",
-                                        null,
-                                        true
-                                ),
-                                new FieldTypes(
-                                        "string",
-                                        List.of(
-                                                "answer_directly",
-                                                "call_tool"
-                                        ),
-                                        true
-                                )
-
-                        )
-                ),
-                new ToolCall(
-                        new AllowedOnlyWhen(
-                                "call_tool",
-                                false
-                        ),
-                        new ToolCall.FieldsRecord(
-                                new FieldTypes(
-                                        "string",
-                                        null,
-                                        true
-                                ),
-                                new FieldTypes(
-                                        "object",
-                                        null,
-                                        true
-                                )
-                        )
-                ),
-                new FinalAnswer(
-                        new FinalAnswer.FieldsRecord(
-                                new FieldTypes(
-                                        "string",
-                                        null,
-                                        true
-                                ),
-                                new FieldTypes(
-                                        "string",
-                                        List.of(
-                                                "retrieved_context", "tool_result",
-                                                "retrieved_context_and_tool_result"
-                                        ),
-                                        true
-                                ),
-                                new FieldTypes(
-                                        "boolean",
-                                        null,
-                                        true
-                                )
-
-                        )
-                ),
+                null,
+                null,
+                null,
                 null
         );
     }

@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
+import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;
@@ -125,6 +126,7 @@ public class SystemMsgRecords {
             UserProfile userProfile,
             Memory memory,
             RetrievedContext retrievedContext,
+            List<LongTermMemoryData> longTermMemory,
             List<RecentMessage> recentMessages,
             GroupMemory groupMemory,
 //            String currentUserMessage,

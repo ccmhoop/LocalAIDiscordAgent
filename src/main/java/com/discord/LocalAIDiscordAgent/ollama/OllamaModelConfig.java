@@ -70,8 +70,8 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3.5:9b")
-                                .disableThinking()
+                                .model("qwen3.5:27b")
+                                .enableThinking()
                                 .temperature(0.5)
                                 .topP(0.92)
                                 .repeatPenalty(1.15)

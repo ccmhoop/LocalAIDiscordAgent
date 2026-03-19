@@ -106,6 +106,7 @@ public final class SystemMessageFactory {
                         null,
                         null,
                         null,
+                        null,
                         new ResponseContract(
                                 "continue the conversation naturally without repeating prior assistant wording",
                                 "plain_text",

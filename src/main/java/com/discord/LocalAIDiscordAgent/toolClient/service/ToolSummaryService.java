@@ -2,8 +2,6 @@ package com.discord.LocalAIDiscordAgent.toolClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
-import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
-import com.discord.LocalAIDiscordAgent.webSearch.tools.WebSearchTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
@@ -19,17 +17,14 @@ public class ToolSummaryService {
 
     private final DiscGlobalData discGlobalData;
     private final ChatClient structuredToolClient;
-    private final WebSearchMemoryService webSearchMemoryService;
 
     private RecentMessage recentAssistantMsg;
     private String toolResults;
 
     public ToolSummaryService(
             DiscGlobalData discGlobalData,
-            ChatClient structuredToolClient,
-            WebSearchMemoryService webSearchMemoryService
+            ChatClient structuredToolClient
     ) {
-        this.webSearchMemoryService = webSearchMemoryService;
         this.structuredToolClient = structuredToolClient;
         this.discGlobalData = discGlobalData;
     }
@@ -62,11 +57,9 @@ public class ToolSummaryService {
 
         WebSearchToolResult modelOut = structuredToolClient.prompt()
                 .options(OllamaChatOptions.builder()
-                        .format(summarySchema)// <- key
-                        .internalToolExecutionEnabled(true)
-                        .disableThinking()
-                        .build())
-                .tools(new WebSearchTool(webSearchMemoryService))
+                        .format(summarySchema)
+                        .build()
+                )
                 .system("Create a summary using the tool results! Try to summarize based on the user's message and assistant message if available.")
                 .user(user ->
                                 user.text(userSummaryMSG())
