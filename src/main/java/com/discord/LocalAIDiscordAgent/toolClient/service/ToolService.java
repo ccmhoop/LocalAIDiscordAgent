@@ -131,7 +131,7 @@ public class ToolService {
                 .messages(
                         List.of(
                                 new SystemMessage(toolInstructions),
-                                new UserMessage(discGlobalData.getUserMessage())
+                                new UserMessage("Current_date : "+ LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)+ "\n user_message: " +discGlobalData.getUserMessage())
                         )
                 )
                 .chatOptions(chatOptions)
@@ -142,6 +142,7 @@ public class ToolService {
         return toolClient.prompt(prompt).call().chatResponse();
     }
 
+
     private String handleToolCalls(Prompt prompt, ChatResponse toolResponse){
         StringBuilder contextBuilder = new StringBuilder();
         ToolCallingManager toolCallingManager = ToolCallingManager.builder().build();
@@ -149,28 +150,92 @@ public class ToolService {
         List<Message> hist = exec.conversationHistory();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
         try {
             for (Message m : hist) {
                 if (m instanceof ToolResponseMessage toolResponseMessage) {
                     for (ToolResponse toolContent : toolResponseMessage.getResponses()) {
-                        JsonNode root = objectMapper.readTree(toolContent.responseData());
-                        if (root.isTextual()) {
-                            root = objectMapper.readTree(root.asText());
-                        }
-                        StreamSupport.stream(root.path("results").spliterator(), false)
-                                .filter(Objects::nonNull)
-                                .forEach(contextBuilder::append);
+                        String responseData = toolContent.responseData();
 
+                        // Add validation and logging
+                        if (responseData.trim().isEmpty()) {
+                            log.warn("Tool response data is null or empty for tool: {}", toolContent.name());
+                            continue;
+                        }
+
+                        // Log the response data length and a sample for debugging
+                        log.debug("Tool response data length: {} chars", responseData.length());
+                        if (responseData.length() > 4000) {
+                            log.debug("Response data sample around position 4000: {}",
+                                    responseData.substring(Math.max(0, 3950), Math.min(responseData.length(), 4050)));
+                        }
+
+                        try {
+                            JsonNode root = objectMapper.readTree(responseData);
+
+                            if (root.isTextual()) {
+                                // Try to parse the text content as JSON
+                                String textContent = root.asText();
+                                if (isValidJson(textContent)) {
+                                    root = objectMapper.readTree(textContent);
+                                } else {
+                                    // If it's not valid JSON, treat it as plain text
+                                    log.warn("Tool response contains non-JSON text content: {}",
+                                            textContent.length() > 100 ? textContent.substring(0, 100) + "..." : textContent);
+                                    contextBuilder.append(textContent).append("\n");
+                                    continue;
+                                }
+                            }
+
+                            // Process the results array
+                            JsonNode resultsNode = root.path("results");
+                            if (resultsNode.isMissingNode()) {
+                                log.warn("No 'results' field found in tool response");
+                                // Fallback: append the entire response if no results field
+                                contextBuilder.append(root).append("\n");
+                            } else {
+                                StreamSupport.stream(resultsNode.spliterator(), false)
+                                        .filter(Objects::nonNull)
+                                        .forEach(result -> {
+                                            contextBuilder.append(result).append("\n");
+                                        });
+                            }
+
+
+                        } catch (JsonProcessingException jsonEx) {
+                            log.error("Failed to parse tool response as JSON for tool: {}. Error: {}. " +
+                                            "Response length: {} chars. Response preview: {}",
+                                    toolContent.name(),
+                                    jsonEx.getMessage(),
+                                    responseData.length(),
+                                    responseData.length() > 200 ? responseData.substring(0, 200) + "..." : responseData);
+
+                            // Fallback: treat as plain text
+                            contextBuilder.append(responseData).append("\n");
+                        }
                     }
                 }
             }
-        } catch (JsonProcessingException e) {
-            log.error("Error processing JSON: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("Unexpected error processing tool calls: {}", e.getMessage(), e);
             return "";
         }
+
         return contextBuilder.toString();
     }
 
+    /**
+     * Helper method to validate if a string is valid JSON
+     */
+    private boolean isValidJson(String jsonString) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.readTree(jsonString);
+            return true;
+        } catch (JsonProcessingException e) {
+            return false;
+        }
+    }
     private ToolRuntimeContext buildToolRuntimeContext() {
         return new ToolRuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),

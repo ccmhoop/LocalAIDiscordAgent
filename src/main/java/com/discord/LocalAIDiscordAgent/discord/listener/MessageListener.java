@@ -47,15 +47,7 @@ public abstract class MessageListener {
                     UserEntity finalUser = user;
 
                     Mono<String> responseMono =
-                            Mono.fromCallable(() -> {
-                                        if (toolClientService.shouldUseWebSearch()) {
-                                            return toolClientService.generateToolResponse(finalUser, true);
-                                        } else if (toolClientService.shouldUseDirectLink()) {
-                                            return toolClientService.generateToolResponse(finalUser, false);
-                                        } else {
-                                            return chatClientService.generateLLMResponse(finalUser);
-                                        }
-                                    })
+                            Mono.fromCallable(() -> chatClientService.generateLLMResponse(finalUser))
                                     .subscribeOn(Schedulers.boundedElastic())
                                     .cache();
 

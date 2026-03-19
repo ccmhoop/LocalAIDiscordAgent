@@ -46,7 +46,7 @@ public class WebSearchTool {
     private static final int SEARCH_TIMEOUT_MS = 15_000;
     private static final int MAX_BODY_BYTES = 1_000_000;
     private static final int PAGE_TIMEOUT_MS = 15_000;
-    private static final int MAX_RESULTS = 8;
+    private static final int MAX_RESULTS = 3;
     private static final int MAX_EXCERPT_CHARS = 1_200;
     private static final int MAX_TOTAL_OUTPUT_CHARS = 15000;
     private static final int MAX_REDIRECTS = 5;

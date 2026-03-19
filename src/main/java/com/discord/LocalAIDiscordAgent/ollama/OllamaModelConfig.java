@@ -15,8 +15,9 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:30b-thinking")
-                                .enableThinking()
+                                .model("qwen3.5:27b")
+//                                .enableThinking()
+                                .disableThinking()
                                 .temperature(0.5)
                                 .topP(0.92)
                                 .repeatPenalty(1.15)
@@ -33,7 +34,7 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:8b")
+                                .model("qwen3.5:9b")
                                 .disableThinking()      // summarizer should be deterministic + fast :contentReference[oaicite:5]{index=5}
                                 .temperature(0.0)       // deterministic :contentReference[oaicite:6]{index=6}
 //                                .seed(42)               // repeatable outputs :contentReference[oaicite:7]{index=7}
@@ -53,7 +54,7 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:30b")
+                                .model("qwen3.5:9b")
                                 .disableThinking()
                                 .temperature(0.0)
                                 .numCtx(32768)
@@ -69,7 +70,7 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:30b")
+                                .model("qwen3.5:9b")
                                 .disableThinking()
                                 .temperature(0.5)
                                 .topP(0.92)
@@ -87,7 +88,7 @@ public class OllamaModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3:8b")
+                                .model("qwen3.5:9b")
                                 .disableThinking()
                                 .temperature(0.0)
                                 .topP(0.92)

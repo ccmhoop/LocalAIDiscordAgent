@@ -28,11 +28,4 @@ public class ChatClientConfig {
                 .build();
     }
 
-    @Bean
-    public ChatClient queryGeneratorClient(OllamaChatModel queryGeneratorToolModel) {
-        return ChatClient.builder(queryGeneratorToolModel)
-                .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
-                .build();
-    }
-
 }
