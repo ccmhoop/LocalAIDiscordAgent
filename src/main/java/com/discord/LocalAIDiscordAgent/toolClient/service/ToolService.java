@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.toolClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.ToolSystemMsgFactory;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.ToolSystemMsgPresets;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.ToolRuntimeContext;

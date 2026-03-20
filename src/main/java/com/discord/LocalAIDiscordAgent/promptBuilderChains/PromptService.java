@@ -8,10 +8,7 @@ import com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryChains.PromptMe
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.toolClient.service.ToolQueryGenerationService;
-import com.discord.LocalAIDiscordAgent.toolClient.service.ToolRelevantMemoryService;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
-import com.discord.LocalAIDiscordAgent.vectorMemory.webQAMemory.WebQAService;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,10 +33,6 @@ public class PromptService {
     private final SystemMessageFactory systemMessageFactory;
     private final PromptMemoryChain promptMemoryChain;
 
-    List<MergedWebQAItem> webQAResults;
-    private Memory baseMemory;
-
-
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 
@@ -59,12 +52,9 @@ public class PromptService {
 
 
     public String getSystemPromptAsJson() {
-
         promptMemoryChain.executeMemoryChain();
         return systemMessageFactory.buildSystemMessage(buildSystemMessageConfig());
     }
-
-
 
     private SystemMessageConfig buildSystemMessageConfig() {
         SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
