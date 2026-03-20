@@ -1,19 +1,17 @@
-package com.discord.LocalAIDiscordAgent.systemMessage.config;
+package com.discord.LocalAIDiscordAgent.toolSystemMessage.config;
 
-import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
+import com.discord.LocalAIDiscordAgent.toolSystemMessage.ToolSystemMsgFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class SystemPromptConfig {
-
+public class ToolPromptConfig {
     @Bean
-    public SystemMessageFactory systemMessageFactory(
+    public ToolSystemMsgFactory toolSystemMsgFactory(
             @Qualifier("aiObjectMapper") ObjectMapper aiObjectMapper
     ) {
-        return new SystemMessageFactory(aiObjectMapper);
+        return new ToolSystemMsgFactory(aiObjectMapper);
     }
-
 }

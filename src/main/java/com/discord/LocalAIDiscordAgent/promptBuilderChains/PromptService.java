@@ -1,17 +1,16 @@
-package com.discord.LocalAIDiscordAgent.systemMessage.service;
+package com.discord.LocalAIDiscordAgent.promptBuilderChains;
 
 import com.discord.LocalAIDiscordAgent.chatSummary.model.ChatSummary;
 import com.discord.LocalAIDiscordAgent.chatSummary.repository.ChatSummaryRepository;
 import com.discord.LocalAIDiscordAgent.chatSummary.records.SummaryRecords.Fact;
-import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryChains.PromptMemoryChain;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
+import com.discord.LocalAIDiscordAgent.toolClient.service.ToolQueryGenerationService;
+import com.discord.LocalAIDiscordAgent.toolClient.service.ToolRelevantMemoryService;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
-import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService;
-import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 import com.discord.LocalAIDiscordAgent.vectorMemory.webQAMemory.WebQAService;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -32,19 +31,12 @@ import java.util.Optional;
 public class PromptService {
 
     private final ToolService toolService;
-    private final WebQAService webQAService;
     private final ChatSummaryRepository repo;
     private final DiscGlobalData discGlobalData;
-    private final GroupChatMemoryService groupChatService;
-    private final RecentChatMemoryService recentChatService;
     private final SystemMessageFactory systemMessageFactory;
-    private final LongTermMemoryService longTermMemoryService;
+    private final PromptMemoryChain promptMemoryChain;
 
-    private List<LongTermMemoryData> longTermMemoryData;
-    private List<RecentMessage> recentMessages;
-    private RetrievedContext retrievedContext;
-    private GroupMemory groupChatMemory;
-    private UserProfile userProfile;
+    List<MergedWebQAItem> webQAResults;
     private Memory baseMemory;
 
 
@@ -53,93 +45,71 @@ public class PromptService {
 
     public PromptService(
             ToolService toolService,
-            WebQAService webQAService,
             ChatSummaryRepository repo,
             DiscGlobalData discGlobalData,
             SystemMessageFactory systemMessageFactory,
-            GroupChatMemoryService groupChatMemoryService,
-            RecentChatMemoryService recentChatMemoryService,
-            LongTermMemoryService longTermMemoryService
+            PromptMemoryChain promptMemoryChain
     ) {
-        this.longTermMemoryService = longTermMemoryService;
         this.systemMessageFactory = systemMessageFactory;
-        this.recentChatService = recentChatMemoryService;
-        this.groupChatService = groupChatMemoryService;
         this.discGlobalData = discGlobalData;
-        this.webQAService = webQAService;
         this.toolService = toolService;
         this.repo = repo;
+        this.promptMemoryChain = promptMemoryChain;
     }
 
-    public String buildSystemPrompt() {
-        SystemMessageConfig config = SystemMessagePresets.qwenFriendlyDefault();
-        return systemMessageFactory.buildSystemMessage(config);
-    }
 
     public String getSystemPromptAsJson() {
-        this.userProfile = buildUserProfile();
-        this.recentMessages = recentChatService.buildMessageMemory();
-        this.groupChatMemory = groupChatService.buildMessageMemory();
 
-        if (groupChatMemory != null) {
-            this.baseMemory = buildMemory(discGlobalData.getConversationId());
-        } else {
-            this.baseMemory = buildMemory(discGlobalData.getGroupConversationId());
-        }
-
-        this.longTermMemoryData = longTermMemoryService.getLongTermMemory();
-        List<MergedWebQAItem> webQAResults = webQAService.getWebQAResults(recentMessages);
-
-        String toolSummary = toolService.executeTools(userProfile, getLastAssistantMsg(), webQAResults);
-
-        if (toolSummary == null || toolSummary.isBlank()) {
-            retrievedContext = null;
-        }else{
-            this.retrievedContext = new RetrievedContext(null, toolSummary);
-        }
-
+        promptMemoryChain.executeMemoryChain();
         return systemMessageFactory.buildSystemMessage(buildSystemMessageConfig());
     }
 
-    public String buildSystemPromptJson(SystemMessageConfig config) {
-        return systemMessageFactory.buildSystemMessage(config);
-    }
+
 
     private SystemMessageConfig buildSystemMessageConfig() {
         SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
         RuntimeContext runtimeContext = new RuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
-                this.userProfile,
-                this.baseMemory,
-                this.retrievedContext,
-                longTermMemoryData,
-                this.recentMessages,
-                this.groupChatMemory,
+                discGlobalData.getUserProfile(),
+                buildMemory(),
+                buildRetrievedContext(),
+                discGlobalData.getLongTermMemoryData(),
+                discGlobalData.getRecentMessages(),
+                discGlobalData.getGroupChatMemory(),
                 baseConfig.runtimeContext().responseContract()
         );
-
         return SystemMessagePresets.withMessageMemory(baseConfig, runtimeContext);
     }
 
+    private RetrievedContext buildRetrievedContext() {
+        String toolSummary = toolService.executeTools(getLastAssistantMsg(), null);
+        if (toolSummary == null || toolSummary.isBlank()) {
+            return null;
+        }
+        return new RetrievedContext(null, toolSummary);
+    }
+
     private RecentMessage getLastAssistantMsg() {
-        if (this.recentMessages == null || this.recentMessages.isEmpty()) return null;
+        if (discGlobalData.getRecentMessages() == null || discGlobalData.getRecentMessages().isEmpty()) return null;
         return new RecentMessage(
-                this.recentMessages.getLast().timestamp(),
+                discGlobalData.getRecentMessages().getLast().timestamp(),
                 MessageType.ASSISTANT.toString(),
-                this.recentMessages.getLast().content()
+                discGlobalData.getRecentMessages().getLast().content()
         );
     }
 
-    private UserProfile buildUserProfile() {
-        return new UserProfile(
-                discGlobalData.getUserId(),
-                discGlobalData.getUsername(),
-                discGlobalData.getServerNickname());
-    }
+    private Memory buildMemory() {
+        String id;
+        if (discGlobalData.getGroupChatMemory() == null) {
+            id = discGlobalData.getGroupConversationId();
+        }else if (discGlobalData.getRecentMessages() != null) {
+            id = discGlobalData.getConversationId();
+        }else{
+            return null;
+        }
 
-    private Memory buildMemory(String conversationId) {
         try {
-            Optional<ChatSummary> mem = repo.findById(conversationId);
+            Optional<ChatSummary> mem = repo.findById(id);
             if (mem.isEmpty()) {
                 return null;
             }

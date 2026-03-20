@@ -13,17 +13,17 @@ public class ChatClientConfig {
 
     @Bean
     public ChatClient advisorChatClient(
-            OllamaChatModel ollamaQwenModelConfig,
+            OllamaChatModel qwenChatModel,
             SystemMessageFactory systemMessageFactory
     ) {
-        return ChatClient.builder(ollamaQwenModelConfig)
+        return ChatClient.builder(qwenChatModel)
                 .defaultSystem(systemMessageFactory.buildDefaultSystemMessage())
                 .build();
     }
 
     @Bean
-    public ChatClient summaryChatClient(OllamaChatModel ollamaQwenSummaryConfig) {
-        return ChatClient.builder(ollamaQwenSummaryConfig)
+    public ChatClient summaryChatClient(OllamaChatModel qwenChatSummaryModel) {
+        return ChatClient.builder(qwenChatSummaryModel)
                 .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .build();
     }

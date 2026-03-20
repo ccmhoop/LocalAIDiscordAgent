@@ -47,7 +47,6 @@ public class ToolService {
 
     private List<MergedWebQAItem> webQAResults;
     private RecentMessage recentAssistantMsg;
-    private UserProfile userProfile;
 
     public ToolService(
             ChatClient executeToolsClient,
@@ -68,7 +67,6 @@ public class ToolService {
      * and web QA results. This method coordinates various tool execution workflows,
      * including generating prompts, processing tool responses, and summarizing results.
      *
-     * @param userProfile        the profile of the current user interacting with the tool
      * @param recentAssistantMsg the most recent message from the assistant
      *                           used in processing tool-related workflows
      * @param webQAResults       a list of merged web QA results providing context or
@@ -77,13 +75,11 @@ public class ToolService {
      * or null if no valid results are available
      */
     public String executeTools(
-            UserProfile userProfile,
             RecentMessage recentAssistantMsg,
             List<MergedWebQAItem> webQAResults
     ) {
         this.recentAssistantMsg = recentAssistantMsg;
         this.webQAResults = webQAResults;
-        this.userProfile = userProfile;
 
         String toolsResults = processTools();
 
@@ -143,7 +139,6 @@ public class ToolService {
     private ChatResponse runToolLLM(Prompt prompt) {
         return toolClient.prompt(prompt).call().chatResponse();
     }
-
 
     private String handleToolCalls(Prompt prompt, ChatResponse toolResponse){
         StringBuilder contextBuilder = new StringBuilder();
@@ -228,7 +223,7 @@ public class ToolService {
     private ToolRuntimeContext buildToolRuntimeContext() {
         return new ToolRuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
-                this.userProfile,
+                discGlobalData.getUserProfile(),
                 this.webQAResults,
                 this.recentAssistantMsg
         );

@@ -3,7 +3,7 @@ package com.discord.LocalAIDiscordAgent.chatClient.service;
 import com.discord.LocalAIDiscordAgent.chatClient.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessChatClient;
-import com.discord.LocalAIDiscordAgent.systemMessage.service.PromptService;
+import com.discord.LocalAIDiscordAgent.promptBuilderChains.PromptService;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 

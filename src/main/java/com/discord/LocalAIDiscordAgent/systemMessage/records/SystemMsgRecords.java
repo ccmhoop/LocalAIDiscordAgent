@@ -4,6 +4,7 @@ import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemor
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;
+import java.util.Set;
 
 public class SystemMsgRecords {
 
@@ -168,7 +169,7 @@ public class SystemMsgRecords {
     }
 
     public record GroupMemory(
-            List<UserProfile> participants,
+            Set<UserProfile> participants,
             List<GroupMessage> messages
     ) {
     }

@@ -28,13 +28,14 @@ public class ToolQueryGenerationService {
     private final ChatClient queryGeneratorToolClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private List<RecentMessage> recentMessages;
+    private boolean isMemoryRelevant;
 
     private static final SystemMessage SYSTEM_MESSAGE = new SystemMessage("""
         You will receive one JSON object with this structure:
         {
           "instructions": [string],
           "include_date": boolean,
+          "is_memory_relevant": boolean,
           "runtime_context": {
             "date": string,
             "time": string,
@@ -51,6 +52,7 @@ public class ToolQueryGenerationService {
         - depends on prior conversation context or stored memory,
         - refers to facts, entities, events, or documents,
         - would benefit from semantic search to answer well.
+        - Always generate a query when "is_memory_relevant" is false.
 
         Retrieval is not required for:
         - greetings,
@@ -70,6 +72,7 @@ public class ToolQueryGenerationService {
 
         If retrieval is needed, generate exactly one concise, information-rich semantic vector search query optimized for retrieval.
         If retrieval is not needed, return an empty string.
+     
 
         Do not explain your reasoning.
         Return only the final query text or an empty string.
@@ -80,6 +83,7 @@ public class ToolQueryGenerationService {
             "Generate a semantic vector search query only when the user_message expresses an information need, references prior knowledge, or would benefit from memory or document retrieval.",
             "Do not generate a query for casual conversation, acknowledgements, greetings, reactions, filler, conversational transitions, encouragement, or social banter.",
             "If the user_message does not require retrieval, return an empty string.",
+            "Always generate a query when \"is_memory_relevant\" is false.",
             "Treat the user_message as the primary source of intent.",
             "Use recent_messages and other runtime_context fields only when they are relevant to the user_message and improve retrieval quality.",
             "Ignore irrelevant, weak, or distracting context.",
@@ -98,8 +102,8 @@ public class ToolQueryGenerationService {
         this.discGlobalData = discGlobalData;
     }
 
-    public String generateQuery(List<RecentMessage> recentMessages) {
-        this.recentMessages = recentMessages;
+    public String generateQuery(boolean isMemoryRelevant) {
+        this.isMemoryRelevant = isMemoryRelevant;
 
         var validation = StructuredOutputValidationAdvisor.builder()
                 .outputType(RetrievalDecision.class)
@@ -151,11 +155,12 @@ public class ToolQueryGenerationService {
         return new InstructionsRecord(
                 INSTRUCTIONS,
                 true,
+                this.isMemoryRelevant,
                 new RuntimeContext(
                         LocalDate.now().toString(),
                         LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                         null,
-                        this.recentMessages,
+                        discGlobalData.getRecentMessages(),
                         discGlobalData.getUserMessage()
                 )
         );
@@ -168,6 +173,7 @@ public class ToolQueryGenerationService {
     private record InstructionsRecord(
             List<String> instructions,
             boolean includeDateIfRelevant,
+            boolean is_memory_relevant,
             RuntimeContext runtimeContext
     ) {}
 

@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.systemMessage.config;
+package com.discord.LocalAIDiscordAgent.objectMapper.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class JacksonAiConfig {
+public class AiObjectMapperConfig {
 
     @Bean("aiObjectMapper")
     public ObjectMapper aiObjectMapper() {
