@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
 import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
-import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;
 import java.util.Set;
@@ -121,7 +120,6 @@ public class SystemMsgRecords {
         }
     }
 
-
     public record RuntimeContext(
             String Date,
             UserProfile userProfile,
@@ -149,8 +147,7 @@ public class SystemMsgRecords {
     }
 
     public record RetrievedContext(
-            List<MergedWebQAItem> webResults,
-            String toolSummary
+            String contextSummary
             ){
     }
 

@@ -5,7 +5,6 @@ import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.Re
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.ToolSystemMsgFactory;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.ToolSystemMsgPresets;
 import com.discord.LocalAIDiscordAgent.toolSystemMessage.records.ToolSystemMsgRecords.ToolRuntimeContext;
-import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchMemoryService;
 import com.discord.LocalAIDiscordAgent.webSearch.tools.WebSearchTool;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,23 +39,22 @@ public class ToolService {
 
     private final ChatClient toolClient;
     private final DiscGlobalData discGlobalData;
-    private final ToolSummaryService toolSummaryService;
+//    private final ToolSummaryService toolSummaryService;
     private final ToolSystemMsgFactory toolSystemMsgFactory;
     private final WebSearchMemoryService webSearchMemoryService;
 
-    private List<MergedWebQAItem> webQAResults;
+//    private List<MergedWebQAItem> webQAResults;
     private RecentMessage recentAssistantMsg;
 
     public ToolService(
             ChatClient executeToolsClient,
             DiscGlobalData discGlobalData,
-            ToolSummaryService toolSummaryService,
             ToolSystemMsgFactory toolSystemMsgFactory,
             WebSearchMemoryService webSearchMemoryService
     ) {
         this.webSearchMemoryService = webSearchMemoryService;
         this.toolSystemMsgFactory = toolSystemMsgFactory;
-        this.toolSummaryService = toolSummaryService;
+//        this.toolSummaryService = toolSummaryService;
         this.discGlobalData = discGlobalData;
         this.toolClient = executeToolsClient;
     }
@@ -66,19 +64,13 @@ public class ToolService {
      * and web QA results. This method coordinates various tool execution workflows,
      * including generating prompts, processing tool responses, and summarizing results.
      *
-     * @param recentAssistantMsg the most recent message from the assistant
      *                           used in processing tool-related workflows
-     * @param webQAResults       a list of merged web QA results providing context or
      *                           additional details for tool execution
      * @return a summarized context generated from the tool outputs,
      * or null if no valid results are available
      */
-    public String executeTools(
-            RecentMessage recentAssistantMsg,
-            List<MergedWebQAItem> webQAResults
-    ) {
-        this.recentAssistantMsg = recentAssistantMsg;
-        this.webQAResults = webQAResults;
+    public String executeTools() {
+//        this.webQAResults = webQAResults;
 
         String toolsResults = processTools();
 
@@ -86,13 +78,7 @@ public class ToolService {
             return null;
         }
 
-        String summaryContext = toolSummaryService.summerizeToolResults(toolsResults, recentAssistantMsg);
-
-        if (summaryContext.isEmpty()) {
-            return null;
-        }
-
-        return summaryContext;
+        return toolsResults;
     }
 
     private String processTools() {
@@ -102,12 +88,7 @@ public class ToolService {
 
         if (toolResponse != null && toolResponse.hasToolCalls()){
             toolsResults = handleToolCalls(prompt, toolResponse);
-            log.info("sumerizeData with web_search: {}", toolsResults);
-        }
-
-        if (this.webQAResults != null && toolsResults.isEmpty()) {
-            toolsResults = webQAResults.toString();
-            log.info("sumerizeData with vector_memory: {}", toolsResults);
+            log.info("web_search results: {}", toolsResults);
         }
 
         return toolsResults;
@@ -223,7 +204,8 @@ public class ToolService {
         return new ToolRuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 discGlobalData.getUserProfile(),
-                this.webQAResults,
+//                this.webQAResults,
+                null,
                 this.recentAssistantMsg
         );
     }

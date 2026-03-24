@@ -26,6 +26,7 @@ public class DiscGlobalData {
     private String conversationId;
     private String groupConversationId;
     private GroupMemory groupChatMemory;
+    private RecentMessage lastAssistantMsg;
     private List<RecentMessage> recentMessages;
     private List<LongTermMemoryData> longTermMemoryData;
 
@@ -47,12 +48,15 @@ public class DiscGlobalData {
 
     public void setDiscDataMemory(
             GroupMemory groupChatMemory,
-            List<RecentMessage> recentMessage,
+            List<RecentMessage> recentMessages,
             List<LongTermMemoryData> longTermMemoryData
     ) {
         this.longTermMemoryData = longTermMemoryData;
         this.groupChatMemory = groupChatMemory;
-        this.recentMessages = recentMessage;
+        this.recentMessages = recentMessages;
+        if (this.recentMessages != null ) {
+            setLastAssistantMessage();
+        }
     }
 
 
@@ -63,6 +67,22 @@ public class DiscGlobalData {
         content = content.replace("<@1379869980123992274>", "").trim();
         if (content.isEmpty()) return "";
         return content;
+    }
+
+    private void setLastAssistantMessage() {
+        List<RecentMessage> messageList = this.recentMessages;
+        if (messageList.size() < 2 || messageList.size() % 2 != 0) {
+            this.lastAssistantMsg = null;
+        }
+
+        RecentMessage recentMessage = messageList.getLast();
+        if (recentMessage.role().toLowerCase().contains("assistant")) {
+            this.lastAssistantMsg = new RecentMessage(
+                    recentMessage.timestamp(),
+                    recentMessage.role(),
+                    recentMessage.content()
+            );
+        }
     }
 
     public Boolean dataIsEmptyOrNull() {
@@ -109,15 +129,31 @@ public class DiscGlobalData {
         return groupConversationId;
     }
 
+    public RecentMessage getLastAssistantMsg() {
+        if (lastAssistantMsg == null) {
+            return null;
+        }
+        return lastAssistantMsg;
+    }
+
     public GroupMemory getGroupChatMemory() {
+        if (groupChatMemory == null) {
+            return null;
+        }
         return groupChatMemory;
     }
 
     public List<RecentMessage> getRecentMessages() {
+        if (recentMessages == null) {
+            return null;
+        }
         return recentMessages;
     }
 
     public List<LongTermMemoryData> getLongTermMemoryData() {
+        if (longTermMemoryData == null) {
+            return null;
+        }
         return longTermMemoryData;
     }
 }

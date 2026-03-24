@@ -29,4 +29,11 @@ public class ToolClientConfig {
                 .build();
     }
 
+    @Bean
+    public ChatClient isValidToolClient(OllamaChatModel isValidToolModel) {
+        return ChatClient.builder(isValidToolModel)
+                .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
+                .build();
+    }
+
 }

@@ -4,17 +4,14 @@ import com.discord.LocalAIDiscordAgent.chatSummary.model.ChatSummary;
 import com.discord.LocalAIDiscordAgent.chatSummary.repository.ChatSummaryRepository;
 import com.discord.LocalAIDiscordAgent.chatSummary.records.SummaryRecords.Fact;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryChains.PromptMemoryChain;
+import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
-import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,33 +24,31 @@ import java.util.Optional;
 @Service
 public class PromptService {
 
-    private final ToolService toolService;
     private final ChatSummaryRepository repo;
     private final DiscGlobalData discGlobalData;
     private final SystemMessageFactory systemMessageFactory;
-    private final PromptMemoryChain promptMemoryChain;
+    private final LLMCallChain llmCallChain;
 
     private static final ObjectMapper objectMapper = new ObjectMapper()
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
 
     public PromptService(
-            ToolService toolService,
             ChatSummaryRepository repo,
             DiscGlobalData discGlobalData,
             SystemMessageFactory systemMessageFactory,
-            PromptMemoryChain promptMemoryChain
+            LLMCallChain llmCallChain
     ) {
         this.systemMessageFactory = systemMessageFactory;
         this.discGlobalData = discGlobalData;
-        this.toolService = toolService;
         this.repo = repo;
-        this.promptMemoryChain = promptMemoryChain;
+        this.llmCallChain = llmCallChain;
     }
 
 
     public String getSystemPromptAsJson() {
-        promptMemoryChain.executeMemoryChain();
-        return systemMessageFactory.buildSystemMessage(buildSystemMessageConfig());
+        return systemMessageFactory.buildSystemMessage(
+                buildSystemMessageConfig()
+        );
     }
 
     private SystemMessageConfig buildSystemMessageConfig() {
@@ -72,20 +67,11 @@ public class PromptService {
     }
 
     private RetrievedContext buildRetrievedContext() {
-        String toolSummary = toolService.executeTools(getLastAssistantMsg(), null);
-        if (toolSummary == null || toolSummary.isBlank()) {
+        String context = llmCallChain.executeContextChain();
+        if (context == null || context.isBlank()) {
             return null;
         }
-        return new RetrievedContext(null, toolSummary);
-    }
-
-    private RecentMessage getLastAssistantMsg() {
-        if (discGlobalData.getRecentMessages() == null || discGlobalData.getRecentMessages().isEmpty()) return null;
-        return new RecentMessage(
-                discGlobalData.getRecentMessages().getLast().timestamp(),
-                MessageType.ASSISTANT.toString(),
-                discGlobalData.getRecentMessages().getLast().content()
-        );
+        return new RetrievedContext(context);
     }
 
     private Memory buildMemory() {

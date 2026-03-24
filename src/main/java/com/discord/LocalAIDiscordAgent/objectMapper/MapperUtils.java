@@ -2,12 +2,14 @@ package com.discord.LocalAIDiscordAgent.objectMapper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.RecordComponent;
 import java.util.*;
 
+@Slf4j
 @Component
 public class MapperUtils {
 
@@ -19,7 +21,7 @@ public class MapperUtils {
         this.aiObjectMapper = aiObjectMapper;
     }
 
-    public String recordToString(Record record) {
+    public String valuesToString(Record record) {
         try {
             return aiObjectMapper.writeValueAsString(record);
         } catch (Exception e) {
@@ -27,13 +29,14 @@ public class MapperUtils {
         }
     }
 
-    public String generateSchema(Record recordInstance) {
+    public String objectTypeTostring(Record recordInstance) {
         try {
             Object rawTypeStructure = resolve(recordInstance);
             Object snakeCaseStructure = toSnakeCaseKeys(rawTypeStructure);
             return aiObjectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(snakeCaseStructure);
         } catch (Exception e) {
-            return "{\"error\":\"Schema generation failed: " + e.getMessage() + "\"}";
+            log.error("Failed to serialize object type structure: {}", e.getMessage(), e);
+            return "";
         }
     }
 
