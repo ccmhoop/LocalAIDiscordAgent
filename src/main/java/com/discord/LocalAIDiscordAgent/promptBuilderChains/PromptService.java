@@ -46,33 +46,38 @@ public class PromptService {
 
 
     public String getSystemPromptAsJson() {
+        RuntimeContext runtimeContext = llmCallChain.executeContextChainRuntime();
+        if (discGlobalData.getImagePath() != null)  {
+            return null;
+        }
         return systemMessageFactory.buildSystemMessage(
-                buildSystemMessageConfig()
+                buildSystemMessageConfig(runtimeContext)
         );
     }
 
-    private SystemMessageConfig buildSystemMessageConfig() {
+    private SystemMessageConfig buildSystemMessageConfig(RuntimeContext context) {
         SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
         RuntimeContext runtimeContext = new RuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 discGlobalData.getUserProfile(),
-                buildMemory(),
-                buildRetrievedContext(),
-                discGlobalData.getLongTermMemoryData(),
-                discGlobalData.getRecentMessages(),
-                discGlobalData.getGroupChatMemory(),
+//                buildMemory(),
+                null,
+                context.retrievedContext().contextSummary() == null? null : context.retrievedContext(),
+                context.longTermMemory(),
+                context.recentMessages() == null || context.recentMessages().isEmpty() ? null : context.recentMessages(),
+                context.groupMemory(),
                 baseConfig.runtimeContext().responseContract()
         );
         return SystemMessagePresets.withMessageMemory(baseConfig, runtimeContext);
     }
 
-    private RetrievedContext buildRetrievedContext() {
-        String context = llmCallChain.executeContextChain();
-        if (context == null || context.isBlank()) {
-            return null;
-        }
-        return new RetrievedContext(context);
-    }
+//    private RetrievedContext buildRetrievedContext() {
+//        String context = llmCallChain.executeContextChain();
+//        if (context == null || context.isBlank()) {
+//            return null;
+//        }
+//        return new RetrievedContext(context);
+//    }
 
     private Memory buildMemory() {
         String id;

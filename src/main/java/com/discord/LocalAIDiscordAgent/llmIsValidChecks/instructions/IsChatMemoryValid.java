@@ -29,7 +29,10 @@ public class IsChatMemoryValid {
             If the relevance is weak, uncertain, or ambiguous, return false.
             
             Do not explain your reasoning.
-            Return only true or false.
+            Return only:
+            - "decision" : {
+                  "type" : "boolean"
+                }
             """;
 
     private static final List<String> INSTRUCTIONS = List.of(
@@ -41,7 +44,12 @@ public class IsChatMemoryValid {
             "Use semantic meaning, topic alignment, entities, intent, and context when deciding relevance.",
             "Prefer false when relevance is uncertain, weak, or ambiguous.",
             "Ignore conversational filler and focus only on whether the retrieved_context is meaningfully useful for the user_message.",
-            "Return only the boolean decision."
+            """
+            Return only:
+            - "decision" : {
+                  "type" : "boolean"
+                }
+            """
     );
 
     protected static IsValidRecord getInstructions(DiscGlobalData discGlobalData) {

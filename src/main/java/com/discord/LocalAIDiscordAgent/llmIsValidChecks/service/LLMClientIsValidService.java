@@ -56,7 +56,7 @@ public class LLMClientIsValidService {
     private void setInstructionsRecord() {
         this.LLMInstructionsToCheck = new InstructionsRecord(
                 instructions,
-                isValidContextRecord,
+                isValidContextRecord == null? null : isValidContextRecord,
                 discGlobalData.getUserMessage()
         );
     }
@@ -77,7 +77,7 @@ public class LLMClientIsValidService {
     }
 
     private SystemMessage buildSystemMessageJson() {
-        String objectJsonSchema = mapperUtils.objectTypeTostring(LLMInstructionsToCheck);
+        String objectJsonSchema = mapperUtils.objectTypeTostring(new LLMDecision(null));
         this.systemMsg = this.systemMsg.formatted(objectJsonSchema);
         return new SystemMessage(this.systemMsg);
     }
@@ -94,11 +94,13 @@ public class LLMClientIsValidService {
                 .build();
 
         var converter = new BeanOutputConverter<>(LLMDecision.class);
-
+//        Map<String, Object> summarySchema = converter.getJsonSchemaMap();
         LLMDecision llmResponse = llmIsValidClient.prompt(this.prompt)
                 .options(OllamaChatOptions.builder()
                         .format(converter.getJsonSchema())
                         .build())
+                .system(buildSystemMessageJson().getText())
+                .user(buildUserMessageJson().getText())
                 .advisors(validation)
                 .call()
                 .entity(LLMDecision.class);
@@ -111,7 +113,7 @@ public class LLMClientIsValidService {
     }
 
     public record LLMDecision(
-            boolean decision
+            Boolean decision
     ) {
     }
 }

@@ -16,4 +16,12 @@ public final class IsValidInstructions {
         return IsVectorMemoryValid.getInstructions(vectorDBMemory, discGlobalData.getLastAssistantMsg());
     }
 
+    public static IsValidRecord checkIsWebSearch(DiscGlobalData discGlobalData) {
+        return IsWebSearch.getInstructions(discGlobalData);
+    }
+
+    public static IsValidRecord checkIsImageGeneration(){
+        return IsImageGeneration.getInstructions();
+    }
+
 }

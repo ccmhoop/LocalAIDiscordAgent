@@ -31,7 +31,10 @@ public class IsVectorMemoryValid {
             If the usefulness of the retrieved_context is uncertain, weak, or ambiguous, return false.
             
             Do not explain your reasoning.
-            Return only true or false.
+            Return only:
+            - "decision" : {
+                  "type" : "boolean"
+                }
             """;
 
     private static final List<String> INSTRUCTIONS = List.of(
@@ -43,7 +46,12 @@ public class IsVectorMemoryValid {
             "Do not assume relevance from shared words alone.",
             "Prefer false when usefulness is weak, uncertain, or ambiguous.",
             "Ignore conversational filler and judge only whether the retrieved_context is actually usable for answering the user_message.",
-            "Return only the boolean decision."
+            """
+            Return only:
+            - "decision" : {
+                  "type" : "boolean"
+                }
+            """
     );
 
     protected static IsValidRecord getInstructions(List<MergedWebQAItem> vectorDBMemory, RecentMessage lastAssistantMsg) {

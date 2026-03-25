@@ -1,11 +1,13 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
+import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
+import discord4j.core.object.entity.channel.MessageChannel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,8 @@ import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 import java.net.SocketException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,35 +57,29 @@ public abstract class MessageListener {
 
                     return message.getChannel()
                             .flatMap(channel ->
-                                    responseMono
-                                            .flatMapMany(response -> {
-                                                String cleanedResponse = cleanResponse(response);
-                                                List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
-//                                                generateAndSaveAudio(cleanedResponse, userId);
-//                                                VoiceMain.generateAndSaveAudio(cleanedResponse, discGlobalData.getUserId());
-
-                                                return Flux.fromIterable(chunks)
-                                                        .concatMap(chunk -> channel.createMessage(chunk)
-                                                                .retryWhen(Retry.backoff(3, Duration.ofSeconds(120))
-                                                                        .filter(MessageListener::isConnectionReset)
-                                                                        .doBeforeRetry(rs -> log.warn(
-                                                                                "Retrying after connection reset, attempt: {}",
-                                                                                rs.totalRetries() + 1
-                                                                        ))));
-                                            })
-                                            .then(Mono.fromRunnable(() -> {
-                                                try {
-                                                    processSummaryClient.saveInteraction();
-                                                } catch (ObjectOptimisticLockingFailureException e) {
-                                                    log.warn("Failed to save interaction summary due to concurrent modification for conversation: {}:{}",
-                                                            discGlobalData.getGuildId(), discGlobalData.getUserId(), e);
-                                                    // Don't propagate this error as it's not critical to the user experience
-                                                } catch (Exception e) {
-                                                    log.error("Unexpected error saving interaction summary for conversation: {}:{}",
-                                                            discGlobalData.getGuildId(), discGlobalData.getUserId(), e);
-                                                }
-                                            }))
-
+                                    {
+                                        try {
+                                            return responseMono
+                                                    .flatMapMany(response -> {
+                                                        String cleanedResponse = cleanResponse(response);
+                                                        List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
+                                                        return Flux.fromIterable(chunks)
+                                                                .concatMap(channel::createMessage);
+                                                    })
+                                                    .then(Mono.fromCallable(discGlobalData::getImagePath)
+                                                            .subscribeOn(Schedulers.boundedElastic()))
+                                                    .flatMap(imagePath -> sendImage(channel, imagePath, "Generated image"))
+                                                    .then(Mono.fromRunnable(() -> {
+                                                        try {
+                                                            processSummaryClient.saveInteraction();
+                                                        } catch (Exception e) {
+                                                            log.warn("Failed to save interaction summary", e);
+                                                        }
+                                                    }));
+                                        } catch (Exception e) {
+                                            return Mono.error(new RuntimeException(e));
+                                        }
+                                    }
                             );
 
                 }).then();
@@ -93,6 +91,26 @@ public abstract class MessageListener {
                 .filter(message -> message.getContent().equalsIgnoreCase("!todo"))
                 .flatMap(Message::getChannel)
                 .flatMap(channel -> channel.createMessage("Things to do today:\n - write a bot\n - eat lunch\n - play a game"))
+                .then();
+    }
+
+    private Mono<Void> sendImage(MessageChannel channel, Path imagePath, String caption) {
+        if (imagePath == null || !Files.exists(imagePath)) {
+            return Mono.empty();
+        }
+        return Mono.fromCallable(() -> Files.newInputStream(imagePath))
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(inputStream ->
+                        channel.createMessage(spec -> {
+                            spec.setContent(caption);
+                            spec.addFile(imagePath.getFileName().toString(), inputStream);
+                        }).doFinally(signal -> {
+                            try {
+                                inputStream.close();
+                            } catch (Exception ignored) {
+                            }
+                        })
+                )
                 .then();
     }
 

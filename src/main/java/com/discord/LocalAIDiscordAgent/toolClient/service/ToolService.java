@@ -88,7 +88,7 @@ public class ToolService {
 
         if (toolResponse != null && toolResponse.hasToolCalls()){
             toolsResults = handleToolCalls(prompt, toolResponse);
-            log.info("web_search results: {}", toolsResults);
+            log.debug("web_search results: {}", toolsResults);
         }
 
         return toolsResults;

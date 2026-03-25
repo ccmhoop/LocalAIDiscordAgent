@@ -9,4 +9,8 @@ public final class QueryGeneratorInstructions {
        return QueryVectorMemory.getInstructions(discGlobalData);
     }
 
+    public static QueryGeneratorRecord generateImagePrompt(){
+        return ImagePrompt.getInstructions();
+    }
+
 }

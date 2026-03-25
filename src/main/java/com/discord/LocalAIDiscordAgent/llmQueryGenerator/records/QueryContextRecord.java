@@ -9,4 +9,5 @@ public record QueryContextRecord(
         List<LongTermMemoryData> longTermMemory,
         RecentMessage lastAssistantMsg
 ) {
+
 }

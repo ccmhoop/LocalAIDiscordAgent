@@ -51,7 +51,7 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
 
         Set<UserProfile> participantProfiles = buildParticipantList(users);
 
-        if (participantProfiles.size() <2) {
+        if (participantProfiles.size() <=2) {
             return null;
         }
 

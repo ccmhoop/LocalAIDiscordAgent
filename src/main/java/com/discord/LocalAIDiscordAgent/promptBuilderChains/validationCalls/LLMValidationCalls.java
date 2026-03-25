@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryCalls;
+package com.discord.LocalAIDiscordAgent.promptBuilderChains.validationCalls;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
@@ -32,15 +32,6 @@ public class LLMValidationCalls {
         this.LLMClientIsValidService = LLMClientIsValidService;
     }
 
-    public boolean isChatMemoryValid() {
-        if (discGlobalData.getRecentMessages() == null || discGlobalData.getRecentMessages().isEmpty()) {
-            return false;
-        }
-        return LLMClientIsValidService.preformCheck(
-                IsValidInstructions.checkMessageMemory(discGlobalData)
-        );
-    }
-
     public boolean isVectorDBMemoryValid(String query) {
         List<MergedWebQAItem> vectorDBResults = webQAService.getWebQAResults(query);
         if (vectorDBResults != null) {
@@ -52,6 +43,14 @@ public class LLMValidationCalls {
             );
         }
         return false;
+    }
+
+    public boolean isImageGeneration() {
+        return LLMClientIsValidService.preformCheck(IsValidInstructions.checkIsImageGeneration());
+    }
+
+    public boolean isWebSearch() {
+        return LLMClientIsValidService.preformCheck(IsValidInstructions.checkIsWebSearch(discGlobalData));
     }
 
     public record VectorDBMemory(

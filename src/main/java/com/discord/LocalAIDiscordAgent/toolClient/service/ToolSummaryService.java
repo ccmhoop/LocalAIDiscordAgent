@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.toolClient.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
@@ -16,15 +17,17 @@ public class ToolSummaryService {
 
     private final DiscGlobalData discGlobalData;
     private final ChatClient structuredToolClient;
+    private final PromptData promptData;
 
     private String toolResults;
 
     public ToolSummaryService(
             DiscGlobalData discGlobalData,
-            ChatClient structuredToolClient
+            ChatClient structuredToolClient, PromptData promptData
     ) {
         this.structuredToolClient = structuredToolClient;
         this.discGlobalData = discGlobalData;
+        this.promptData = promptData;
     }
 
     public String summerizeToolResults(
@@ -38,6 +41,7 @@ public class ToolSummaryService {
             return "";
         }
 
+        promptData.setRetrievedContext(summarizedToolResults);
         return summarizedToolResults;
     }
 

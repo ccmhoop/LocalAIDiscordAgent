@@ -10,6 +10,7 @@ import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Path;
 import java.util.List;
 
 @Component
@@ -17,6 +18,7 @@ public class DiscGlobalData {
 
     private String userId;
     private String guildId;
+    private Path imagePath;
     private String username;
     private String channelId;
     private String userGlobal;
@@ -59,6 +61,24 @@ public class DiscGlobalData {
         }
     }
 
+    public void setDiscTonull(
+    ) {
+        this.guildId = null;
+        this.channelId = null;
+        this.userId = null;
+        this.username = null;
+        this.userGlobal = null;
+        this.serverNickname = null;
+        this.userMessage = null;
+        this.conversationId = null;
+        this.groupConversationId = null;
+        this.userProfile = null;
+        this.groupChatMemory = null;
+        this.recentMessages = null;
+        this.longTermMemoryData = null;
+        this.imagePath = null;
+        this.lastAssistantMsg = null;
+    }
 
     private String extractUserMessage(String content) {
         boolean mentioned = content.toLowerCase().contains("@kier") || content.contains("<@1379869980123992274>");
@@ -87,6 +107,10 @@ public class DiscGlobalData {
 
     public Boolean dataIsEmptyOrNull() {
         return guildId == null || channelId == null || userId == null || username == null || userGlobal == null || serverNickname == null || userMessage == null;
+    }
+
+    public void setImagePath(Path imagePath) {
+        this.imagePath = imagePath;
     }
 
     public String getGuildId() {
@@ -127,6 +151,13 @@ public class DiscGlobalData {
 
     public String getGroupConversationId() {
         return groupConversationId;
+    }
+
+    public Path getImagePath() {
+        if (imagePath == null) {
+            return null;
+        }
+        return imagePath;
     }
 
     public RecentMessage getLastAssistantMsg() {

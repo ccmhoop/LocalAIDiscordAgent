@@ -40,6 +40,9 @@ public class ChatClientService {
     public String generateLLMResponse(UserEntity userEntity) {
         try {
             ChatResponse chatResponse = callLLM();
+            if (chatResponse == null) {
+                return  null;
+            }
             String assistantMessage = ChatClientHelpers.extractOutputTextAsString(chatResponse);
             log.debug("Ollama response (extractedResponse={}): ", assistantMessage);
 
@@ -66,6 +69,9 @@ public class ChatClientService {
 
     private ChatResponse callLLM() {
         String systemPrompt = promptService.getSystemPromptAsJson();
+        if (systemPrompt == null) {
+            return null;
+        }
         Prompt prompt = Prompt.builder()
                 .messages(
                         List.of(

@@ -21,6 +21,10 @@ public class MapperUtils {
         this.aiObjectMapper = aiObjectMapper;
     }
 
+    public ObjectMapper getAiObjectMapper() {
+        return aiObjectMapper;
+    }
+
     public String valuesToString(Record record) {
         try {
             return aiObjectMapper.writeValueAsString(record);
