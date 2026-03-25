@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.discord.service;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
-import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;

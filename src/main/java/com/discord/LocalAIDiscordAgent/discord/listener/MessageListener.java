@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
 import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
-import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
@@ -9,17 +8,14 @@ import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.MessageChannel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.retry.Retry;
 
 import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
