@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 public class DiscGlobalData {
@@ -35,7 +36,7 @@ public class DiscGlobalData {
     public void setDiscData(MessageCreateEvent event) {
         this.guildId = event.getGuildId().map(Snowflake::asString).orElse("");
         this.channelId = event.getMessage().getChannelId().asString();
-        this.userId = event.getMessage().getAuthor().get().getId().asString().trim();
+        this.userId = Objects.requireNonNull(event.getMessage().getAuthor().orElse(null)).getId().asString().trim();
         this.username = event.getMessage().getAuthor().map(User::getUsername).orElse("");
         this.userGlobal = event.getMessage().getAuthor().get().getGlobalName().orElse("");
         this.serverNickname = event.getMessage().getAuthorAsMember()

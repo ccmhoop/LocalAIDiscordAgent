@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.textLLM.payload;
 
 import com.discord.LocalAIDiscordAgent.textLLM.records.TextLLMPayloadRecord;
 
-import java.util.List;
 
 public class TextLLMImagePromptPayload {
 
