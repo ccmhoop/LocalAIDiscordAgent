@@ -1,9 +1,9 @@
-package com.discord.LocalAIDiscordAgent.textLLM.payload;
+package com.discord.LocalAIDiscordAgent.structuredLLM.payload;
 
-import com.discord.LocalAIDiscordAgent.textLLM.records.TextLLMPayloadRecord;
+import com.discord.LocalAIDiscordAgent.structuredLLM.records.StructuredLLMPayloadRecord;
 
 
-public class TextLLMImagePromptPayload {
+public class StructuredImageSettingPayload {
 
     private static final String SYSTEM_MESSAGE = """
              Your task is to generate:
@@ -49,8 +49,8 @@ public class TextLLMImagePromptPayload {
              """;
 
 
-    public static TextLLMPayloadRecord getPayload() {
-        return new TextLLMPayloadRecord(
+    public static StructuredLLMPayloadRecord getPayload() {
+        return new StructuredLLMPayloadRecord(
                 SYSTEM_MESSAGE,
                 null,
                 null

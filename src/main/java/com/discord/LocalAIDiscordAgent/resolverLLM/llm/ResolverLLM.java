@@ -28,7 +28,6 @@ public class ResolverLLM {
     private String systemMsg;
     private Prompt prompt;
 
-
     public ResolverLLM(
             MapperUtils mapperUtils,
             ChatClient resolverLLMClient,
@@ -46,7 +45,7 @@ public class ResolverLLM {
             buildSystemMessageJson();
         }
         setPrompt();
-        log.info("LLM resolver prompt: {}", prompt);
+        log.debug("LLM resolver prompt: {}", prompt);
         return clientCallLLM();
     }
 

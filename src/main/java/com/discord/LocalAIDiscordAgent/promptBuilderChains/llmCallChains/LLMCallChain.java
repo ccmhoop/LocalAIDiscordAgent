@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
+import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
@@ -8,8 +9,7 @@ import com.discord.LocalAIDiscordAgent.resolverLLM.service.ResolverLLMService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
-import com.discord.LocalAIDiscordAgent.textLLM.llm.TextLLM.TextLLMImageGenerationSettings;
-import com.discord.LocalAIDiscordAgent.textLLM.service.TextLLMService;
+import com.discord.LocalAIDiscordAgent.structuredLLM.service.StructuredLLMService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -23,17 +23,16 @@ public class LLMCallChain {
     private final DiscGlobalData discGlobalData;
     private final LLMToolCalls LLMToolCalls;
     private final ResolverLLMService resolverLLM;
-    private final TextLLMService textLLM;
+    private final StructuredLLMService textLLM;
     private final LLMMemoryCalls llmMemoryCalls;
     private final ComfyuiRunService comfyuiRunService;
-
 
     public LLMCallChain(
             DiscGlobalData discGlobalData,
             LLMToolCalls LLMToolCalls,
             PromptData promptData,
             ResolverLLMService resolverLLMService,
-            TextLLMService textLLMService,
+            StructuredLLMService structuredLLMService,
             LLMMemoryCalls llmMemoryCalls,
             ComfyuiRunService comfyuiRunService
     ) {
@@ -41,7 +40,7 @@ public class LLMCallChain {
         this.promptData = promptData;
         this.LLMToolCalls = LLMToolCalls;
         this.resolverLLM = resolverLLMService;
-        this.textLLM = textLLMService;
+        this.textLLM = structuredLLMService;
         this.llmMemoryCalls = llmMemoryCalls;
         this.comfyuiRunService = comfyuiRunService;
     }
@@ -108,7 +107,7 @@ public class LLMCallChain {
         }
 
         try {
-            TextLLMImageGenerationSettings settings = textLLM.generateImageSettings();
+            ImageSettingsRecord settings = textLLM.generateImageSettings();
 
             log.info("Image Prompt: {}", settings);
 

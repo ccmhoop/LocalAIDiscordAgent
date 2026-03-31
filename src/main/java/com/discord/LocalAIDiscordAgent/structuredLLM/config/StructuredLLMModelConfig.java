@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.textLLM.config;
+package com.discord.LocalAIDiscordAgent.structuredLLM.config;
 
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
@@ -7,10 +7,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class TextLLMModelConfig {
+public class StructuredLLMModelConfig {
 
     @Bean
-    public OllamaChatModel textLLMModel(OllamaApi ollamaApi) {
+    public OllamaChatModel structuredLLMModel(OllamaApi ollamaApi) {
         return OllamaChatModel.builder()
                 .ollamaApi(ollamaApi)
                 .defaultOptions(

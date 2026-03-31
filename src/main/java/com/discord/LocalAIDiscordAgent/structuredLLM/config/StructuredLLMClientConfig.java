@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.textLLM.config;
+package com.discord.LocalAIDiscordAgent.structuredLLM.config;
 
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
@@ -7,11 +7,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class TextLLMClientConfig {
+public class StructuredLLMClientConfig {
 
     @Bean
-    public ChatClient textLLMClient(OllamaChatModel textLLMModel) {
-        return ChatClient.builder(textLLMModel)
+    public ChatClient structuredLLMClient(OllamaChatModel structuredLLMModel) {
+        return ChatClient.builder(structuredLLMModel)
                 .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .build();
     }

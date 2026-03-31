@@ -1,12 +1,12 @@
-package com.discord.LocalAIDiscordAgent.textLLM.payload;
+package com.discord.LocalAIDiscordAgent.structuredLLM.payload;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.textLLM.records.TextLLMContextRecord;
-import com.discord.LocalAIDiscordAgent.textLLM.records.TextLLMPayloadRecord;
+import com.discord.LocalAIDiscordAgent.structuredLLM.records.StructuredLLMContextRecord;
+import com.discord.LocalAIDiscordAgent.structuredLLM.records.StructuredLLMPayloadRecord;
 
 import java.util.List;
 
-public class TextLLMVectorQueryPayload {
+public class StructuredVectorQueryPayload {
 
     private static final String SYSTEM_MESSAGE = """        
             Your task is to optimize the user_message for semantic retrieval, create a information-rich semantic vector search query optimized for retrieval.
@@ -20,11 +20,11 @@ public class TextLLMVectorQueryPayload {
             "Preserve the original meaning, intent, key entities, and important constraints from the user_message."
     );
 
-    public static TextLLMPayloadRecord getPayload(DiscGlobalData discGlobalData) {
-        return new TextLLMPayloadRecord(
+    public static StructuredLLMPayloadRecord getPayload(DiscGlobalData discGlobalData) {
+        return new StructuredLLMPayloadRecord(
                 SYSTEM_MESSAGE,
                 INSTRUCTIONS,
-                new TextLLMContextRecord(
+                new StructuredLLMContextRecord(
                         discGlobalData.getLongTermMemoryData(),
                         discGlobalData.getLastAssistantMsg()
                 )

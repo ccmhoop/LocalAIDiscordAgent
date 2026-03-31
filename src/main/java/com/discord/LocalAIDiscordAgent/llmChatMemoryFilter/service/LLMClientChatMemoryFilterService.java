@@ -50,7 +50,7 @@ public class LLMClientChatMemoryFilterService {
         this.systemMsg = chatMemoryFilter.systemMsg();
         setInstructionsRecord();
         setPrompt();
-        log.info("LLM filter prompt: {}", prompt);
+//        log.info("LLM filter prompt: {}", prompt);
 
         FilteredChatMemoryRecord filteredChatMemoryRecord = callLLM();
         if (filteredChatMemoryRecord == null) {

@@ -15,7 +15,8 @@ public class ChatModelConfig {
                 .ollamaApi(ollamaApi)
                 .defaultOptions(
                         OllamaChatOptions.builder()
-                                .model("qwen3.5:27b")
+//                                .model("qwen3.5:27b")
+                                .model("lfm2")
 //                                .enableThinking()
                                 .disableThinking()
                                 .temperature(0.5)
