@@ -18,7 +18,7 @@ public class StructuredLLMService {
     }
 
     public ImageSettingsRecord generateImageSettings(){
-        return llm.generateImageGenerationSettings();
+        return llm.generateImageSettings();
     }
 
 }

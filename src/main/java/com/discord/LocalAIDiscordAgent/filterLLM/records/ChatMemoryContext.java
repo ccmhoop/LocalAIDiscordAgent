@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.records;
+package com.discord.LocalAIDiscordAgent.filterLLM.records;
 
 
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;

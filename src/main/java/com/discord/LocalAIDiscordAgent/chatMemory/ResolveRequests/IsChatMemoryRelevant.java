@@ -1,11 +1,11 @@
-package com.discord.LocalAIDiscordAgent.resolverLLM.payloads;
+package com.discord.LocalAIDiscordAgent.chatMemory.ResolveRequests;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.resolverLLM.request.ResolverLLMRequest;
 import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLMMContextRecord;
-import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLLMPayloadRecord;
 
 
-public class ResolverChatMemoryPayload {
+public class IsChatMemoryRelevant extends ResolverLLMRequest {
 
     private static final String SYSTEM_MESSAGE = """
             You are a strict relevance classifier.
@@ -36,17 +36,15 @@ public class ResolverChatMemoryPayload {
             </memory>
             """;
 
-    public static ResolverLLMPayloadRecord getPayload(DiscGlobalData discGlobalData) {
-        return new ResolverLLMPayloadRecord(
-                SYSTEM_MESSAGE,
+    public IsChatMemoryRelevant(DiscGlobalData discGlobalData) {
+        super(SYSTEM_MESSAGE,
                 new ResolverLMMContextRecord(
                         discGlobalData.getGroupChatMemory(),
                         discGlobalData.getLongTermMemoryData(),
                         discGlobalData.getRecentMessages(),
                         null,
                         null
-                )
-        );
+                ));
     }
 
 }

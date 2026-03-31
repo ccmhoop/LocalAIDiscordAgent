@@ -1,13 +1,13 @@
-package com.discord.LocalAIDiscordAgent.resolverLLM.payloads;
+package com.discord.LocalAIDiscordAgent.vectorMemory.llmRequests.resolver;
 
+import com.discord.LocalAIDiscordAgent.resolverLLM.request.ResolverLLMRequest;
 import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLMMContextRecord;
-import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLLMPayloadRecord;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;
 
 
-public class ResolverVectorMemoryPayload {
+public class IsVectorMemoryRelevantRequest extends ResolverLLMRequest {
 
     private static final String SYSTEM_MESSAGE = """
             You are a strict relevance classifier.
@@ -38,16 +38,17 @@ public class ResolverVectorMemoryPayload {
             </memory>
             """;
 
-    public static ResolverLLMPayloadRecord getPayload(List<MergedWebQAItem> vectorDBMemory) {
-        return new ResolverLLMPayloadRecord(
+    public IsVectorMemoryRelevantRequest(List<MergedWebQAItem> vectorDBMemory){
+        super(
                 SYSTEM_MESSAGE,
-                new ResolverLMMContextRecord(
-                        null,
-                        null,
-                        null,
-                        vectorDBMemory,
-                        null
-                )
+        new ResolverLMMContextRecord(
+                null,
+                null,
+                null,
+                vectorDBMemory,
+                null
+        )
         );
     }
+
 }

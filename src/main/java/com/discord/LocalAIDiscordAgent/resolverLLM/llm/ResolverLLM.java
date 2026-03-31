@@ -3,8 +3,8 @@ package com.discord.LocalAIDiscordAgent.resolverLLM.llm;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 
+import com.discord.LocalAIDiscordAgent.resolverLLM.request.ResolverLLMRequest;
 import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLMMContextRecord;
-import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLLMPayloadRecord;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -38,10 +38,10 @@ public class ResolverLLM {
         this.mapperUtils = mapperUtils;
     }
 
-    public boolean call(@NonNull ResolverLLMPayloadRecord payload) {
-        this.payloadContextData = payload.payloadContext();
-        this.systemMsg = payload.systemMsg();
-        if (payload.payloadContext() != null) {
+    public <T extends ResolverLLMRequest> boolean call(@NonNull T payload) {
+        this.payloadContextData = payload.getContext();
+        this.systemMsg = payload.getSystemMessage();
+        if (this.payloadContextData != null) {
             buildSystemMessageJson();
         }
         setPrompt();

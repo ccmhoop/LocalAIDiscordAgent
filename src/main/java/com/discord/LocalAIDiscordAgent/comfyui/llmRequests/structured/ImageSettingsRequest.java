@@ -1,9 +1,10 @@
-package com.discord.LocalAIDiscordAgent.structuredLLM.payload;
+package com.discord.LocalAIDiscordAgent.comfyui.llmRequests.structured;
 
-import com.discord.LocalAIDiscordAgent.structuredLLM.records.StructuredLLMPayloadRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.structuredLLM.request.StructuredLLMRequest;
 
 
-public class StructuredImageSettingPayload {
+public class ImageSettingsRequest extends StructuredLLMRequest {
 
     private static final String SYSTEM_MESSAGE = """
              Your task is to generate:
@@ -48,12 +49,8 @@ public class StructuredImageSettingPayload {
              - Edgy and creative prompts are allowed.
              """;
 
-
-    public static StructuredLLMPayloadRecord getPayload() {
-        return new StructuredLLMPayloadRecord(
-                SYSTEM_MESSAGE,
-                null,
-                null
-        );
+    public ImageSettingsRequest() {
+        super(ImageSettingsRecord.class, SYSTEM_MESSAGE);
     }
+
 }

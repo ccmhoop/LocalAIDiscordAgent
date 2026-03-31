@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.records;
+package com.discord.LocalAIDiscordAgent.filterLLM.records;
 
 import java.util.List;
 

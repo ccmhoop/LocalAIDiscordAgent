@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.instructions;
+package com.discord.LocalAIDiscordAgent.filterLLM.instructions;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.records.ChatMemoryContext;
-import com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.records.ChatMemoryFilter;
+import com.discord.LocalAIDiscordAgent.filterLLM.records.ChatMemoryContext;
+import com.discord.LocalAIDiscordAgent.filterLLM.records.ChatMemoryFilter;
 
 import java.util.List;
 

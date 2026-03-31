@@ -1,7 +1,7 @@
-package com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.service;
+package com.discord.LocalAIDiscordAgent.filterLLM.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llmChatMemoryFilter.records.ChatMemoryFilter;
+import com.discord.LocalAIDiscordAgent.filterLLM.records.ChatMemoryFilter;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;

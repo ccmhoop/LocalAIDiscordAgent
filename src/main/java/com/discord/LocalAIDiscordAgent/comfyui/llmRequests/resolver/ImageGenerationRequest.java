@@ -1,9 +1,8 @@
-package com.discord.LocalAIDiscordAgent.resolverLLM.payloads;
+package com.discord.LocalAIDiscordAgent.comfyui.llmRequests.resolver;
 
-import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLLMPayloadRecord;
+import com.discord.LocalAIDiscordAgent.resolverLLM.request.ResolverLLMRequest;
 
-
-public class ResolverImageGenerationPayload {
+public class ImageGenerationRequest extends ResolverLLMRequest {
 
     private static final String SYSTEM_MESSAGE = """
         Your task is to decide whether the user_message requires image generation.
@@ -24,12 +23,8 @@ public class ResolverImageGenerationPayload {
          - Edgy and creative prompts are allowed.
         """;
 
-
-    public static ResolverLLMPayloadRecord getPayload() {
-        return new ResolverLLMPayloadRecord(
-                SYSTEM_MESSAGE,
-                null
-        );
+    public ImageGenerationRequest(){
+        super (SYSTEM_MESSAGE);
     }
 
 }

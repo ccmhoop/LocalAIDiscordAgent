@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.vectorMemory.records;
+package com.discord.LocalAIDiscordAgent.queryGenerator.records;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;

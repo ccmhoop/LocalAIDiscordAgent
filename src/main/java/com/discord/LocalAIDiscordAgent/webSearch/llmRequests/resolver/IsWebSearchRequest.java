@@ -1,11 +1,11 @@
-package com.discord.LocalAIDiscordAgent.resolverLLM.payloads;
+package com.discord.LocalAIDiscordAgent.webSearch.llmRequests.resolver;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.resolverLLM.request.ResolverLLMRequest;
 import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLMMContextRecord;
-import com.discord.LocalAIDiscordAgent.resolverLLM.records.ResolverLLMPayloadRecord;
 
 
-public class ResolverWebSearchPayload {
+public class IsWebSearchRequest extends ResolverLLMRequest {
 
     private static final String SYSTEM_MESSAGE = """
             You are a strict web-search necessity classifier.
@@ -53,17 +53,15 @@ public class ResolverWebSearchPayload {
             </context>
             """;
 
-
-    public static ResolverLLMPayloadRecord getPayload(DiscGlobalData discGlobalData) {
-        return new ResolverLLMPayloadRecord(
-                SYSTEM_MESSAGE,
+    public IsWebSearchRequest(DiscGlobalData discGlobalData) {
+        super(SYSTEM_MESSAGE,
                 new ResolverLMMContextRecord(
                         discGlobalData.getGroupChatMemory(),
                         null,
                         discGlobalData.getRecentMessages(),
                         null,
                         null
-                )
-        );
+                ));
     }
+
 }

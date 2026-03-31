@@ -3,10 +3,9 @@ package com.discord.LocalAIDiscordAgent.structuredLLM.calls;
 import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.structuredLLM.llm.StructuredLLM;
-import com.discord.LocalAIDiscordAgent.structuredLLM.payload.StructuredImageSettingPayload;
-import com.discord.LocalAIDiscordAgent.structuredLLM.payload.StructuredVectorQueryPayload;
-import com.discord.LocalAIDiscordAgent.structuredLLM.records.StructuredLLMPayloadRecord;
-import com.discord.LocalAIDiscordAgent.vectorMemory.records.QueryRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.llmRequests.structured.ImageSettingsRequest;
+import com.discord.LocalAIDiscordAgent.queryGenerator.llmRequests.structured.VectorQueryGenerateRequest;
+import com.discord.LocalAIDiscordAgent.queryGenerator.records.QueryRecord;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,17 +23,15 @@ public class StructuredLLMCalls {
     }
 
     public String generateVectorQuery() {
-        StructuredLLMPayloadRecord payload = StructuredVectorQueryPayload.getPayload(discGlobalData);
-        Record record = llm.call(payload, QueryRecord.class);
+        Record record = llm.call(new VectorQueryGenerateRequest(discGlobalData));
         if (record instanceof QueryRecord(String query)) {
             return query;
         }
         return null;
     }
 
-    public ImageSettingsRecord generateImageGenerationSettings() {
-        StructuredLLMPayloadRecord payload = StructuredImageSettingPayload.getPayload();
-        Record record = llm.call(payload, ImageSettingsRecord.class);
+    public ImageSettingsRecord generateImageSettings() {
+        Record record = llm.call(new ImageSettingsRequest());
         if (record instanceof ImageSettingsRecord recordOutPut) {
             return recordOutPut;
         }

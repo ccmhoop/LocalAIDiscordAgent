@@ -1,7 +1,7 @@
 {
   "4": {
     "inputs": {
-      "ckpt_name": "juggernautXL_ragnarokBy.safetensors"
+      "ckpt_name": "perfectionRealisticILXL_60.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -52,12 +52,12 @@
         "54",
         0
       ],
-      "steps": 35,
+      "steps": 50,
       "cfg": 5,
       "sampler_name": "dpmpp_2m_sde",
       "scheduler": "karras",
       "start_at_step": 0,
-      "end_at_step": 35,
+      "end_at_step": 50,
       "return_with_leftover_noise": "disable",
       "model": [
         "4",
