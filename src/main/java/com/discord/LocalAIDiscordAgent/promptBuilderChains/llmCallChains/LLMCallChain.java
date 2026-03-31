@@ -2,15 +2,14 @@ package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llmQueryGenerator.service.LLMClientQueryGeneratorService.ImagePromptOutput;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.generatorCalls.LLMGeneratorCalls;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryCalls.LLMMemoryCalls;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.validationCalls.LLMValidationCalls;
+import com.discord.LocalAIDiscordAgent.resolverLLM.service.ResolverLLMService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.discord.LocalAIDiscordAgent.textLLM.llm.TextLLM.TextLLMImageGenerationSettings;
+import com.discord.LocalAIDiscordAgent.textLLM.service.TextLLMService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -23,29 +22,32 @@ public class LLMCallChain {
     private final PromptData promptData;
     private final DiscGlobalData discGlobalData;
     private final LLMToolCalls LLMToolCalls;
-    private final LLMValidationCalls LLMValidationCalls;
-    private final LLMGeneratorCalls LLMGeneratorCalls;
+    private final ResolverLLMService resolverLLM;
+    private final TextLLMService textLLM;
     private final LLMMemoryCalls llmMemoryCalls;
     private final ComfyuiRunService comfyuiRunService;
 
 
     public LLMCallChain(
-            DiscGlobalData discGlobalData, LLMValidationCalls LLMValidationCalls,
+            DiscGlobalData discGlobalData,
             LLMToolCalls LLMToolCalls,
-            PromptData promptData, LLMGeneratorCalls llmGeneratorCalls, LLMMemoryCalls llmMemoryCalls, ComfyuiRunService comfyuiRunService
+            PromptData promptData,
+            ResolverLLMService resolverLLMService,
+            TextLLMService textLLMService,
+            LLMMemoryCalls llmMemoryCalls,
+            ComfyuiRunService comfyuiRunService
     ) {
         this.discGlobalData = discGlobalData;
         this.promptData = promptData;
         this.LLMToolCalls = LLMToolCalls;
-        this.LLMValidationCalls = LLMValidationCalls;
-        LLMGeneratorCalls = llmGeneratorCalls;
+        this.resolverLLM = resolverLLMService;
+        this.textLLM = textLLMService;
         this.llmMemoryCalls = llmMemoryCalls;
         this.comfyuiRunService = comfyuiRunService;
     }
 
     public RuntimeContext executeContextChainRuntime() {
         boolean useImageGeneration = executeImageChain();
-        log.info("Use Image Generation: {}", useImageGeneration);
         if (useImageGeneration) {
             return null;
         }
@@ -67,17 +69,20 @@ public class LLMCallChain {
 
     private String executeContextChain() {
 
-        String query = LLMGeneratorCalls.chatBasedQuery();
+        String query = textLLM.generateQuery();
 
         log.info("Query: {}", query);
 
-        boolean useVectorDbMemory = LLMValidationCalls.isVectorDBMemoryValid(query);
+        boolean useVectorDbMemory = resolverLLM.useVectorMemory(query);
         log.info("Use Vector DB Memory: {}", useVectorDbMemory);
 
         boolean useWebSearch = false;
 
+        boolean useChatMemory =  resolverLLM.useChatMemory();
+        log.info("Use Chat Memory: {}", useChatMemory);
+
         if (!useVectorDbMemory) {
-            useWebSearch = LLMValidationCalls.isWebSearch();
+            useWebSearch = resolverLLM.useWebSearch();
         }
         log.info("Use Web Search Memory: {}", useWebSearch);
 
@@ -90,24 +95,27 @@ public class LLMCallChain {
             LLMToolCalls.callWebSearchTool();
         }
 
+
          return LLMToolCalls.callSummaryTool();
 
     }
 
     private boolean executeImageChain() {
-        if (!LLMValidationCalls.isImageGeneration()) {
+        boolean useImageGeneration = resolverLLM.useImageGeneration();
+        log.info("Use Image Generation: {}", useImageGeneration);
+        if (!useImageGeneration) {
             return false;
         }
 
         try {
-            ImagePromptOutput outPut = LLMGeneratorCalls.imagePrompt();
+            TextLLMImageGenerationSettings settings = textLLM.generateImageSettings();
 
-            log.info("Image Prompt: {}", outPut);
+            log.info("Image Prompt: {}", settings);
 
-            String positivePrompt = outPut.positivePrompt();
-            String negativePrompt = outPut.negativePrompt();
-            int width = outPut.pixelWidth();
-            int height = outPut.pixelHeight();
+            String positivePrompt = settings.positivePrompt();
+            String negativePrompt = settings.negativePrompt();
+            int width = settings.pixelWidth();
+            int height = settings.pixelHeight();
 
             Path path = comfyuiRunService.generateImage(positivePrompt, negativePrompt, width, height);
             discGlobalData.setImagePath(path);

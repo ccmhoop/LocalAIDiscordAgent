@@ -1,8 +1,11 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.data;
 
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
+import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 
 @Getter
@@ -40,5 +43,9 @@ public class PromptData  {
 
     public record TestContext(String testContext) {}
 
+    public record VectorDBMemory(
+            List<MergedWebQAItem> vectorDBResults
+    ) {
+    }
 
 }

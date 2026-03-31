@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.discord.service;
 
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;
@@ -55,10 +56,9 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
 
         discGlobalData.setDiscTonull();
 
-
         discGlobalData.setDiscData(event);
 
-        if (discGlobalData.dataIsEmptyOrNull() || discGlobalData.getUserMessage().isBlank()){
+        if (discGlobalData.getUserMessage() == null || discGlobalData.getUserMessage().isBlank()){
             return Mono.empty();
         }
 

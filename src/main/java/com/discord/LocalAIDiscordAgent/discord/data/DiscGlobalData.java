@@ -142,6 +142,9 @@ public class DiscGlobalData {
     }
 
     public String getUserMessage() {
+        if (userMessage == null) {
+            return null;
+        }
         return userMessage;
     }
 

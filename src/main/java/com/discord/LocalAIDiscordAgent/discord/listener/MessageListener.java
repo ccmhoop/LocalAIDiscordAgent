@@ -64,7 +64,7 @@ public abstract class MessageListener {
                                                     })
                                                     .then(Mono.fromCallable(discGlobalData::getImagePath)
                                                             .subscribeOn(Schedulers.boundedElastic()))
-                                                    .flatMap(imagePath -> sendImage(channel, imagePath, "Generated image"))
+                                                    .flatMap(imagePath -> sendImage(channel, imagePath, "Generated image for user %s".formatted(discGlobalData.getServerNickname())))
                                                     .then(Mono.fromRunnable(() -> {
                                                         try {
                                                             processSummaryClient.saveInteraction();
@@ -78,7 +78,7 @@ public abstract class MessageListener {
                                     }
                             );
 
-                }).then();
+                }).then(Mono.fromRunnable(discGlobalData::setDiscTonull));
     }
 
     public Mono<Void> processCommand(Message eventMessage) {

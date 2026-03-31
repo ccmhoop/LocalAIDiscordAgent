@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.toolClient.config;
+package com.discord.LocalAIDiscordAgent.resolverLLM.config;
 
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
@@ -7,20 +7,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class ToolClientConfig {
+public class ResolverLLMClientConfig {
 
     @Bean
-    public ChatClient executeToolsClient(OllamaChatModel executeToolsModel) {
-        return ChatClient.builder(executeToolsModel)
-                .build();
-    }
-
-    @Bean
-    public ChatClient structuredToolClient(OllamaChatModel summerizeToolModel) {
-        return ChatClient.builder(summerizeToolModel)
+    public ChatClient resolverLLMClient(OllamaChatModel resolverLLMModel) {
+        return ChatClient.builder(resolverLLMModel)
                 .defaultAdvisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .build();
     }
-
 
 }

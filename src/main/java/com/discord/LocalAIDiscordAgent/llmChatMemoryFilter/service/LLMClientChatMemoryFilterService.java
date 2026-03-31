@@ -37,9 +37,9 @@ public class LLMClientChatMemoryFilterService {
     public LLMClientChatMemoryFilterService(
             MapperUtils mapperUtils,
             DiscGlobalData discGlobalData,
-            ChatClient isValidToolClient
+            ChatClient resolverLLMClient
     ) {
-        this.llmFilterClient = isValidToolClient;
+        this.llmFilterClient = resolverLLMClient;
         this.discGlobalData = discGlobalData;
         this.mapperUtils = mapperUtils;
     }
