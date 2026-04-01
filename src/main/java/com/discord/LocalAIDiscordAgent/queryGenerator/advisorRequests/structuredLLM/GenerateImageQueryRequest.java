@@ -50,6 +50,9 @@ public class GenerateImageQueryRequest extends StructuredLLMRequest {
             11. Do not invent facts, entities, or visual details that are not present or clearly implied.
             12. If the user_message is already well-formed for retrieval, return a cleaned-up version with minimal changes.
             13. Optimize for semantic search retrieval of visually useful memory, not for answering the user directly.
+            
+            output requirements:
+            - return only a short, concise semantic search query
             """;
 
     public GenerateImageQueryRequest() {
