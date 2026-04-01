@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.llmAdvisors.filterLLM.llm;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.llmAdvisors.filterLLM.request.FilterRequest;
-import com.discord.LocalAIDiscordAgent.llmAdvisors.structuredLLM.request.StructuredLLMRequest;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,7 +24,6 @@ public class FilterLLM {
     private final MapperUtils mapperUtils;
     private final DiscGlobalData discGlobalData;
 
-    private String systemMsg;
     private Prompt prompt;
 
     public FilterLLM(
@@ -50,7 +48,6 @@ public class FilterLLM {
 
     private void setPrompt(FilterRequest request) {
         String systemMessage = buildSystemMessageJson(request);
-//        log.info("LLM Filter system message: {}", systemMessage);
         this.prompt = Prompt.builder()
                 .messages(
                         new SystemMessage(systemMessage),
