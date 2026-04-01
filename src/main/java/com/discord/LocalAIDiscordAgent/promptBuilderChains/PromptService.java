@@ -57,27 +57,8 @@ public class PromptService {
 
     private SystemMessageConfig buildSystemMessageConfig(RuntimeContext context) {
         SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
-        RuntimeContext runtimeContext = new RuntimeContext(
-                LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
-                discGlobalData.getUserProfile(),
-//                buildMemory(),
-                null,
-                context.retrievedContext().contextSummary() == null? null : context.retrievedContext(),
-                context.longTermMemory(),
-                context.recentMessages() == null || context.recentMessages().isEmpty() ? null : context.recentMessages(),
-                context.groupMemory(),
-                baseConfig.runtimeContext().responseContract()
-        );
-        return SystemMessagePresets.withMessageMemory(baseConfig, runtimeContext);
+        return SystemMessagePresets.withMessageMemory(baseConfig, context);
     }
-
-//    private RetrievedContext buildRetrievedContext() {
-//        String context = llmCallChain.executeContextChain();
-//        if (context == null || context.isBlank()) {
-//            return null;
-//        }
-//        return new RetrievedContext(context);
-//    }
 
     private Memory buildMemory() {
         String id;

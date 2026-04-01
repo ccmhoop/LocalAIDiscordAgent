@@ -16,6 +16,8 @@ public class PromptData  {
 
     private String retrievedContext;
     private TestContext testContext;
+    private  List<MergedWebQAItem> vectorDBResults;
+    private String summary;
 
     public PromptData(MapperUtils mapperUtils) {
         this.mapperUtils = mapperUtils;
@@ -27,6 +29,25 @@ public class PromptData  {
         }
 
         return testContext.testContext();
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
+    }
+
+    public String getSummary() {
+        if (summary == null || summary.isBlank()) {
+            return null;
+        }
+        return summary;
+    }
+
+    public void setVectorDBResults(List<MergedWebQAItem> vectorDBResults) {
+        this.vectorDBResults = vectorDBResults;
+    }
+
+    public List<MergedWebQAItem> getVectorDBMemory() {
+        return vectorDBResults;
     }
 
     public void setRetrievedContext(Record contextRecord){

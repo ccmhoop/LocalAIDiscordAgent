@@ -53,7 +53,16 @@ public final class SystemMessagePresets {
                 base.memoryPolicy(),
                 base.antiRepetitionPolicy(),
                 base.sensitiveTopicPolicy(),
-                runtimeContext
+                new RuntimeContext(
+                        runtimeContext.Date(),
+                        runtimeContext.userProfile(),
+                        runtimeContext.memory(),
+                        runtimeContext.retrievedContext(),
+                        runtimeContext.longTermMemory(),
+                        runtimeContext.recentMessages(),
+                        runtimeContext.groupMemory(),
+                        base.runtimeContext().responseContract()
+                )
         );
     }
 }

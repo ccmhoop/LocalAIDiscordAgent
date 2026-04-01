@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.discord.service;
 
 import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
@@ -11,8 +12,15 @@ import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import com.discord.LocalAIDiscordAgent.llmMemory.vectorMemory.longTermMemory.LongTermMemoryService;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
+import static org.springframework.ai.chat.messages.MessageType.USER;
 
 @Slf4j
 @Service
@@ -61,10 +69,16 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
             return Mono.empty();
         }
 
+        Map<MessageType, List<RecentChatMemory>> recentMap = recentChatMemoryService.getChatMemoryAsMap();
+
+        List<RecentChatMemory> recentUsers = recentMap.getOrDefault(USER, List.of());
+        List<RecentChatMemory> recentAssistants = recentMap.getOrDefault(ASSISTANT, List.of());
+
         discGlobalData.setDiscDataMemory(
                 groupChatMemoryService.buildMessageMemory(),
                 recentChatMemoryService.buildMessageMemory(),
-                longTermMemoryService.getLongTermMemory()
+                longTermMemoryService.getLongTermMemory(),
+                recentChatMemoryService.getChatMemoryAsMap()
         );
 
 

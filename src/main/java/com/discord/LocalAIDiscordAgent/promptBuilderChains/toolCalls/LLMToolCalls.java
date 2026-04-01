@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls;
 
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolSummaryService;
 import org.springframework.stereotype.Component;
@@ -27,9 +28,13 @@ public class LLMToolCalls {
         promptData.setRetrievedContext(toolContext);
     }
 
-    public String callSummaryTool() {
+    public RetrievedContext callSummaryTool() {
         String retrievedContextString = promptData.getRetrievedContext();
-        return toolSummaryService.summerizeToolResults(retrievedContextString);
+        if (retrievedContextString != null && !retrievedContextString.isEmpty()) {
+            String summary = toolSummaryService.summerizeToolResults(retrievedContextString);
+            return new RetrievedContext(summary);
+        }
+        return null;
     }
 
 

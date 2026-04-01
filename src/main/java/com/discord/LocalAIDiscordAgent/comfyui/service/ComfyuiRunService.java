@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
+import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.ClassPathResource;
@@ -35,7 +36,7 @@ public class ComfyuiRunService {
 //        return ResponseEntity.ok(imagePath.getFileName().toString());
 //    }
 
-    public Path generateImage(String positivePrompt, String negativePrompt, int width, int height) throws Exception {
+    public Path generateImage(ImageSettingsRecord imageSettings) throws Exception {
         ClassPathResource workflowResource = new ClassPathResource("comfyui/sdxl_api.json");
 
         if (!workflowResource.exists()) {
@@ -50,9 +51,9 @@ public class ComfyuiRunService {
             );
         }
 
-        setImageSize(apiWorkflow,"5", width, height );
-        setPromptText(apiWorkflow, "6", positivePrompt);
-        setPromptText(apiWorkflow, "7", negativePrompt);
+        setImageSize(apiWorkflow,"5", imageSettings.pixelWidth(), imageSettings.pixelHeight() );
+        setPromptText(apiWorkflow, "6", imageSettings.positivePrompt());
+        setPromptText(apiWorkflow, "7", imageSettings.negativePrompt());
 
         byte[] imageBytes = comfyuiService.runWorkflowAndGetFirstImage(apiWorkflow);
 

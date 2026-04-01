@@ -63,6 +63,36 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
         return orderAndBuildRecentMessages(size, userMessages, assistantMessages);
     }
 
+    public static List<RecentMessage> reduceAndBuildRecentMessages(
+            List<RecentChatMemory> assistantMessages,
+            List<RecentChatMemory> userMessages,
+            List<Integer> indexes
+    ) {
+        int userSize = userMessages.size();
+        int assistantSize = assistantMessages.size();
+        List<RecentMessage> recentMessages = new ArrayList<>();
+
+        for (int i : indexes) {
+            if (i < userSize) {
+                RecentChatMemory user = userMessages.get(i);
+                recentMessages.add(new RecentMessage(
+                        user.getTimestamp().toString(),
+                        MessageType.USER.toString(),
+                        user.getContent()
+                ));
+            }
+            if (i < assistantSize) {
+                RecentChatMemory assistant = assistantMessages.get(i);
+                recentMessages.add(new RecentMessage(
+                        assistant.getTimestamp().toString(),
+                        MessageType.ASSISTANT.toString(),
+                        assistant.getContent()
+                ));
+            }
+        }
+        return recentMessages;
+    }
+
     private static List<RecentMessage> orderAndBuildRecentMessages(int size, List<RecentChatMemory> userMessages, List<RecentChatMemory> assistantMessages) {
         List<RecentMessage> recentMessages = new ArrayList<>(size);
 

@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.data;
 
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
@@ -8,11 +9,16 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.User;
+import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
+import static org.springframework.ai.chat.messages.MessageType.USER;
 
 @Component
 public class DiscGlobalData {
@@ -32,6 +38,8 @@ public class DiscGlobalData {
     private RecentMessage lastAssistantMsg;
     private List<RecentMessage> recentMessages;
     private List<LongTermMemoryData> longTermMemoryData;
+    private List<RecentChatMemory> userMessages;
+    private List<RecentChatMemory> assistantMessages;
 
     public void setDiscData(MessageCreateEvent event) {
         this.guildId = event.getGuildId().map(Snowflake::asString).orElse("");
@@ -52,14 +60,18 @@ public class DiscGlobalData {
     public void setDiscDataMemory(
             GroupMemory groupChatMemory,
             List<RecentMessage> recentMessages,
-            List<LongTermMemoryData> longTermMemoryData
+            List<LongTermMemoryData> longTermMemoryData,
+            Map<MessageType, List<RecentChatMemory>> userAssistantMessages
     ) {
         this.longTermMemoryData = longTermMemoryData;
         this.groupChatMemory = groupChatMemory;
         this.recentMessages = recentMessages;
+        this.userMessages = userAssistantMessages.getOrDefault(USER, List.of());
+        this.assistantMessages = userAssistantMessages.getOrDefault(ASSISTANT, List.of());
         if (this.recentMessages != null ) {
             setLastAssistantMessage();
         }
+
     }
 
     public void setDiscTonull(
@@ -183,6 +195,18 @@ public class DiscGlobalData {
             return null;
         }
         return recentMessages;
+    }
+    public List<RecentChatMemory> getUserMessages() {
+        if (userMessages == null) {
+            return null;
+        }
+        return userMessages;
+    }
+    public List<RecentChatMemory> getAssistantMessages() {
+        if (assistantMessages == null) {
+            return null;
+        }
+        return assistantMessages;
     }
 
     public List<LongTermMemoryData> getLongTermMemoryData() {

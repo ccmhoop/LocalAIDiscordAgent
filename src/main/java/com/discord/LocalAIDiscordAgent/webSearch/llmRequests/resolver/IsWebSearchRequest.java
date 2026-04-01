@@ -1,8 +1,8 @@
 package com.discord.LocalAIDiscordAgent.webSearch.llmRequests.resolver;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llmResolvers.booleanLLM.request.BooleanLLMRequest;
-import com.discord.LocalAIDiscordAgent.llmResolvers.booleanLLM.records.BooLeanLMMContextRecord;
+import com.discord.LocalAIDiscordAgent.llmAdvisors.booleanLLM.request.BooleanLLMRequest;
+import com.discord.LocalAIDiscordAgent.llmAdvisors.booleanLLM.records.BooLeanLMMContextRecord;
 
 
 public class IsWebSearchRequest extends BooleanLLMRequest {
