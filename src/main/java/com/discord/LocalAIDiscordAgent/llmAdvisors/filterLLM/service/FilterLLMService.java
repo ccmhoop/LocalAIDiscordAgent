@@ -19,7 +19,7 @@ public class FilterLLMService {
     public ChatMemoryPayload chatMemoryReducerFilter(boolean useChatMemory){
         log.info("Use Chat Memory: {}", useChatMemory);
         if (!useChatMemory) {
-            new ChatMemoryPayload(null,null, null);
+           return new ChatMemoryPayload(null,null, null);
         }
        return filterLLMCalls.removeUnnecessaryChatMemory();
     }

@@ -37,12 +37,10 @@ public class FilterLLM {
 
     public Record call(@NonNull FilterRequest request) {
         boolean contextPresent = request.getContext() != null;
-        log.info("Use LLM Filter : {}", contextPresent);
         if (!contextPresent) {
             return null;
         }
         setPrompt(request);
-        log.info("LLM Filter prompt: {}", prompt);
         return callLLM(request.getOutputRecordClass());
     }
 

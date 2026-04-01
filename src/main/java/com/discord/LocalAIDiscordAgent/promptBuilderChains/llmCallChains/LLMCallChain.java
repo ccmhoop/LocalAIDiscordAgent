@@ -8,7 +8,6 @@ import com.discord.LocalAIDiscordAgent.llmMemory.records.ChatMemoryPayload;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.discord.LocalAIDiscordAgent.llmAdvisors.booleanLLM.service.BooleanLLMService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
 import com.discord.LocalAIDiscordAgent.llmAdvisors.structuredLLM.service.StructuredLLMService;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +75,7 @@ public class LLMCallChain {
     }
 
     private ChatMemoryPayload executeChatMemoryChain() {
-        boolean useChatMemory =  booleanLLM.useChatMemoryIfRelevant();
+        boolean useChatMemory = booleanLLM.useChatMemoryIfRelevant();
         return filterLLM.chatMemoryReducerFilter(useChatMemory);
     }
 
