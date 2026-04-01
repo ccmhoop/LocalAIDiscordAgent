@@ -1,14 +1,14 @@
 package com.discord.LocalAIDiscordAgent.discord.service;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;
-import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
+import com.discord.LocalAIDiscordAgent.llmMain.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
-import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.vectorMemory.longTermMemory.LongTermMemoryService;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

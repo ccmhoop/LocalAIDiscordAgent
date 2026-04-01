@@ -1,8 +1,8 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryCalls;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.filterLLM.instructions.ChatMemoryInstructions;
-import com.discord.LocalAIDiscordAgent.filterLLM.service.LLMClientChatMemoryFilterService;
+import com.discord.LocalAIDiscordAgent.llmResolvers.filterLLM.instructions.ChatMemoryInstructions;
+import com.discord.LocalAIDiscordAgent.llmResolvers.filterLLM.service.LLMClientChatMemoryFilterService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
 import lombok.extern.slf4j.Slf4j;

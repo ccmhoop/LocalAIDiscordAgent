@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
-import com.discord.LocalAIDiscordAgent.chatClient.service.ChatClientService;
+import com.discord.LocalAIDiscordAgent.llmMain.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;

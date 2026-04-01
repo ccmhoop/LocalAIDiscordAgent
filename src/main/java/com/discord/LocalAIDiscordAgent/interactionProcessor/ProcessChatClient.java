@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.interactionProcessor;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
-import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService;
+import com.discord.LocalAIDiscordAgent.llmMemory.vectorMemory.longTermMemory.LongTermMemoryService;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;

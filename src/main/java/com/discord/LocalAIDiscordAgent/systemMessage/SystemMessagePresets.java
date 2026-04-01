@@ -1,7 +1,7 @@
 package com.discord.LocalAIDiscordAgent.systemMessage;
 
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
-import com.discord.LocalAIDiscordAgent.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.llmMemory.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 
 import java.util.List;
 

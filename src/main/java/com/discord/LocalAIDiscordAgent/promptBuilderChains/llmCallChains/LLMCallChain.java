@@ -5,11 +5,11 @@ import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.memoryCalls.LLMMemoryCalls;
-import com.discord.LocalAIDiscordAgent.resolverLLM.service.ResolverLLMService;
+import com.discord.LocalAIDiscordAgent.llmResolvers.booleanLLM.service.BooleanLLMService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
-import com.discord.LocalAIDiscordAgent.structuredLLM.service.StructuredLLMService;
+import com.discord.LocalAIDiscordAgent.llmResolvers.structuredLLM.service.StructuredLLMService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +22,7 @@ public class LLMCallChain {
     private final PromptData promptData;
     private final DiscGlobalData discGlobalData;
     private final LLMToolCalls LLMToolCalls;
-    private final ResolverLLMService resolverLLM;
+    private final BooleanLLMService booleanLLM;
     private final StructuredLLMService textLLM;
     private final LLMMemoryCalls llmMemoryCalls;
     private final ComfyuiRunService comfyuiRunService;
@@ -31,7 +31,7 @@ public class LLMCallChain {
             DiscGlobalData discGlobalData,
             LLMToolCalls LLMToolCalls,
             PromptData promptData,
-            ResolverLLMService resolverLLMService,
+            BooleanLLMService booleanLLMService,
             StructuredLLMService structuredLLMService,
             LLMMemoryCalls llmMemoryCalls,
             ComfyuiRunService comfyuiRunService
@@ -39,7 +39,7 @@ public class LLMCallChain {
         this.discGlobalData = discGlobalData;
         this.promptData = promptData;
         this.LLMToolCalls = LLMToolCalls;
-        this.resolverLLM = resolverLLMService;
+        this.booleanLLM = booleanLLMService;
         this.textLLM = structuredLLMService;
         this.llmMemoryCalls = llmMemoryCalls;
         this.comfyuiRunService = comfyuiRunService;
@@ -72,16 +72,16 @@ public class LLMCallChain {
 
         log.info("Query: {}", query);
 
-        boolean useVectorDbMemory = resolverLLM.useVectorMemory(query);
+        boolean useVectorDbMemory = booleanLLM.useVectorMemory(query);
         log.info("Use Vector DB Memory: {}", useVectorDbMemory);
 
         boolean useWebSearch = false;
 
-        boolean useChatMemory =  resolverLLM.useChatMemory();
+        boolean useChatMemory =  booleanLLM.useChatMemory();
         log.info("Use Chat Memory: {}", useChatMemory);
 
         if (!useVectorDbMemory) {
-            useWebSearch = resolverLLM.useWebSearch();
+            useWebSearch = booleanLLM.useWebSearch();
         }
         log.info("Use Web Search Memory: {}", useWebSearch);
 
@@ -89,18 +89,16 @@ public class LLMCallChain {
             return null;
         }
 
-
         if (useWebSearch) {
             LLMToolCalls.callWebSearchTool();
         }
-
 
          return LLMToolCalls.callSummaryTool();
 
     }
 
     private boolean executeImageChain() {
-        boolean useImageGeneration = resolverLLM.useImageGeneration();
+        boolean useImageGeneration = booleanLLM.useImageGeneration();
         log.info("Use Image Generation: {}", useImageGeneration);
         if (!useImageGeneration) {
             return false;
