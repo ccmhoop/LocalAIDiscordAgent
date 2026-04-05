@@ -2,7 +2,6 @@ package com.discord.LocalAIDiscordAgent.llmRouteDecider;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
-import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -12,20 +11,16 @@ public class RouteDecisionPreparationService {
 
     private final RouteDecisionService routeDecisionService;
     private final RouteDecisionValidator validator;
-    private final MapperUtils mapperUtils;
 
     public RouteDecisionPreparationService(
             RouteDecisionService routeDecisionService,
-            RouteDecisionValidator validator,
-            MapperUtils mapperUtils
+            RouteDecisionValidator validator
     ) {
         this.routeDecisionService = routeDecisionService;
         this.validator = validator;
-        this.mapperUtils = mapperUtils;
     }
 
     public RouteDecision prepare(DiscGlobalData discGlobalData) {
-//        PromptData promptData = new PromptData(mapperUtils);
 
         String normalizedUserMessage = normalize(discGlobalData.getUserMessage());
         if (normalizedUserMessage == null) {

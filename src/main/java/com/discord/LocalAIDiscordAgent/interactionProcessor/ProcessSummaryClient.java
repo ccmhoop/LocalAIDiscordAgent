@@ -43,7 +43,6 @@ public class ProcessSummaryClient {
      * Updates both:
      * - per-user summary (guild:user)
      * - per-channel group summary (guild:channel)
-     *
      * IMPORTANT: turns use STABLE ids (DB id / snowflake), not array indices.
      */
     public void saveInteraction() {

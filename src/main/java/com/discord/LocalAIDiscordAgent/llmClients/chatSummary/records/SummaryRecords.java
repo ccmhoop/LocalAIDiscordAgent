@@ -43,7 +43,6 @@ public class SummaryRecords {
 
     /**
      * A single turn in the transcript sent to the summarizer.
-     *
      * id must be STABLE (DB id, Discord snowflake, ULID...). Do NOT use array indices.
      */
     public record Turn(

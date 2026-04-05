@@ -1,7 +1,6 @@
 package com.discord.LocalAIDiscordAgent.webSearch.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -12,16 +11,13 @@ public class WebSearchPreparationService {
 
     private final WebSearchNecessityService necessityService;
     private final WebSearchRuleEngine ruleEngine;
-    private final MapperUtils mapperUtils;
 
     public WebSearchPreparationService(
             WebSearchNecessityService necessityService,
-            WebSearchRuleEngine ruleEngine,
-            MapperUtils mapperUtils
+            WebSearchRuleEngine ruleEngine
     ) {
         this.necessityService = necessityService;
         this.ruleEngine = ruleEngine;
-        this.mapperUtils = mapperUtils;
     }
 
     public void prepare(DiscGlobalData discGlobalData, PromptData promptData) {
