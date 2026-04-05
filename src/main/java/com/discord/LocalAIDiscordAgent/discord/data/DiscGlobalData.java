@@ -1,10 +1,10 @@
 package com.discord.LocalAIDiscordAgent.discord.data;
 
-import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
-import com.discord.LocalAIDiscordAgent.llmMemory.vectorMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Member;

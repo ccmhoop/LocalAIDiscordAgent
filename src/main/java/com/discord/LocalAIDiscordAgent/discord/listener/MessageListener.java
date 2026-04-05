@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
-import com.discord.LocalAIDiscordAgent.llmMain.chatClient.service.ChatClientService;
+import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
@@ -58,6 +58,7 @@ public abstract class MessageListener {
                                             return responseMono
                                                     .flatMapMany(response -> {
                                                         String cleanedResponse = cleanResponse(response);
+//                                                        VoiceMain.generateAndSaveAudio(cleanedResponse, discGlobalData.getUserId());
                                                         List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
                                                         return Flux.fromIterable(chunks)
                                                                 .concatMap(channel::createMessage);
@@ -67,7 +68,7 @@ public abstract class MessageListener {
                                                     .flatMap(imagePath -> sendImage(channel, imagePath, "Generated image for user %s".formatted(discGlobalData.getServerNickname())))
                                                     .then(Mono.fromRunnable(() -> {
                                                         try {
-                                                            processSummaryClient.saveInteraction();
+//                                                            processSummaryClient.saveInteraction();
                                                         } catch (Exception e) {
                                                             log.warn("Failed to save interaction summary", e);
                                                         }

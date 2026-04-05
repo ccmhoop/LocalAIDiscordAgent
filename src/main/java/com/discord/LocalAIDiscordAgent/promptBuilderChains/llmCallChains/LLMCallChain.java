@@ -1,16 +1,20 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
-import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
+import com.discord.LocalAIDiscordAgent.comfyui.imageAdvisor.ImageSettingsPreparationService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llmAdvisors.filterLLM.service.FilterLLMService;
-import com.discord.LocalAIDiscordAgent.llmMemory.records.ChatMemoryPayload;
+import com.discord.LocalAIDiscordAgent.llmRouteDecider.RouteDecisionPreparationService;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
+import com.discord.LocalAIDiscordAgent.ragMemory.ragAdvisor.RagContextPreparationService;
+import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
+import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
-import com.discord.LocalAIDiscordAgent.llmAdvisors.booleanLLM.service.BooleanLLMService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
-import com.discord.LocalAIDiscordAgent.llmAdvisors.structuredLLM.service.StructuredLLMService;
+import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchPreparationService;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
@@ -21,101 +25,104 @@ import java.time.temporal.ChronoUnit;
 @Component
 public class LLMCallChain {
 
-    private final PromptData promptData;
-    private final DiscGlobalData discGlobalData;
     private final LLMToolCalls LLMToolCalls;
-    private final BooleanLLMService booleanLLM;
-    private final StructuredLLMService structuredLLM;
-    private final FilterLLMService filterLLM;
+    private final DiscGlobalData discGlobalData;
+    private final RouteDecisionPreparationService routeDecisionService;
     private final ComfyuiRunService comfyuiRunService;
+    private final ChatMemoryPreparationService chatMemoryService;
+    private final RagContextPreparationService ragContextService;
+    private final MapperUtils mapperUtils;
+    private final WebSearchPreparationService webSearchPreparationService;
+    private final ImageSettingsPreparationService imageSettingsPreparationService;
+
 
     public LLMCallChain(
+            ComfyuiRunService comfyuiRunService,
             DiscGlobalData discGlobalData,
             LLMToolCalls LLMToolCalls,
-            PromptData promptData,
-            BooleanLLMService booleanLLMService,
-            StructuredLLMService structuredLLMService,
-            FilterLLMService filterLLMService,
-            ComfyuiRunService comfyuiRunService
+            RouteDecisionPreparationService RouteDecisionPreparationService,
+            ChatMemoryPreparationService chatMemoryPreparationService,
+            RagContextPreparationService ragContextService,
+            MapperUtils mapperUtils,
+            WebSearchPreparationService webSearchPreparationService,
+            ImageSettingsPreparationService imageSettingsPreparationService
     ) {
-        this.discGlobalData = discGlobalData;
-        this.promptData = promptData;
         this.LLMToolCalls = LLMToolCalls;
-        this.booleanLLM = booleanLLMService;
-        this.structuredLLM = structuredLLMService;
-        this.filterLLM = filterLLMService;
+        this.discGlobalData = discGlobalData;
         this.comfyuiRunService = comfyuiRunService;
+        this.routeDecisionService = RouteDecisionPreparationService;
+        this.chatMemoryService = chatMemoryPreparationService;
+        this.ragContextService = ragContextService;
+        this.mapperUtils = mapperUtils;
+        this.webSearchPreparationService = webSearchPreparationService;
+        this.imageSettingsPreparationService = imageSettingsPreparationService;
     }
 
     public RuntimeContext executeContextChainRuntime() {
-        boolean imageGenerationWasUsed = executeImageChain();
-
-        if (imageGenerationWasUsed) {
-            return null;
+        PromptData promptData = new PromptData(mapperUtils);
+        RouteDecision decision = routeDecisionService.prepare(discGlobalData);
+        switch (decision.mode()) {
+            case IMAGE -> {
+                executeImageChain(promptData);
+                return null;
+            }
+            case TEXT -> {
+                return executeTextResponseChain(promptData);
+            }
         }
 
-        ChatMemoryPayload chatMemoryContext = executeChatMemoryChain();
+        return null;
+    }
 
-        boolean useVectorMemory = executeUseVectorMemoryChain();
+    @NotNull
+    private RuntimeContext executeTextResponseChain(PromptData promptData) {
 
-        if (!useVectorMemory) {
-            executeWebSearchyChain();
+        chatMemoryService.prepare(discGlobalData, promptData);
+        ragContextService.prepare(discGlobalData, promptData);
+
+        if (promptData.getRetrievedContext() == null) {
+            webSearchPreparationService.prepare(discGlobalData, promptData);
+            executeWebSearchyChain(promptData);
+        }
+
+        if (promptData.getRetrievedContext() != null) {
+            LLMToolCalls.callSummaryTool(promptData);
         }
 
         return new RuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 discGlobalData.getUserProfile(),
                 null,
-                LLMToolCalls.callSummaryTool(),
-                chatMemoryContext.longTermMemory(),
-                chatMemoryContext.recentMessages(),
-                chatMemoryContext.groupMemory(),
+                promptData.getSummary() == null? null : new RetrievedContext(promptData.getSummary()),
+                promptData.getChatMemoryPayload().longTermMemory(),
+                promptData.getChatMemoryPayload().recentMessages(),
+                promptData.getChatMemoryPayload().groupMemory(),
                 null
         );
     }
 
-    private ChatMemoryPayload executeChatMemoryChain() {
-        boolean useChatMemory = booleanLLM.useChatMemoryIfRelevant();
-        return filterLLM.chatMemoryReducerFilter(useChatMemory);
-    }
-
-    private boolean executeUseVectorMemoryChain() {
-        String query = structuredLLM.generateQuery();
-        return booleanLLM.useVectorMemoryIfRelevant(query);
-    }
-
-    private boolean executeImageContextChain() {
-        String query = structuredLLM.generateImageQuery();
-        return booleanLLM.useImageContextIfValid(query);
-    }
-
-    private void executeWebSearchyChain() {
-       boolean useWebSearch = booleanLLM.useWebSearchIfRequired();
-       if (useWebSearch) {
-           LLMToolCalls.callWebSearchTool();
-       }
-    }
-
-    private boolean executeImageChain() {
-        boolean useImageGeneration = booleanLLM.useImageGenerationIfRequested();
-        if (!useImageGeneration) {
-            return false;
+    private void executeWebSearchyChain(PromptData promptData) {
+        if (promptData.isWebSearchRequired()) {
+            LLMToolCalls.callWebSearchTool();
         }
+    }
 
-        if (executeImageContextChain()) {
-            structuredLLM.summarizeImageContext();
+    private void executeImageChain(PromptData promptData) {
+        ragContextService.prepare(discGlobalData, promptData);
+
+        if (promptData.getRetrievedContext() != null) {
+            LLMToolCalls.callSummaryTool(promptData);
         }
 
         try {
-            ImageSettingsRecord settings = structuredLLM.generateImageSettings();
-            log.info("Image Prompt: {}", settings);
-            Path path = comfyuiRunService.generateImage(settings);
+            imageSettingsPreparationService.prepare(discGlobalData, promptData);
+            log.info("Image Prompt: {}", promptData.getImageSettings());
+            Path path = comfyuiRunService.generateImage(promptData);
             discGlobalData.setImagePath(path);
-            return true;
         } catch (Exception e) {
             log.error("Error generating image", e);
-            return false;
         }
+        promptData.setSummary(null);
     }
 
 }

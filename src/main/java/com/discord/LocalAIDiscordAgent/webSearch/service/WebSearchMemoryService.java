@@ -44,7 +44,7 @@ public class WebSearchMemoryService {
     private static final Pattern AD_PARAMS = Pattern.compile("(?i)[?&](ad_domain|ad_provider|ad_type|click_metadata|ad_click|advertisement)=");
 
     private static final int SEARCH_TOP_K = 3;
-    private static final double RETRIEVAL_SIMILARITY_THRESHOLD = .50;
+    private static final double RETRIEVAL_SIMILARITY_THRESHOLD = .75;
 
     private static final int DEDUPE_TOP_K = 3;
     private static final double DEDUPE_SIMILARITY_THRESHOLD = 0.90;

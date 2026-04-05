@@ -33,3 +33,4 @@ build/
 .vscode/
 /savedSpeech/
 /images/
+/src/main/resources/comfyui/video_api_wan2.2.json

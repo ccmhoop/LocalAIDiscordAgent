@@ -1,8 +1,8 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains;
 
-import com.discord.LocalAIDiscordAgent.llmMain.chatSummary.model.ChatSummary;
-import com.discord.LocalAIDiscordAgent.llmMain.chatSummary.repository.ChatSummaryRepository;
-import com.discord.LocalAIDiscordAgent.llmMain.chatSummary.records.SummaryRecords.Fact;
+import com.discord.LocalAIDiscordAgent.llmClients.chatSummary.model.ChatSummary;
+import com.discord.LocalAIDiscordAgent.llmClients.chatSummary.repository.ChatSummaryRepository;
+import com.discord.LocalAIDiscordAgent.llmClients.chatSummary.records.SummaryRecords.Fact;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;

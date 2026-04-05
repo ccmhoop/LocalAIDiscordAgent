@@ -1,11 +1,11 @@
 package com.discord.LocalAIDiscordAgent.interactionProcessor;
 
-import com.discord.LocalAIDiscordAgent.llmMain.chatSummary.service.ChatSummaryService;
-import com.discord.LocalAIDiscordAgent.llmMain.chatSummary.records.SummaryRecords.Turn;
-import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.groupChatMemory.model.GroupChatMemory;
-import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
-import com.discord.LocalAIDiscordAgent.llmMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.llmClients.chatSummary.service.ChatSummaryService;
+import com.discord.LocalAIDiscordAgent.llmClients.chatSummary.records.SummaryRecords.Turn;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.groupChatMemory.model.GroupChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
