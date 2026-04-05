@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
 import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.records.VideoSettingsRecord;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +37,41 @@ public class ComfyuiRunService {
 //        Path imagePath = generateImage();
 //        return ResponseEntity.ok(imagePath.getFileName().toString());
 //    }
+
+
+    public Path generateVideo(PromptData promptData) throws Exception {
+        VideoSettingsRecord imageSettings = promptData.getVideoSettings();
+        ClassPathResource workflowResource = new ClassPathResource("comfyui/video_api_wan2.2.json");
+
+        if (!workflowResource.exists()) {
+            throw new IllegalStateException("Workflow file not found in classpath: comfyui/video_api_wan2.2.json");
+        }
+
+        Map<String, Object> apiWorkflow;
+        try (var inputStream = workflowResource.getInputStream()) {
+            apiWorkflow = objectMapper.readValue(
+                    inputStream,
+                    new TypeReference<Map<String, Object>>() {}
+            );
+        }
+
+        setPromptText(apiWorkflow, "72", imageSettings.negativePrompt());
+        setPromptText(apiWorkflow, "89", imageSettings.positivePrompt());
+
+
+        byte[] imageBytes = comfyuiService.runWorkflowAndGetFirstImage(apiWorkflow);
+
+        String fileName = UUID.randomUUID() + ".mp4";
+        Path outputPath = imageRoot.resolve(fileName).normalize();
+
+        if (outputPath.getParent() != null) {
+            Files.createDirectories(outputPath.getParent());
+        }
+
+        Files.write(outputPath, imageBytes);
+
+        return outputPath;
+    }
 
     public Path generateImage(PromptData promptData) throws Exception {
         ImageSettingsRecord imageSettings = promptData.getImageSettings();

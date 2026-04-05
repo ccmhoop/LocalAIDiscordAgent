@@ -8,6 +8,8 @@ import org.springframework.ai.document.DocumentReader;
 import org.springframework.ai.document.DocumentWriter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,6 +20,7 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class LongTermMemoryService {
 
     private static final int SEARCH_TOP_K = 2;
@@ -26,7 +29,7 @@ public class LongTermMemoryService {
     private static final String ASSISTANT_MESSAGE_KEY = "assistantMessage";
     private static final String TIER_LONG_TERM_CHAT_MEMORY = "long_term_chat_memory";
 
-    private final DiscGlobalData discGlobalData;
+    private DiscGlobalData discGlobalData;
     private final VectorStore vectorStore;
     private final DocumentWriter writer;
 
@@ -36,6 +39,10 @@ public class LongTermMemoryService {
         this.writer = longTermVectorMemory;
         this.discGlobalData = discGlobalData;
         this.vectorStore = longTermVectorMemory;
+    }
+
+    public void setDiscGlobalData(DiscGlobalData discGlobalData) {
+        this.discGlobalData = discGlobalData;
     }
 
     public List<LongTermMemoryData> getLongTermMemory() {

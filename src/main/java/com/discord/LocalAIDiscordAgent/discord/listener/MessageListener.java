@@ -1,8 +1,10 @@
 package com.discord.LocalAIDiscordAgent.discord.listener;
 
-import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
 import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
+import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
@@ -21,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 @Slf4j
 @Component
 public abstract class MessageListener {
@@ -29,57 +30,50 @@ public abstract class MessageListener {
     private static final int MAX_INPUT_LENGTH = 4096;
     private static final int DISCORD_MAX_MESSAGE_LEN = 2000;
 
-    public Mono<Void> processCommandAI(Message eventMessage, DiscGlobalData discGlobalData, UserService userService, ChatClientService chatClientService, ProcessSummaryClient processSummaryClient) {
-        return Mono.just(eventMessage)
-                .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
-                .flatMap(message -> {
+    public Mono<Void> processCommandAI(
+            Message eventMessage,
+            UserService userService,
+            ChatClientService chatClientService,
+            ProcessSummaryClient processSummaryClient
+    ) {
+        return DiscGlobalDataContextHolder.get()
+                .flatMap(discGlobalData ->
+                        Mono.just(eventMessage)
+                                .filter(message -> message.getAuthor().map(user -> !user.isBot()).orElse(false))
+                                .flatMap(message -> {
 
-                    UserEntity user = userService.getUser();
+                                    UserEntity user = userService.getUser(discGlobalData);
 
-                    if (user == null) {
-                        user = userService.buildUser();
-                        userService.saveUser(user);
-                    }else if (!discGlobalData.getServerNickname().equals(user.getServerNickname())){
-                        userService.updateUser(user, discGlobalData.getServerNickname());
-                    }
-
-                    UserEntity finalUser = user;
-
-                    Mono<String> responseMono =
-                            Mono.fromCallable(() -> chatClientService.generateLLMResponse(finalUser))
-                                    .subscribeOn(Schedulers.boundedElastic())
-                                    .cache();
-
-
-                    return message.getChannel()
-                            .flatMap(channel ->
-                                    {
-                                        try {
-                                            return responseMono
-                                                    .flatMapMany(response -> {
-                                                        String cleanedResponse = cleanResponse(response);
-//                                                        VoiceMain.generateAndSaveAudio(cleanedResponse, discGlobalData.getUserId());
-                                                        List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
-                                                        return Flux.fromIterable(chunks)
-                                                                .concatMap(channel::createMessage);
-                                                    })
-                                                    .then(Mono.fromCallable(discGlobalData::getImagePath)
-                                                            .subscribeOn(Schedulers.boundedElastic()))
-                                                    .flatMap(imagePath -> sendImage(channel, imagePath, "Generated image for user %s".formatted(discGlobalData.getServerNickname())))
-                                                    .then(Mono.fromRunnable(() -> {
-                                                        try {
-//                                                            processSummaryClient.saveInteraction();
-                                                        } catch (Exception e) {
-                                                            log.warn("Failed to save interaction summary", e);
-                                                        }
-                                                    }));
-                                        } catch (Exception e) {
-                                            return Mono.error(new RuntimeException(e));
-                                        }
+                                    if (user == null) {
+                                        user = userService.buildUser(discGlobalData);
+                                        userService.saveUser(user);
+                                    } else if (!discGlobalData.getServerNickname().equals(user.getServerNickname())) {
+                                        userService.updateUser(user, discGlobalData.getServerNickname());
                                     }
-                            );
 
-                }).then(Mono.fromRunnable(discGlobalData::setDiscTonull));
+                                    UserEntity finalUser = user;
+
+                                    return message.getChannel()
+                                            .flatMap(channel ->
+                                                    chatClientService.generateLLMResponse(finalUser, discGlobalData)
+                                                            .flatMapMany(response -> {
+                                                                String cleanedResponse = cleanResponse(response);
+                                                                List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
+                                                                return Flux.fromIterable(chunks)
+                                                                        .concatMap(channel::createMessage);
+                                                            })
+                                                            .then(Mono.fromCallable(discGlobalData::getImagePath)
+                                                                    .subscribeOn(Schedulers.boundedElastic()))
+                                                            .flatMap(imagePath -> sendImage(
+                                                                    channel,
+                                                                    imagePath,
+                                                                    "Generated file complete for user %s"
+                                                                            .formatted(discGlobalData.getServerNickname())
+                                                            ))
+                                            );
+                                })
+                                .doFinally(signalType -> discGlobalData.setDiscTonull())
+                );
     }
 
     public Mono<Void> processCommand(Message eventMessage) {

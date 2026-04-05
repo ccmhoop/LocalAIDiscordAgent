@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,19 +25,25 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 
 @Slf4j
 @Service
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
 
     @Value("${group.chat.time.window.minutes}")
     private long minutesWindow;
 
     private final GroupChatMemoryRepository chatRepo;
-    private final DiscGlobalData discGlobalData;
+    private DiscGlobalData discGlobalData;
 
     public GroupChatMemoryService(GroupChatMemoryRepository groupChatMemoryRepository, @Value("${group.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
         super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class, discGlobalData);
         this.chatRepo = groupChatMemoryRepository;
         this.discGlobalData = discGlobalData;
     }
+
+    public void setDiscGlobalData(DiscGlobalData discGlobalData) {
+        this.discGlobalData = discGlobalData;
+    }
+
 
     public GroupMemory buildMessageMemory()  {
         Map<MessageType, List<GroupChatMemory>> sortedGroupMap = getChatMemoryAsMap();

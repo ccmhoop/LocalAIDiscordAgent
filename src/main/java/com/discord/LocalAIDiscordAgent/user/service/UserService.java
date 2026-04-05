@@ -13,14 +13,12 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     public final UserRepository userRepository;
-    public final DiscGlobalData discGlobalData;
 
-    public UserService(UserRepository userRepository, DiscGlobalData discGlobalData) {
+    public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.discGlobalData = discGlobalData;
     }
 
-    public UserEntity getUser() {
+    public UserEntity getUser(DiscGlobalData discGlobalData) {
         Long userId = Long.parseLong(discGlobalData.getUserId());
         return userRepository.findByUserId(userId);
     }
@@ -38,7 +36,7 @@ public class UserService {
         }
     }
 
-    public UserEntity buildUser() {
+    public UserEntity buildUser(DiscGlobalData discGlobalData) {
         return UserEntity.builder()
                 .userId(Long.parseLong(discGlobalData.getUserId()))
                 .userGlobal(discGlobalData.getUserGlobal())

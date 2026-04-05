@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,15 +24,20 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 
 @Slf4j
 @Service
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory> {
 
     private final RecentChatMemoryRepository chatRepo;
-    private final DiscGlobalData discGlobalData;
+    private DiscGlobalData discGlobalData;
 
     public RecentChatMemoryService(RecentChatMemoryRepository recentChatMemoryRepository,
                                    @Value("${recent.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
         super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class, discGlobalData);
         this.chatRepo = recentChatMemoryRepository;
+        this.discGlobalData = discGlobalData;
+    }
+
+    public void setDiscGlobalData(DiscGlobalData discGlobalData) {
         this.discGlobalData = discGlobalData;
     }
 

@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.comfyui.imageAdvisor.ImageSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.videoAdvisor.VideoSettingsPreparationService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.RouteDecisionPreparationService;
 import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
@@ -26,7 +27,6 @@ import java.time.temporal.ChronoUnit;
 public class LLMCallChain {
 
     private final LLMToolCalls LLMToolCalls;
-    private final DiscGlobalData discGlobalData;
     private final RouteDecisionPreparationService routeDecisionService;
     private final ComfyuiRunService comfyuiRunService;
     private final ChatMemoryPreparationService chatMemoryService;
@@ -34,21 +34,20 @@ public class LLMCallChain {
     private final MapperUtils mapperUtils;
     private final WebSearchPreparationService webSearchPreparationService;
     private final ImageSettingsPreparationService imageSettingsPreparationService;
+    private final VideoSettingsPreparationService videoService;
 
 
     public LLMCallChain(
             ComfyuiRunService comfyuiRunService,
-            DiscGlobalData discGlobalData,
             LLMToolCalls LLMToolCalls,
             RouteDecisionPreparationService RouteDecisionPreparationService,
             ChatMemoryPreparationService chatMemoryPreparationService,
             RagContextPreparationService ragContextService,
             MapperUtils mapperUtils,
             WebSearchPreparationService webSearchPreparationService,
-            ImageSettingsPreparationService imageSettingsPreparationService
+            ImageSettingsPreparationService imageSettingsPreparationService, VideoSettingsPreparationService videoService
     ) {
         this.LLMToolCalls = LLMToolCalls;
-        this.discGlobalData = discGlobalData;
         this.comfyuiRunService = comfyuiRunService;
         this.routeDecisionService = RouteDecisionPreparationService;
         this.chatMemoryService = chatMemoryPreparationService;
@@ -56,18 +55,23 @@ public class LLMCallChain {
         this.mapperUtils = mapperUtils;
         this.webSearchPreparationService = webSearchPreparationService;
         this.imageSettingsPreparationService = imageSettingsPreparationService;
+        this.videoService = videoService;
     }
 
-    public RuntimeContext executeContextChainRuntime() {
+    public RuntimeContext executeContextChainRuntime(DiscGlobalData discGlobalData) {
         PromptData promptData = new PromptData(mapperUtils);
         RouteDecision decision = routeDecisionService.prepare(discGlobalData);
         switch (decision.mode()) {
             case IMAGE -> {
-                executeImageChain(promptData);
+                executeImageChain(discGlobalData, promptData);
+                return null;
+            }
+            case VIDEO -> {
+                executeVideoChain(discGlobalData, promptData);
                 return null;
             }
             case TEXT -> {
-                return executeTextResponseChain(promptData);
+                return executeTextResponseChain(discGlobalData, promptData);
             }
         }
 
@@ -75,7 +79,7 @@ public class LLMCallChain {
     }
 
     @NotNull
-    private RuntimeContext executeTextResponseChain(PromptData promptData) {
+    private RuntimeContext executeTextResponseChain(DiscGlobalData discGlobalData,PromptData promptData) {
 
         chatMemoryService.prepare(discGlobalData, promptData);
         ragContextService.prepare(discGlobalData, promptData);
@@ -107,7 +111,7 @@ public class LLMCallChain {
         }
     }
 
-    private void executeImageChain(PromptData promptData) {
+    private void executeImageChain(DiscGlobalData discGlobalData,PromptData promptData) {
         ragContextService.prepare(discGlobalData, promptData);
 
         if (promptData.getRetrievedContext() != null) {
@@ -121,6 +125,24 @@ public class LLMCallChain {
             discGlobalData.setImagePath(path);
         } catch (Exception e) {
             log.error("Error generating image", e);
+        }
+        promptData.setSummary(null);
+    }
+
+    private void executeVideoChain(DiscGlobalData discGlobalData,PromptData promptData) {
+        ragContextService.prepare(discGlobalData, promptData);
+
+        if (promptData.getRetrievedContext() != null) {
+            LLMToolCalls.callSummaryTool(promptData);
+        }
+
+        try {
+            videoService.prepare(discGlobalData, promptData);
+            log.info("Video Prompt: {}", promptData.getVideoSettings());
+            Path path = comfyuiRunService.generateVideo(promptData);
+            discGlobalData.setImagePath(path);
+        } catch (Exception e) {
+            log.error("Error generating Video", e);
         }
         promptData.setSummary(null);
     }

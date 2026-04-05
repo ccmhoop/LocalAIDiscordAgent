@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.promptBuilderChains.data;
 
 import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.chatMemory.records.ChatMemoryPayload;
+import com.discord.LocalAIDiscordAgent.comfyui.records.VideoSettingsRecord;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
@@ -27,10 +28,19 @@ public class PromptData {
     private String queryString;
     private ChatMemoryPayload chatMemoryPayload;
     private ImageSettingsRecord imageSettings;
+    private VideoSettingsRecord videoSettings;
     private boolean webSearchRequired;
 
     public PromptData(MapperUtils mapperUtils) {
         this.mapperUtils = mapperUtils;
+    }
+
+    public void setVideoSettings(VideoSettingsRecord videoSettings) {
+        this.videoSettings = videoSettings;
+    }
+
+    public VideoSettingsRecord getVideoSettings() {
+        return videoSettings;
     }
 
     public void setWebSearchRequired(boolean webSearchRequired) {
