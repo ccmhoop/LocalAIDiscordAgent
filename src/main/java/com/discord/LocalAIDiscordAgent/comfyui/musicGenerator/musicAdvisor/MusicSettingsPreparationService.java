@@ -2,6 +2,7 @@ package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
 
 import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.validation.MusicSettingsValidator;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;

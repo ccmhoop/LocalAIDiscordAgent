@@ -15,6 +15,7 @@ public record MusicSettingsRecord(
         String lyrics,
         int bpm,
         String keyscale,
+        double duration,
         String title
 ){
 
@@ -27,12 +28,14 @@ public record MusicSettingsRecord(
             String lyrics = node.path("lyrics").asText();
             int bpm = node.path("bpm").asInt();
             String keyscale = node.path("keyscale").asText();
+            double duration = node.path("duration").asDouble();
             String title = node.path("title").asText();
             return new MusicSettingsRecord(
                     tags,
                     lyrics,
                     bpm,
                     keyscale,
+                    duration,
                     title
             );
 

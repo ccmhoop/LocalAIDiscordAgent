@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor;
 
 import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -17,7 +18,6 @@ import java.util.Map;
 
 @Service
 public class VideoSettingGenerationService {
-
 
     private static final String SYSTEM_MESSAGE = """
             Your task is to generate:
@@ -58,36 +58,28 @@ public class VideoSettingGenerationService {
 
     public VideoSettingGenerationService(ChatModel structuredLLMModel) {
 
-        var videoSettingsConv = new BeanOutputConverter<>(VideoSettingsRecord.class);
+        var converter = new BeanOutputConverter<>(VideoSettingsRecord.class);
 
-        Map<String, Object> videoSettingsSchema = videoSettingsConv.getJsonSchemaMap();
+        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+
+        var validation = StructuredOutputValidationAdvisor.builder()
+                .outputType(VideoSettingsRecord.class)
+                .objectMapper(MapperUtils.lenientJsonMapper())
+                .maxRepeatAttempts(3)
+                .build();
 
         this.internalChatClient = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .format(videoSettingsSchema)
+                        .format(schemaFormat)
                         .disableThinking()
                         .temperature(0.5)
                         .build())
+                .defaultAdvisors(validation)
                 .build();
     }
 
     public VideoSettingsRecord generate(String userMessage, String context) {
         String safeContext = context == null ? "" : context.trim();
-
-        ObjectMapper lenientMapper = JsonMapper.builder()
-                .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES)
-                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
-                .enable(JsonParser.Feature.ALLOW_TRAILING_COMMA)
-                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .build();
-
-        var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(VideoSettingsRecord.class)
-                .objectMapper(lenientMapper)
-                .maxRepeatAttempts(3)
-                .build();
-
 
         return internalChatClient.prompt()
                 .system(SYSTEM_MESSAGE.formatted(safeContext))
@@ -97,7 +89,6 @@ public class VideoSettingGenerationService {
                         %s
                         --------------------------
                         """.formatted(userMessage))
-                .advisors(validation)
                 .call()
                 .entity(VideoSettingsRecord.class);
     }

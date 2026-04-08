@@ -15,9 +15,11 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
@@ -27,11 +29,18 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory> {
 
+    private static final Comparator<RecentChatMemory> BY_TIME_ASC =
+            Comparator.comparing(RecentChatMemory::getTimestamp)
+                    .thenComparing(m -> m.getType() == USER ? 0 : 1);
+
     private final RecentChatMemoryRepository chatRepo;
     private DiscGlobalData discGlobalData;
 
-    public RecentChatMemoryService(RecentChatMemoryRepository recentChatMemoryRepository,
-                                   @Value("${recent.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
+    public RecentChatMemoryService(
+            RecentChatMemoryRepository recentChatMemoryRepository,
+            @Value("${recent.chat.memory.message.limit}") int messageLimit,
+            DiscGlobalData discGlobalData
+    ) {
         super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class, discGlobalData);
         this.chatRepo = recentChatMemoryRepository;
         this.discGlobalData = discGlobalData;
@@ -42,17 +51,28 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
     }
 
     @Override
-    public void saveAndTrim( List<Message> messages, UserEntity user) {
-        saveAll( messages, user);
+    public void saveAndTrim(List<Message> messages, UserEntity user) {
+        saveAll(messages, user);
         trimDbToMessagesLimit();
     }
 
-    public List<RecentMessage> buildMessageMemory() {
-        List<RecentMessage> recentMessages = sortedRecentMessageList();
-        if (recentMessages.isEmpty()) {
-            return null;
+    @Override
+    public void trimDbToMessagesLimit() {
+        try {
+            List<RecentChatMemory> memories = new ArrayList<>(
+                    chatRepo.findAllByConversationIdOrderByTimestampAsc(
+                            discGlobalData.getConversationId()
+                    )
+            );
+
+            trimOrderedMemoriesToLimit(memories);
+        } catch (Exception e) {
+            log.error("Error during recent chat memory trimming: {}", e.getMessage(), e);
         }
-        return new ArrayList<>(recentMessages);
+    }
+
+    public List<RecentMessage> buildMessageMemory() {
+        return sortedRecentMessageList();
     }
 
     private List<RecentMessage> sortedRecentMessageList() {
@@ -62,10 +82,17 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
             return Collections.emptyList();
         }
 
-        List<RecentChatMemory> userMessages = recentMap.get(USER);
-        List<RecentChatMemory> assistantMessages = recentMap.get(ASSISTANT);
+        List<RecentChatMemory> userMessages =
+                recentMap.getOrDefault(USER, Collections.emptyList());
+
+        List<RecentChatMemory> assistantMessages =
+                recentMap.getOrDefault(ASSISTANT, Collections.emptyList());
 
         int size = Math.min(userMessages.size(), assistantMessages.size());
+
+        if (size == 0) {
+            return Collections.emptyList();
+        }
 
         return orderAndBuildRecentMessages(size, userMessages, assistantMessages);
     }
@@ -88,6 +115,7 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                         user.getContent()
                 ));
             }
+
             if (i < assistantSize) {
                 RecentChatMemory assistant = assistantMessages.get(i);
                 recentMessages.add(new RecentMessage(
@@ -97,11 +125,16 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 ));
             }
         }
+
         return recentMessages;
     }
 
-    private static List<RecentMessage> orderAndBuildRecentMessages(int size, List<RecentChatMemory> userMessages, List<RecentChatMemory> assistantMessages) {
-        List<RecentMessage> recentMessages = new ArrayList<>(size);
+    private static List<RecentMessage> orderAndBuildRecentMessages(
+            int size,
+            List<RecentChatMemory> userMessages,
+            List<RecentChatMemory> assistantMessages
+    ) {
+        List<RecentMessage> recentMessages = new ArrayList<>(size * 2);
 
         for (int i = 0; i < size; i++) {
             RecentChatMemory user = userMessages.get(i);
@@ -119,33 +152,52 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                     assistant.getContent()
             ));
         }
+
         return recentMessages;
     }
 
     @Override
     public Map<MessageType, List<RecentChatMemory>> getChatMemoryAsMap() {
-        List<RecentChatMemory> memories = new ArrayList<>(chatRepo.findAllByConversationId(discGlobalData.getConversationId()));
+        List<RecentChatMemory> memories = new ArrayList<>(
+                chatRepo.findAllByConversationIdOrderByTimestampAsc(
+                        discGlobalData.getConversationId()
+                )
+        );
+
         if (memories.isEmpty()) {
             return Collections.emptyMap();
         }
+
         return sortAndMap(memories);
     }
 
     @Override
     public Map<MessageType, List<RecentChatMemory>> sortAndMap(List<RecentChatMemory> memories) {
-        var partitioned = memories.stream()
+        List<RecentChatMemory> ordered = memories.stream()
                 .filter(m -> m.getType() == USER || m.getType() == ASSISTANT)
-                .collect(Collectors.partitioningBy(
-                        m -> m.getType() == USER
-                ));
+                .sorted(BY_TIME_ASC)
+                .toList();
 
-        if (partitioned.get(true).isEmpty() || partitioned.get(false).isEmpty()) {
+        if (ordered.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<RecentChatMemory> userMessages = ordered.stream()
+                .filter(m -> m.getType() == USER)
+                .toList();
+
+        List<RecentChatMemory> assistantMessages = ordered.stream()
+                .filter(m -> m.getType() == ASSISTANT)
+                .toList();
+
+        if (userMessages.isEmpty() || assistantMessages.isEmpty()) {
             return Collections.emptyMap();
         }
 
         return Map.of(
-                USER, partitioned.get(true),
-                ASSISTANT, partitioned.get(false));
+                USER, new ArrayList<>(userMessages),
+                ASSISTANT, new ArrayList<>(assistantMessages)
+        );
     }
 
     @Override
@@ -157,8 +209,7 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
                 .user(user)
                 .content(message.getText())
                 .type(message.getMessageType())
-                .timestamp(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+                .timestamp(LocalDateTime.now())
                 .build();
     }
-
 }

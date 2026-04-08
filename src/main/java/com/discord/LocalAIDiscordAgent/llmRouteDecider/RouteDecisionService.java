@@ -1,16 +1,28 @@
 package com.discord.LocalAIDiscordAgent.llmRouteDecider;
 
+import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
+import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Slf4j
 @Service
 public class RouteDecisionService {
+
+    private final ChatClient llm;
 
     private static final String SYSTEM_MSG = """
             You classify user requests into exactly one mode:
@@ -30,35 +42,30 @@ public class RouteDecisionService {
             - normalizedPrompt should be empty for TEXT.
             """;
 
-    private final ChatClient llm;
-//    private final ObjectMapper mapper;
-
     public RouteDecisionService(ChatModel structuredLLMModel) {
+        var converter = new BeanOutputConverter<>(RouteDecision.class);
+
+        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+
+        var validation = StructuredOutputValidationAdvisor.builder()
+                .outputType(RouteDecision.class)
+                .objectMapper(MapperUtils.lenientJsonMapper())
+                .maxRepeatAttempts(3)
+                .build();
+
         this.llm = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
                         .temperature(0.0)
+                        .format(schemaFormat)
                         .build())
+                .defaultAdvisors(validation)
                 .build();
-
-//        this.mapper = JsonMapper.builder()
-//                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-//                .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
-//                .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
-//                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
-//                .enable(JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
-//                .build();
     }
 
     public RouteDecision decide(String userMessage) {
         if (userMessage == null || userMessage.isBlank()) {
             return RouteDecision.textFallback("Empty user message");
         }
-
-        var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(RouteDecision.class)
-//                .objectMapper(mapper)
-                .maxRepeatAttempts(3)
-                .build();
 
         RouteDecision decision = llm.prompt()
                 .system(SYSTEM_MSG)
@@ -67,7 +74,6 @@ public class RouteDecisionService {
                         
                         %s
                         """.formatted(userMessage))
-                .advisors(validation)
                 .call()
                 .entity(RouteDecision.class);
 

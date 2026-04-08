@@ -31,7 +31,6 @@ public class RouteDecisionPreparationService {
         RouteDecision rawDecision = routeDecisionService.decide(normalizedUserMessage);
         RouteDecision normalizedDecision = validator.normalize(rawDecision);
 
-        log.info("Normalized route decision: {}", normalizedDecision);
 
         if (!validator.isUsable(normalizedDecision)) {
             normalizedDecision = RouteDecision.textFallback("Route decision failed validation");

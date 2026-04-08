@@ -3,6 +3,7 @@ package com.discord.LocalAIDiscordAgent.comfyui.config;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -12,14 +13,20 @@ import org.springframework.web.client.RestClient;
 public class ComfyUiConfig {
 
     @Bean
-    RestClient comfyUiRestClient() {
-        HttpClient httpClient = HttpClient.newBuilder()
+    public HttpClient comfyUiHttpClient() {
+        return HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+    }
 
+    @Bean
+    public RestClient comfyUiRestClient(
+            HttpClient comfyUiHttpClient,
+            @Value("${comfyui.http-base-url}") String httpBaseUrl
+    ) {
         return RestClient.builder()
-                .baseUrl("http://127.0.0.1:8000")
-                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .baseUrl(httpBaseUrl)
+                .requestFactory(new JdkClientHttpRequestFactory(comfyUiHttpClient))
                 .build();
     }
 }

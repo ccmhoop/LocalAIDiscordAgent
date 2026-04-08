@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.validation;
 
 import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
 import org.springframework.stereotype.Component;
@@ -42,5 +42,29 @@ public class MusicSettingsValidator {
 
     private String key(int width, int height) {
         return width + "x" + height;
+    }
+
+    private String normalizeKeyScale(String keyScale) {
+        if (keyScale == null || keyScale.isBlank()) {
+            return "C major";
+        }
+
+        return switch (keyScale.toLowerCase().trim()) {
+            case "c" -> "C major";
+            case "d" -> "D major";
+            case "e" -> "E major";
+            case "f" -> "F major";
+            case "g" -> "G major";
+            case "a" -> "A major";
+            case "b" -> "B major";
+            case "cm" -> "C minor";
+            case "dm" -> "D minor";
+            case "em" -> "E minor";
+            case "fm" -> "F minor";
+            case "gm" -> "G minor";
+            case "am" -> "A minor";
+            case "bm" -> "B minor";
+            default -> keyScale;
+        };
     }
 }

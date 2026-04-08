@@ -1,11 +1,16 @@
 package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
+import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class MusicSettingGenerationService {
@@ -20,30 +25,53 @@ public class MusicSettingGenerationService {
             Field rules:
             
             1. tags:
-               - generate a list of musical tags that best describe the user's intent
-               - Include the most important musical characteristics from the user_message
-               - Prefer tags and descriptors such as genre, mood, instruments, vocal style, production style, era, energy, rhythm, and atmosphere
-               - Keep it compact but descriptive
-               - If the user provides tags, use them
+                - Generate a compact but descriptive set of musical tags that best match the user's intent.
+                - Extract the most important musical characteristics from `user_message`.
+                - Prioritize tags in these categories when available:
+                    - genre / subgenre
+                    - mood / emotion
+                    - instruments
+                    - vocal style
+                    - production style
+                    - era / influence
+                    - energy / intensity
+                    - rhythm / groove / tempo feel
+                    - atmosphere / texture
+                - If the user already provides tags or stylistic descriptors, preserve and reuse them.
+                - Prefer specific musical language over generic wording.
+                - Do not invent unrelated traits that are not implied by the user's request.
+                - Keep the result concise, but rich enough to guide music generation accurately.
+                - Return the tags as a short descriptive line or compact tag phrase, not a long explanation.
             
             2. lyrics:
-               - example header : [Verse 1], [Pre-Chorus], [Chorus], [verse 2] [Bridge], [Final Chorus], [Instrumental] etc.
-               - If Generate Lyrics based on user_message is true.
-               - If the user provides lyrics, return the lyrics in the format specified above.
-               - If the user requests to improve the lyrics, generate a new set of lyrics that fits the user's mood and style.
+                - example section headers : [Verse 1], [Pre-Chorus], [Chorus], [verse 2] [Bridge], [Final Chorus], [Instrumental] etc.
+                - If the user provides lyrics, return the lyrics in the format specified above.
+                - If the user requests to improve the lyrics, generate a new set of lyrics that fits the user's mood and style.
+                - Don't describe the melody, just the lyrics.
+                - Don't include the melody in the lyrics.
+                - Don't include the instruments in the lyrics.
+                - Don't include the vocal style in the lyrics.
+                - Don't include the production style in the lyrics.
+                - Don't Vocal instructs, only the lyrics.
+                - Only include the lyrics and Section Headers.
 
             3. bpm:
-               - Choose an appropriate BPM based on the requested style, mood, and energy
-               - If the user specifies a BPM, use it
-               - If no BPM is provided, infer a musically appropriate value
-
-            4. keyscale:
-               - Choose an appropriate musical key from the predefined list: [ C Major, G Major, D Major, A Major, F Major, Bb Major, A Minor, E Minor, D Minor, B Minor ]
-               - If the user specifies a key or scale, use it
-               - If not specified, infer one that fits the requested mood and style
+                - Choose an appropriate BPM based on the requested style, mood, and energy
+                - If the user specifies a BPM, use it
+                - If no BPM is provided, infer a musically appropriate value
             
-            5. title:
-               - Generate a descriptive title that captures the user's intent
+            4. keyscale:
+                - Choose an appropriate musical key from the predefined list, case sensitive: [ C major, G major, D major, A major, F major, Bb major, A minor, E minor, D minor, B minor ]
+                - If the user specifies a key or scale, use it
+                - If not specified, infer one that fits the requested mood and style
+            
+            5. duration:
+                - Choose an appropriate duration based on the bpm
+                - Minimum duration is 90 seconds
+                - Maximum duration is 180 seconds
+            
+            6. title:
+                - Generate a descriptive title that captures the user's intent
             
             Behavior rules:
             1. Preserve the user's intent, genre, mood, and constraints.
@@ -56,10 +84,25 @@ public class MusicSettingGenerationService {
     private final ChatClient internalChatClient;
 
     public MusicSettingGenerationService(ChatModel structuredLLMModel) {
+
+        var converter = new BeanOutputConverter<>(MusicSettingsRecord.class);
+
+        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+
+        var validation = StructuredOutputValidationAdvisor.builder()
+                .outputType(MusicSettingsRecord.class)
+                .objectMapper(MapperUtils.lenientJsonMapper())
+                .maxRepeatAttempts(3)
+                .build();
+
         this.internalChatClient = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .temperature(0.1)
+                        .format(schemaFormat)
+                        .model("ministral-3:14b")
+                        .disableThinking()
+                        .temperature(0.5)
                         .build())
+                .defaultAdvisors(validation)
                 .build();
     }
 

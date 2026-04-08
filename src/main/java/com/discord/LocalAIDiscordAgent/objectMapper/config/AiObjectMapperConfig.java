@@ -1,15 +1,15 @@
 package com.discord.LocalAIDiscordAgent.objectMapper.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AiObjectMapperConfig {
 
+    @Qualifier("aiObjectMapper")
     @Bean("aiObjectMapper")
     public ObjectMapper aiObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
@@ -18,4 +18,5 @@ public class AiObjectMapperConfig {
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         return mapper;
     }
+
 }

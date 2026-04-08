@@ -1,7 +1,8 @@
 package com.discord.LocalAIDiscordAgent.objectMapper;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -91,4 +92,14 @@ public class MapperUtils {
 
         return value;
     }
+
+    public static JsonMapper lenientJsonMapper() {
+        return JsonMapper.builder()
+                .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES)
+                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
+                .enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .build();
+    }
+
 }

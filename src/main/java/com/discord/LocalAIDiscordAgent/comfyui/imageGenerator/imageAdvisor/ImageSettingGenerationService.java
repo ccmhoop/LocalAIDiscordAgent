@@ -1,10 +1,16 @@
 package com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.imageAdvisor;
 
 import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class ImageSettingGenerationService {
@@ -60,10 +66,24 @@ public class ImageSettingGenerationService {
     private final ChatClient internalChatClient;
 
     public ImageSettingGenerationService(ChatModel structuredLLMModel) {
+
+        var converter = new BeanOutputConverter<>(ImageSettingsRecord.class);
+
+        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+
+        var validation = StructuredOutputValidationAdvisor.builder()
+                .outputType(ImageSettingsRecord.class)
+                .objectMapper(MapperUtils.lenientJsonMapper())
+                .maxRepeatAttempts(3)
+                .build();
+
         this.internalChatClient = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .temperature(0.1)
+                        .format(schemaFormat)
+                        .disableThinking()
+                        .temperature(0.5)
                         .build())
+                .defaultAdvisors(validation)
                 .build();
     }
 

@@ -28,13 +28,21 @@ import static org.springframework.ai.chat.messages.MessageType.USER;
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
 
+    private static final Comparator<GroupChatMemory> BY_TIME_ASC =
+            Comparator.comparing(GroupChatMemory::getTimestamp)
+                    .thenComparing(m -> m.getType() == USER ? 0 : 1);
+
     @Value("${group.chat.time.window.minutes}")
     private long minutesWindow;
 
     private final GroupChatMemoryRepository chatRepo;
     private DiscGlobalData discGlobalData;
 
-    public GroupChatMemoryService(GroupChatMemoryRepository groupChatMemoryRepository, @Value("${group.chat.memory.message.limit}") int messageLimit, DiscGlobalData discGlobalData) {
+    public GroupChatMemoryService(
+            GroupChatMemoryRepository groupChatMemoryRepository,
+            @Value("${group.chat.memory.message.limit}") int messageLimit,
+            DiscGlobalData discGlobalData
+    ) {
         super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class, discGlobalData);
         this.chatRepo = groupChatMemoryRepository;
         this.discGlobalData = discGlobalData;
@@ -44,62 +52,96 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         this.discGlobalData = discGlobalData;
     }
 
-
-    public GroupMemory buildMessageMemory()  {
+    public GroupMemory buildMessageMemory() {
         Map<MessageType, List<GroupChatMemory>> sortedGroupMap = getChatMemoryAsMap();
+
         if (sortedGroupMap.isEmpty()) {
             return null;
         }
-        List<GroupChatMemory> users = sortedGroupMap.getOrDefault(USER, List.of());
-        List<GroupChatMemory> assistants = sortedGroupMap.getOrDefault(ASSISTANT, List.of());
+
+        List<GroupChatMemory> users = sortedGroupMap.getOrDefault(USER, Collections.emptyList());
+        List<GroupChatMemory> assistants = sortedGroupMap.getOrDefault(ASSISTANT, Collections.emptyList());
+
         int size = users.size() + assistants.size();
-        if (size <= 2 ) {
+        if (size <= 2) {
             return null;
         }
 
         Set<UserProfile> participantProfiles = buildParticipantList(users);
-
-        if (participantProfiles.size() <=2) {
+        if (participantProfiles.size() <= 2) {
             return null;
         }
 
         List<GroupMessage> groupMessages = buildSGroupMessages(users, assistants);
+        if (groupMessages.isEmpty()) {
+            return null;
+        }
 
         return new GroupMemory(participantProfiles, groupMessages);
     }
 
     @Override
-    public void saveAndTrim( List<Message> messages, UserEntity user) {
-
+    public void saveAndTrim(List<Message> messages, UserEntity user) {
         try {
             LocalDateTime timeWindow = LocalDateTime.now().minusMinutes(this.minutesWindow);
-            List<GroupChatMemory> memories = chatRepo.findAllByGuildId(discGlobalData.getGuildId()).stream()
-                    .filter(m -> LocalDateTime.now().isBefore(timeWindow) || m.getUser().getUserId().toString().equals(discGlobalData.getUserId())
-                    ).toList();
 
-            chatRepo.deleteAll(memories);
-            chatRepo.flush();
+            List<GroupChatMemory> expiredMemories = new ArrayList<>(
+                    chatRepo.findAllByConversationIdAndTimestampBeforeOrderByTimestampAsc(
+                            discGlobalData.getGroupConversationId(),
+                            timeWindow
+                    )
+            );
+
+            if (!expiredMemories.isEmpty()) {
+                chatRepo.deleteAllInBatch(expiredMemories);
+                chatRepo.flush();
+            }
 
             saveAll(messages, user);
-            chatRepo.flush();
-
             trimDbToMessagesLimit();
-            log.debug("Successfully saved and trimmed group chat memory for user: {}", discGlobalData.getUsername());
+
+            log.debug(
+                    "Successfully saved and trimmed group chat memory for group conversation: {}",
+                    discGlobalData.getGroupConversationId()
+            );
         } catch (Exception e) {
-            log.error("Error in saveAndTrim for user {}: {}", discGlobalData.getUsername(), e.getMessage(), e);
+            log.error(
+                    "Error in saveAndTrim for group conversation {}: {}",
+                    discGlobalData.getGroupConversationId(),
+                    e.getMessage(),
+                    e
+            );
             throw e;
         }
     }
 
     @Override
+    public void trimDbToMessagesLimit() {
+        try {
+            List<GroupChatMemory> memories = new ArrayList<>(
+                    chatRepo.findAllByConversationIdOrderByTimestampAsc(
+                            discGlobalData.getGroupConversationId()
+                    )
+            );
+
+            trimOrderedMemoriesToLimit(memories);
+        } catch (Exception e) {
+            log.error("Error during group chat memory trimming: {}", e.getMessage(), e);
+        }
+    }
+
+    @Override
     public Map<MessageType, List<GroupChatMemory>> getChatMemoryAsMap() {
-        List<GroupChatMemory> memories = chatRepo.findAll().stream().filter(m -> m.getConversationId().equals(discGlobalData.getGroupConversationId())).collect(Collectors.toList());
-//        if (memories.isEmpty() || memories.size() <= 2) {
-//            return Collections.emptyMap();
-//        }
+        List<GroupChatMemory> memories = new ArrayList<>(
+                chatRepo.findAllByConversationIdOrderByTimestampAsc(
+                        discGlobalData.getGroupConversationId()
+                )
+        );
+
         if (memories.isEmpty()) {
             return Collections.emptyMap();
         }
+
         return sortAndMap(memories);
     }
 
@@ -107,42 +149,61 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
     public Map<MessageType, List<GroupChatMemory>> sortAndMap(List<GroupChatMemory> memories) {
         LocalDateTime timeWindow = LocalDateTime.now().minusMinutes(this.minutesWindow);
 
-//        if (memories.size() <= 2){
-//            return Collections.emptyMap();
-//        }
+        List<GroupChatMemory> ordered = memories.stream()
+                .filter(m ->
+                        (m.getType() == USER || m.getType() == ASSISTANT)
+                                && !m.getTimestamp().isBefore(timeWindow)
+                )
+                .sorted(BY_TIME_ASC)
+                .toList();
 
-        var partitioned = memories.stream()
-                .filter(m -> (m.getType() == USER || m.getType() == ASSISTANT) && m.getTimestamp().isAfter(timeWindow))
-                .collect(Collectors.partitioningBy(
-                        m -> m.getType() == USER
-                ));
+        if (ordered.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
-        if (partitioned.get(true).isEmpty() || partitioned.get(false).isEmpty() ||
-                partitioned.get(true).size() != partitioned.get(false).size()) {
+        List<GroupChatMemory> users = ordered.stream()
+                .filter(m -> m.getType() == USER)
+                .toList();
+
+        List<GroupChatMemory> assistants = ordered.stream()
+                .filter(m -> m.getType() == ASSISTANT)
+                .toList();
+
+        if (users.isEmpty() || assistants.isEmpty() || users.size() != assistants.size()) {
             return Collections.emptyMap();
         }
 
         return Map.of(
-                USER, partitioned.get(true),
-                ASSISTANT, partitioned.get(false));
+                USER, new ArrayList<>(users),
+                ASSISTANT, new ArrayList<>(assistants)
+        );
     }
 
     public Set<UserProfile> buildParticipantList(List<GroupChatMemory> users) {
-        Set<UserProfile> userProfiles = new HashSet<>();
-        for (GroupChatMemory participant  : users) {
+        Set<UserProfile> userProfiles = new LinkedHashSet<>();
+
+        for (GroupChatMemory participant : users) {
             UserEntity user = participant.getUser();
-            userProfiles.add(new UserProfile(user.getUserId().toString(), user.getUsername(), user.getServerNickname()));
+            userProfiles.add(
+                    new UserProfile(
+                            user.getUserId().toString(),
+                            user.getUsername(),
+                            user.getServerNickname()
+                    )
+            );
         }
-         return userProfiles;
+
+        return userProfiles;
     }
 
-    public List<GroupMessage> buildSGroupMessages(List<GroupChatMemory> users, List<GroupChatMemory> assistants) {
-
+    public List<GroupMessage> buildSGroupMessages(
+            List<GroupChatMemory> users,
+            List<GroupChatMemory> assistants
+    ) {
         if (users.isEmpty() || assistants.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
 
-        // Use the minimum size of both lists to avoid IndexOutOfBoundsException
         int minSize = Math.min(users.size(), assistants.size());
         List<GroupMessage> groupMessages = new ArrayList<>(minSize * 2);
 
@@ -172,10 +233,8 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
         return groupMessages;
     }
 
-
     @Override
     public GroupChatMemory buildChatEntity(Message message, UserEntity user) {
-
         return GroupChatMemory.builder()
                 .guildId(discGlobalData.getGuildId())
                 .channelId(discGlobalData.getChannelId())
@@ -183,7 +242,7 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
                 .user(user)
                 .content(message.getText())
                 .type(message.getMessageType())
-                .timestamp(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+                .timestamp(LocalDateTime.now())
                 .build();
     }
 
