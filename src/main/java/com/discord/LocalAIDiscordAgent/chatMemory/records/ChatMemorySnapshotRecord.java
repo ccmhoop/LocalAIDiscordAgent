@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.chatMemory.records;
 
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 
 import java.util.List;

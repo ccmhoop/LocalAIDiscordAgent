@@ -1,8 +1,9 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.data;
 
-import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
 import com.discord.LocalAIDiscordAgent.chatMemory.records.ChatMemoryPayload;
-import com.discord.LocalAIDiscordAgent.comfyui.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
@@ -30,9 +31,18 @@ public class PromptData {
     private ImageSettingsRecord imageSettings;
     private VideoSettingsRecord videoSettings;
     private boolean webSearchRequired;
+    private MusicSettingsRecord musicSettings;
 
     public PromptData(MapperUtils mapperUtils) {
         this.mapperUtils = mapperUtils;
+    }
+
+    public void setMusicSettings(MusicSettingsRecord musicSettings) {
+        this.musicSettings = musicSettings;
+    }
+
+    public MusicSettingsRecord getMusicSettings() {
+        return musicSettings;
     }
 
     public void setVideoSettings(VideoSettingsRecord videoSettings) {

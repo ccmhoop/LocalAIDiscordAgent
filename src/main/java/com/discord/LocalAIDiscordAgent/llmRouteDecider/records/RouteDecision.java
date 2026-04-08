@@ -8,7 +8,8 @@ public record RouteDecision(
     public enum Mode {
         TEXT,
         IMAGE,
-        VIDEO
+        VIDEO,
+        MUSIC
     }
     public static RouteDecision textFallback(String reason) {
         return new RouteDecision(Mode.TEXT, "", reason);

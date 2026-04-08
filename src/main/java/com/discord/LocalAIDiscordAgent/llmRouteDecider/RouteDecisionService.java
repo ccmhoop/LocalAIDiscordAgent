@@ -14,17 +14,19 @@ public class RouteDecisionService {
 
     private static final String SYSTEM_MSG = """
             You classify user requests into exactly one mode:
-
+            
             TEXT  = the user wants a normal text answer, explanation, code, analysis, summary, or chat response.
             IMAGE = the user wants an image to be created, drawn, illustrated, rendered, designed, or edited.
             VIDEO = the user wants a video to be created, animated, generated, rendered, or storyboarded as a video output.
-
+            MUSIC = the user wants music, a song, instrumental, beat, soundtrack, melody, audio track, or musical composition to be created or generated.
+            
             Rules:
             - Return only valid structured output.
             - If the user explicitly asks to generate, create, draw, render, illustrate, design, edit, or transform an image, choose IMAGE.
             - If the user explicitly asks to generate, create, animate, render, produce, or make a video, choose VIDEO.
+            - If the user explicitly asks to generate, create, compose, produce, make, or write music, a song, beat, instrumental, soundtrack, melody, or lyrics for music generation, choose MUSIC.
             - Otherwise choose TEXT.
-            - normalizedPrompt should be a cleaned-up generation prompt if mode is IMAGE or VIDEO.
+            - normalizedPrompt should be a cleaned-up generation prompt if mode is IMAGE, VIDEO, or MUSIC.
             - normalizedPrompt should be empty for TEXT.
             """;
 
@@ -62,7 +64,7 @@ public class RouteDecisionService {
                 .system(SYSTEM_MSG)
                 .user("""
                         Classify this request:
-
+                        
                         %s
                         """.formatted(userMessage))
                 .advisors(validation)

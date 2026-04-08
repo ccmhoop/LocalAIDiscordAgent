@@ -1,6 +1,7 @@
 package com.discord.LocalAIDiscordAgent.llmRouteDecider;
 
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
+import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision.Mode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,19 +17,24 @@ public class RouteDecisionValidator {
 
         return switch (decision.mode()) {
             case TEXT -> new RouteDecision(
-                    RouteDecision.Mode.TEXT,
+                    Mode.TEXT,
                     "",
                     reason == null ? "Defaulted to TEXT" : reason
             );
             case IMAGE -> new RouteDecision(
-                    RouteDecision.Mode.IMAGE,
+                    Mode.IMAGE,
                     normalizedPrompt == null ? "" : normalizedPrompt,
                     reason == null ? "Image request detected" : reason
             );
             case VIDEO -> new RouteDecision(
-                    RouteDecision.Mode.VIDEO,
+                    Mode.VIDEO,
                     normalizedPrompt == null ? "" : normalizedPrompt,
                     reason == null ? "Video request detected" : reason
+            );
+            case MUSIC -> new RouteDecision(
+                    Mode.MUSIC,
+                    normalizedPrompt == null ? "" : normalizedPrompt,
+                    reason == null ? "music request detected" : reason
             );
         };
     }
@@ -40,7 +46,7 @@ public class RouteDecisionValidator {
 
         return switch (decision.mode()) {
             case TEXT -> true;
-            case IMAGE, VIDEO -> decision.normalizedPrompt() != null && !decision.normalizedPrompt().isBlank();
+            case IMAGE, VIDEO, MUSIC-> decision.normalizedPrompt() != null && !decision.normalizedPrompt().isBlank();
         };
     }
 

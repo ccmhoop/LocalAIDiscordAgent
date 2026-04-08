@@ -1,10 +1,12 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
-import com.discord.LocalAIDiscordAgent.comfyui.records.ImageSettingsRecord;
-import com.discord.LocalAIDiscordAgent.comfyui.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.Resource;
@@ -20,6 +22,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ComfyuiRunService {
 
@@ -59,7 +62,7 @@ public class ComfyuiRunService {
         setPromptText(apiWorkflow, "89", imageSettings.positivePrompt());
 
 
-        byte[] imageBytes = comfyuiService.runWorkflowAndGetFirstImage(apiWorkflow);
+        byte[] imageBytes = comfyuiService.runGenerationWorkflow(apiWorkflow);
 
         String fileName = UUID.randomUUID() + ".mp4";
         Path outputPath = imageRoot.resolve(fileName).normalize();
@@ -93,7 +96,7 @@ public class ComfyuiRunService {
         setPromptText(apiWorkflow, "6", imageSettings.positivePrompt());
         setPromptText(apiWorkflow, "7", imageSettings.negativePrompt());
 
-        byte[] imageBytes = comfyuiService.runWorkflowAndGetFirstImage(apiWorkflow);
+        byte[] imageBytes = comfyuiService.runGenerationWorkflow(apiWorkflow);
 
         String fileName = UUID.randomUUID() + ".png";
         Path outputPath = imageRoot.resolve(fileName).normalize();
@@ -105,6 +108,87 @@ public class ComfyuiRunService {
         Files.write(outputPath, imageBytes);
 
         return outputPath;
+    }
+
+    public Path generateMusic(PromptData promptData) throws Exception {
+        MusicSettingsRecord musicSettings = promptData.getMusicSettings();
+        ClassPathResource workflowResource = new ClassPathResource("comfyui/music_gen_api.json");
+
+        if (!workflowResource.exists()) {
+            throw new IllegalStateException("Workflow file not found in classpath: music_gen_api.json");
+        }
+
+        Map<String, Object> apiWorkflow;
+        try (var inputStream = workflowResource.getInputStream()) {
+            apiWorkflow = objectMapper.readValue(
+                    inputStream,
+                    new TypeReference<Map<String, Object>>() {}
+            );
+        }
+
+        setMusicSettings(apiWorkflow, "94", musicSettings);
+
+        byte[] audioBytes = comfyuiService.runGenerationWorkflow(apiWorkflow);
+
+        String fileName = musicSettings.title() + " "+ UUID.randomUUID() + ".mp3".trim();
+        Path outputPath = imageRoot.resolve(fileName).normalize();
+
+        if (outputPath.getParent() != null) {
+            Files.createDirectories(outputPath.getParent());
+        }
+
+        Files.write(outputPath, audioBytes);
+
+        return outputPath;
+    }
+
+
+    private void setMusicSettings(Map<String, Object> workflow, String nodeId, MusicSettingsRecord musicSettings) {
+        Object nodeObj = workflow.get(nodeId);
+        if (!(nodeObj instanceof Map<?, ?> nodeMapRaw)) {
+            throw new IllegalStateException("Node not found: " + nodeId);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nodeMap = (Map<String, Object>) nodeMapRaw;
+
+        Object inputsObj = nodeMap.get("inputs");
+        if (!(inputsObj instanceof Map<?, ?> inputsRaw)) {
+            throw new IllegalStateException("Inputs not found for node: " + nodeId);
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> inputs = (Map<String, Object>) inputsRaw;
+
+
+        inputs.put("keyscale", "C major");
+        inputs.put("lyrics", musicSettings.lyrics());
+        inputs.put("bpm", musicSettings.bpm());
+        inputs.put("tags", musicSettings.tags());
+    }
+
+    private String normalizeKeyScale(String keyScale) {
+        if (keyScale == null || keyScale.isBlank()) {
+            return "C major";
+        }
+
+        return switch (keyScale.toLowerCase().trim()) {
+            case "c" -> "C major";
+            case "d" -> "D major";
+            case "e" -> "E major";
+            case "f" -> "F major";
+            case "g" -> "G major";
+            case "a" -> "A major";
+            case "b" -> "B major";
+            case "cm" -> "C minor";
+            case "dm" -> "D minor";
+            case "em" -> "E minor";
+            case "fm" -> "F minor";
+            case "gm" -> "G minor";
+            case "am" -> "A minor";
+            case "bm" -> "B minor";
+            default -> keyScale;
+        };
     }
 
     private void setPromptText(Map<String, Object> workflow, String nodeId, String text) {

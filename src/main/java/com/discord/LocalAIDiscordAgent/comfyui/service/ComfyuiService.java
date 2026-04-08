@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class ComfyuiService {
 
@@ -20,12 +22,10 @@ public class ComfyuiService {
         this.restClient = restClient;
     }
 
-    public byte[] runWorkflowAndGetFirstImage(Map<String, Object> apiWorkflow) throws InterruptedException {
+    public byte[] runGenerationWorkflow(Map<String, Object> apiWorkflow) throws InterruptedException {
         String clientId = UUID.randomUUID().toString();
-        String promptId = UUID.randomUUID().toString();
 
-        // 1) Queue the prompt
-        QueuePromptRequest request = new QueuePromptRequest(apiWorkflow, clientId, promptId);
+        QueuePromptRequest request = new QueuePromptRequest(apiWorkflow, clientId);
 
         QueuePromptResponse response = restClient.post()
                 .uri("/prompt")
@@ -37,33 +37,32 @@ public class ComfyuiService {
             throw new IllegalStateException("ComfyUI did not return a prompt_id");
         }
 
-        // 2) Poll history until finished
+        String promptId = response.prompt_id();
+
         Map<String, Object> historyEntry = waitForHistory(promptId, Duration.ofMinutes(10));
 
-        // 3) Extract first image reference
-        ImageRef imageRef = extractFirstImage(historyEntry);
-        if (imageRef == null) {
-            throw new IllegalStateException("No image found in ComfyUI history for prompt_id=" + promptId);
+        FileRef fileRef = extractFirstFile(historyEntry);
+        if (fileRef == null) {
+            throw new IllegalStateException("No output file found in ComfyUI history for prompt_id=" + promptId);
         }
 
-        // 4) Download raw image bytes from /view
-        URI imageUri = UriComponentsBuilder.fromPath("/view")
-                .queryParam("filename", imageRef.filename())
-                .queryParam("subfolder", imageRef.subfolder())
-                .queryParam("type", imageRef.type())
+        URI fileUri = UriComponentsBuilder.fromPath("/view")
+                .queryParam("filename", fileRef.filename())
+                .queryParam("subfolder", fileRef.subfolder())
+                .queryParam("type", fileRef.type())
                 .build(true)
                 .toUri();
 
-        byte[] imageBytes = restClient.get()
-                .uri(imageUri)
+        byte[] fileBytes = restClient.get()
+                .uri(fileUri)
                 .retrieve()
                 .body(byte[].class);
 
-        if (imageBytes == null || imageBytes.length == 0) {
-            throw new IllegalStateException("Downloaded image is empty");
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new IllegalStateException("Downloaded file is empty");
         }
 
-        return imageBytes;
+        return fileBytes;
     }
 
     private Map<String, Object> waitForHistory(String promptId, Duration timeout) throws InterruptedException {
@@ -90,7 +89,7 @@ public class ComfyuiService {
         throw new IllegalStateException("Timed out waiting for ComfyUI prompt to finish: " + promptId);
     }
 
-    private ImageRef extractFirstImage(Map<String, Object> historyEntry) {
+    private FileRef extractFirstFile(Map<String, Object> historyEntry) {
         Object outputsObj = historyEntry.get("outputs");
         if (!(outputsObj instanceof Map<?, ?> outputs)) {
             return null;
@@ -101,23 +100,33 @@ public class ComfyuiService {
                 continue;
             }
 
-            Object imagesObj = nodeOutput.get("images");
-            if (!(imagesObj instanceof List<?> images) || images.isEmpty()) {
-                continue;
-            }
+            FileRef ref = extractFromField(nodeOutput, "audio");
+            if (ref != null) return ref;
 
-            Object firstImageObj = images.get(0);
-            if (!(firstImageObj instanceof Map<?, ?> img)) {
-                continue;
-            }
+            ref = extractFromField(nodeOutput, "images");
+            if (ref != null) return ref;
+        }
 
-            String filename = asString(img.get("filename"));
-            String subfolder = asString(img.get("subfolder"));
-            String type = asString(img.get("type"));
+        return null;
+    }
 
-            if (filename != null && type != null) {
-                return new ImageRef(filename, subfolder == null ? "" : subfolder, type);
-            }
+    private FileRef extractFromField(Map<?, ?> nodeOutput, String fieldName) {
+        Object filesObj = nodeOutput.get(fieldName);
+        if (!(filesObj instanceof List<?> files) || files.isEmpty()) {
+            return null;
+        }
+
+        Object firstFileObj = files.get(0);
+        if (!(firstFileObj instanceof Map<?, ?> file)) {
+            return null;
+        }
+
+        String filename = asString(file.get("filename"));
+        String subfolder = asString(file.get("subfolder"));
+        String type = asString(file.get("type"));
+
+        if (filename != null && type != null) {
+            return new FileRef(filename, subfolder == null ? "" : subfolder, type);
         }
 
         return null;
@@ -129,8 +138,7 @@ public class ComfyuiService {
 
     public record QueuePromptRequest(
             Map<String, Object> prompt,
-            String client_id,
-            String prompt_id
+            String client_id
     ) {}
 
     public record QueuePromptResponse(
@@ -139,7 +147,7 @@ public class ComfyuiService {
             Map<String, Object> node_errors
     ) {}
 
-    public record ImageRef(
+    public record FileRef(
             String filename,
             String subfolder,
             String type

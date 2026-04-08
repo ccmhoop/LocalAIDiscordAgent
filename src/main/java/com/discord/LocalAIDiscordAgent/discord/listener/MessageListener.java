@@ -70,7 +70,6 @@ public abstract class MessageListener {
                                                             ))
                                             );
                                 })
-                                .doFinally(signalType -> discGlobalData.setDiscTonull())
                 );
     }
 

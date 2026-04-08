@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.systemMessage.records;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 
 import java.util.List;
 import java.util.Set;

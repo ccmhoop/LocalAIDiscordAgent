@@ -1,11 +1,12 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
+import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor.MusicSettingsPreparationService;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
-import com.discord.LocalAIDiscordAgent.comfyui.imageAdvisor.ImageSettingsPreparationService;
-import com.discord.LocalAIDiscordAgent.comfyui.videoAdvisor.VideoSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.imageAdvisor.ImageSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor.VideoSettingsPreparationService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.RouteDecisionPreparationService;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
 import com.discord.LocalAIDiscordAgent.ragMemory.ragAdvisor.RagContextPreparationService;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
@@ -34,9 +35,9 @@ public class LLMCallChain {
     private final MapperUtils mapperUtils;
     private final WebSearchPreparationService webSearchPreparationService;
     private final ImageSettingsPreparationService imageSettingsPreparationService;
+    private final MusicSettingsPreparationService musicGenerationService;
     private final VideoSettingsPreparationService videoService;
-
-
+    
     public LLMCallChain(
             ComfyuiRunService comfyuiRunService,
             LLMToolCalls LLMToolCalls,
@@ -45,7 +46,7 @@ public class LLMCallChain {
             RagContextPreparationService ragContextService,
             MapperUtils mapperUtils,
             WebSearchPreparationService webSearchPreparationService,
-            ImageSettingsPreparationService imageSettingsPreparationService, VideoSettingsPreparationService videoService
+            ImageSettingsPreparationService imageSettingsPreparationService, MusicSettingsPreparationService musicGenerationService, VideoSettingsPreparationService videoService
     ) {
         this.LLMToolCalls = LLMToolCalls;
         this.comfyuiRunService = comfyuiRunService;
@@ -55,6 +56,7 @@ public class LLMCallChain {
         this.mapperUtils = mapperUtils;
         this.webSearchPreparationService = webSearchPreparationService;
         this.imageSettingsPreparationService = imageSettingsPreparationService;
+        this.musicGenerationService = musicGenerationService;
         this.videoService = videoService;
     }
 
@@ -62,6 +64,9 @@ public class LLMCallChain {
         PromptData promptData = new PromptData(mapperUtils);
         RouteDecision decision = routeDecisionService.prepare(discGlobalData);
         switch (decision.mode()) {
+            case TEXT -> {
+                return executeTextResponseChain(discGlobalData, promptData);
+            }
             case IMAGE -> {
                 executeImageChain(discGlobalData, promptData);
                 return null;
@@ -70,8 +75,9 @@ public class LLMCallChain {
                 executeVideoChain(discGlobalData, promptData);
                 return null;
             }
-            case TEXT -> {
-                return executeTextResponseChain(discGlobalData, promptData);
+            case MUSIC -> {
+                executeMusicChain(discGlobalData, promptData);
+                return null;
             }
         }
 
@@ -138,11 +144,21 @@ public class LLMCallChain {
 
         try {
             videoService.prepare(discGlobalData, promptData);
-            log.info("Video Prompt: {}", promptData.getVideoSettings());
             Path path = comfyuiRunService.generateVideo(promptData);
             discGlobalData.setImagePath(path);
         } catch (Exception e) {
             log.error("Error generating Video", e);
+        }
+        promptData.setSummary(null);
+    }
+
+    private void executeMusicChain(DiscGlobalData discGlobalData, PromptData promptData) {
+        try {
+            musicGenerationService.prepare(discGlobalData, promptData);
+            Path path = comfyuiRunService.generateMusic(promptData);
+            discGlobalData.setImagePath(path);
+        } catch (Exception e) {
+            log.error("Error generating Music", e);
         }
         promptData.setSummary(null);
     }

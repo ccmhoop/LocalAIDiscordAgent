@@ -1,13 +1,14 @@
 package com.discord.LocalAIDiscordAgent.discord.data;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.recentChatMemory.model.RecentChatMemory;
+import com.discord.LocalAIDiscordAgent.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Member;
+import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import org.springframework.ai.chat.messages.MessageType;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -17,47 +18,64 @@ import org.springframework.stereotype.Component;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.springframework.ai.chat.messages.MessageType.ASSISTANT;
 import static org.springframework.ai.chat.messages.MessageType.USER;
+
 
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class DiscGlobalData {
 
-    private String userId;
-    private String guildId;
+    private String userId = "";
+    private String guildId = "";
     private Path imagePath;
-    private String username;
-    private String channelId;
-    private String userGlobal;
-    private String userMessage;
-    private String serverNickname;
+    private String username = "";
+    private String channelId = "";
+    private String userGlobal = "";
+    private String userMessage = "";
+    private String serverNickname = "";
     private UserProfile userProfile;
-    private String conversationId;
-    private String groupConversationId;
+    private String conversationId = "";
+    private String groupConversationId = "";
     private GroupMemory groupChatMemory;
     private RecentMessage lastAssistantMsg;
-    private List<RecentMessage> recentMessages;
-    private List<LongTermMemoryData> longTermMemoryData;
-    private List<RecentChatMemory> userMessages;
-    private List<RecentChatMemory> assistantMessages;
+    private List<RecentMessage> recentMessages = List.of();
+    private List<LongTermMemoryData> longTermMemoryData = List.of();
+    private List<RecentChatMemory> userMessages = List.of();
+    private List<RecentChatMemory> assistantMessages = List.of();
 
-    public void setDiscData(MessageCreateEvent event) {
-        this.guildId = event.getGuildId().map(Snowflake::asString).orElse("");
-        this.channelId = event.getMessage().getChannelId().asString();
-        this.userId = Objects.requireNonNull(event.getMessage().getAuthor().orElse(null)).getId().asString().trim();
-        this.username = event.getMessage().getAuthor().map(User::getUsername).orElse("");
-        this.userGlobal = event.getMessage().getAuthor().get().getGlobalName().orElse("");
-        this.serverNickname = event.getMessage().getAuthorAsMember()
+    public boolean setDiscData(MessageCreateEvent event) {
+        Message message = event.getMessage();
+        User author = message.getAuthor().orElse(null);
+
+        if (author == null) {
+            return false;
+        }
+
+        Snowflake botId = event.getClient().getSelfId();
+
+        this.guildId = event.getGuildId()
+                .map(Snowflake::asString)
+                .orElse("DM");
+
+        this.channelId = message.getChannelId().asString();
+        this.userId = author.getId().asString().trim();
+        this.username = safe(author.getUsername());
+        this.userGlobal = author.getGlobalName().orElse(this.username);
+
+        this.serverNickname = message.getAuthorAsMember()
                 .map(Member::getDisplayName)
+                .onErrorReturn(this.username)
                 .blockOptional()
-                .orElseGet(() -> event.getMessage().getAuthor().map(User::getUsername).orElse(""));
-        this.userMessage = extractUserMessage(event.getMessage().getContent());
-        this.conversationId = guildId + ":" + channelId + ":" + userId;
-        this.groupConversationId = guildId + ":" + channelId;
-        this.userProfile = new UserProfile(userId, username, serverNickname);
+                .orElse(this.username);
+
+        this.userMessage = extractUserMessage(message.getContent(), botId);
+        this.conversationId = this.guildId + ":" + this.channelId + ":" + this.userId;
+        this.groupConversationId = this.guildId + ":" + this.channelId;
+        this.userProfile = new UserProfile(this.userId, this.username, this.serverNickname);
+
+        return true;
     }
 
     public void setDiscDataMemory(
@@ -66,53 +84,53 @@ public class DiscGlobalData {
             List<LongTermMemoryData> longTermMemoryData,
             Map<MessageType, List<RecentChatMemory>> userAssistantMessages
     ) {
-        this.longTermMemoryData = longTermMemoryData;
         this.groupChatMemory = groupChatMemory;
-        this.recentMessages = recentMessages;
-        this.userMessages = userAssistantMessages.getOrDefault(USER, List.of());
-        this.assistantMessages = userAssistantMessages.getOrDefault(ASSISTANT, List.of());
-        if (this.recentMessages != null ) {
-            setLastAssistantMessage();
+        this.recentMessages = recentMessages != null ? recentMessages : List.of();
+        this.longTermMemoryData = longTermMemoryData != null ? longTermMemoryData : List.of();
+        this.userMessages = userAssistantMessages != null
+                ? userAssistantMessages.getOrDefault(USER, List.of())
+                : List.of();
+        this.assistantMessages = userAssistantMessages != null
+                ? userAssistantMessages.getOrDefault(ASSISTANT, List.of())
+                : List.of();
+
+        setLastAssistantMessage();
+    }
+
+    public boolean isValid() {
+        return !isBlank(userId)
+                && !isBlank(channelId)
+                && !isBlank(username)
+                && !isBlank(conversationId)
+                && !isBlank(groupConversationId);
+    }
+
+    public boolean hasEmptyPrompt() {
+        return userMessage == null || userMessage.isBlank();
+    }
+
+    private String extractUserMessage(String content, Snowflake botId) {
+        if (content == null || content.isBlank()) {
+            return "";
         }
 
-    }
-
-    public void setDiscTonull(
-    ) {
-        this.guildId = null;
-        this.channelId = null;
-        this.userId = null;
-        this.username = null;
-        this.userGlobal = null;
-        this.serverNickname = null;
-        this.userMessage = null;
-        this.conversationId = null;
-        this.groupConversationId = null;
-        this.userProfile = null;
-        this.groupChatMemory = null;
-        this.recentMessages = null;
-        this.longTermMemoryData = null;
-        this.imagePath = null;
-        this.lastAssistantMsg = null;
-    }
-
-    private String extractUserMessage(String content) {
-        boolean mentioned = content.toLowerCase().contains("@kier") || content.contains("<@1379869980123992274>");
-        if (!mentioned) return "";
-
-        content = content.replace("<@1379869980123992274>", "").trim();
-        if (content.isEmpty()) return "";
-        return content;
+        return content
+                .replaceAll("<@!?" + botId.asString() + ">", "")
+                .trim();
     }
 
     private void setLastAssistantMessage() {
-        List<RecentMessage> messageList = this.recentMessages;
-        if (messageList.size() < 2 || messageList.size() % 2 != 0) {
-            this.lastAssistantMsg = null;
+        this.lastAssistantMsg = null;
+
+        if (recentMessages == null || recentMessages.isEmpty()) {
+            return;
         }
 
-        RecentMessage recentMessage = messageList.getLast();
-        if (recentMessage.role().toLowerCase().contains("assistant")) {
+        RecentMessage recentMessage = recentMessages.get(recentMessages.size() - 1);
+
+        if (recentMessage != null
+                && recentMessage.role() != null
+                && recentMessage.role().toLowerCase().contains("assistant")) {
             this.lastAssistantMsg = new RecentMessage(
                     recentMessage.timestamp(),
                     recentMessage.role(),
@@ -121,8 +139,12 @@ public class DiscGlobalData {
         }
     }
 
-    public Boolean dataIsEmptyOrNull() {
-        return guildId == null || channelId == null || userId == null || username == null || userGlobal == null || serverNickname == null || userMessage == null;
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     public void setImagePath(Path imagePath) {
@@ -158,9 +180,6 @@ public class DiscGlobalData {
     }
 
     public String getUserMessage() {
-        if (userMessage == null) {
-            return null;
-        }
         return userMessage;
     }
 
@@ -173,49 +192,30 @@ public class DiscGlobalData {
     }
 
     public Path getImagePath() {
-        if (imagePath == null) {
-            return null;
-        }
         return imagePath;
     }
 
     public RecentMessage getLastAssistantMsg() {
-        if (lastAssistantMsg == null) {
-            return null;
-        }
         return lastAssistantMsg;
     }
 
     public GroupMemory getGroupChatMemory() {
-        if (groupChatMemory == null) {
-            return null;
-        }
         return groupChatMemory;
     }
 
     public List<RecentMessage> getRecentMessages() {
-        if (recentMessages == null) {
-            return null;
-        }
         return recentMessages;
     }
+
     public List<RecentChatMemory> getUserMessages() {
-        if (userMessages == null) {
-            return null;
-        }
         return userMessages;
     }
+
     public List<RecentChatMemory> getAssistantMessages() {
-        if (assistantMessages == null) {
-            return null;
-        }
         return assistantMessages;
     }
 
     public List<LongTermMemoryData> getLongTermMemoryData() {
-        if (longTermMemoryData == null) {
-            return null;
-        }
         return longTermMemoryData;
     }
 }

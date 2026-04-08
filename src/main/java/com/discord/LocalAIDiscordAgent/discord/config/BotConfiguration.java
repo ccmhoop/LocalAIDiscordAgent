@@ -19,32 +19,36 @@ public class BotConfiguration {
     private String token;
 
     @Bean
-    public <T extends Event> GatewayDiscordClient gatewayDiscordClient(List<EventListenerINTF<T>> eventListenerINTFS) {
-
-        GatewayDiscordClient discord  = DiscordClientBuilder.create(token)
+    public GatewayDiscordClient gatewayDiscordClient(List<EventListenerINTF<? extends Event>> listeners) {
+        GatewayDiscordClient discord = DiscordClientBuilder.create(token)
                 .build()
                 .gateway()
                 .setEnabledIntents(IntentSet.of(
                         Intent.GUILDS,
                         Intent.GUILD_MESSAGES,
                         Intent.GUILD_MESSAGE_REACTIONS,
-                        Intent.MESSAGE_CONTENT,  // Privileged intent
-                        Intent.GUILD_MEMBERS,    // Privileged intent (if needed)
-                        Intent.GUILD_PRESENCES   // Privileged intent (if needed)
+                        Intent.MESSAGE_CONTENT,
+                        Intent.GUILD_MEMBERS,
+                        Intent.GUILD_PRESENCES
                 ))
                 .login()
                 .block();
 
-
-        for(EventListenerINTF<T> listener : eventListenerINTFS) {
-            discord.on(listener.getEventType())
-                    .flatMap(listener::execute)
-                    .onErrorResume(listener::handleError)
-                    .subscribe();
+        if (discord == null) {
+            throw new IllegalStateException("Failed to login to Discord gateway.");
         }
 
+        for (EventListenerINTF<? extends Event> listener : listeners) {
+            registerListener(discord, listener);
+        }
 
         return discord;
     }
 
+    private <T extends Event> void registerListener(GatewayDiscordClient discord, EventListenerINTF<T> listener) {
+        discord.on(listener.getEventType())
+                .flatMap(listener::execute)
+                .onErrorResume(listener::handleError)
+                .subscribe();
+    }
 }

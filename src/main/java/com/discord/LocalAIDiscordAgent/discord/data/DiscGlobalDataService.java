@@ -1,8 +1,8 @@
 package com.discord.LocalAIDiscordAgent.discord.data;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.longTermMemory.LongTermMemoryService;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemory.recentChatMemory.service.RecentChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.service.GroupChatMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.longTermMemory.LongTermMemoryService;
+import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.service.RecentChatMemoryService;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -30,11 +30,14 @@ public class DiscGlobalDataService {
     public DiscGlobalData build(MessageCreateEvent event) {
         DiscGlobalData discGlobalData = discGlobalDataProvider.getObject();
 
-        discGlobalData.setDiscTonull();
-        discGlobalData.setDiscData(event);
+        boolean populated = discGlobalData.setDiscData(event);
 
-        if (discGlobalData.getUserMessage() == null || discGlobalData.getUserMessage().isBlank()) {
-            return null;
+        if (!populated || !discGlobalData.isValid()) {
+            return discGlobalData;
+        }
+
+        if (discGlobalData.hasEmptyPrompt()) {
+            return discGlobalData;
         }
 
         GroupChatMemoryService groupChatMemoryService = groupChatMemoryServiceProvider.getObject();

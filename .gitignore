@@ -34,3 +34,5 @@ build/
 /savedSpeech/
 /images/
 /src/main/resources/comfyui/video_api_wan2.2.json
+/src/main/resources/comfyui/song_gen_api.json
+/src/main/resources/comfyui/music_gen_api.json
