@@ -1,25 +1,27 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains;
 
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor.MusicSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.internalCall.ImageSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.internalCall.MusicSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.internalCall.VideoSettingsPreparationService;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.imageAdvisor.ImageSettingsPreparationService;
-import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor.VideoSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.RouteDecisionPreparationService;
-import com.discord.LocalAIDiscordAgent.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
-import com.discord.LocalAIDiscordAgent.ragMemory.ragAdvisor.RagContextPreparationService;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls.LLMToolCalls;
+import com.discord.LocalAIDiscordAgent.ragMemory.ragAdvisor.RagContextPreparationService;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RetrievedContext;
 import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
 import com.discord.LocalAIDiscordAgent.webSearch.service.WebSearchPreparationService;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -37,20 +39,22 @@ public class LLMCallChain {
     private final ImageSettingsPreparationService imageSettingsPreparationService;
     private final MusicSettingsPreparationService musicGenerationService;
     private final VideoSettingsPreparationService videoService;
-    
+
     public LLMCallChain(
             ComfyuiRunService comfyuiRunService,
             LLMToolCalls LLMToolCalls,
-            RouteDecisionPreparationService RouteDecisionPreparationService,
+            RouteDecisionPreparationService routeDecisionPreparationService,
             ChatMemoryPreparationService chatMemoryPreparationService,
             RagContextPreparationService ragContextService,
             MapperUtils mapperUtils,
             WebSearchPreparationService webSearchPreparationService,
-            ImageSettingsPreparationService imageSettingsPreparationService, MusicSettingsPreparationService musicGenerationService, VideoSettingsPreparationService videoService
+            ImageSettingsPreparationService imageSettingsPreparationService,
+            MusicSettingsPreparationService musicGenerationService,
+            VideoSettingsPreparationService videoService
     ) {
         this.LLMToolCalls = LLMToolCalls;
         this.comfyuiRunService = comfyuiRunService;
-        this.routeDecisionService = RouteDecisionPreparationService;
+        this.routeDecisionService = routeDecisionPreparationService;
         this.chatMemoryService = chatMemoryPreparationService;
         this.ragContextService = ragContextService;
         this.mapperUtils = mapperUtils;
@@ -60,33 +64,66 @@ public class LLMCallChain {
         this.videoService = videoService;
     }
 
-    public RuntimeContext executeContextChainRuntime(DiscGlobalData discGlobalData) {
-        PromptData promptData = new PromptData(mapperUtils);
-        RouteDecision decision = routeDecisionService.prepare(discGlobalData);
-        switch (decision.mode()) {
-            case TEXT -> {
-                return executeTextResponseChain(discGlobalData, promptData);
-            }
-            case IMAGE -> {
-                executeImageChain(discGlobalData, promptData);
-                return null;
-            }
-            case VIDEO -> {
-                executeVideoChain(discGlobalData, promptData);
-                return null;
-            }
-            case MUSIC -> {
-                executeMusicChain(discGlobalData, promptData);
-                return null;
-            }
-        }
+    public RouteDecision decideRoute(DiscGlobalData discGlobalData) {
+        return routeDecisionService.prepare(discGlobalData);
+    }
 
-        return null;
+    public RuntimeContext executeTextContextRuntime(DiscGlobalData discGlobalData) {
+        PromptData promptData = new PromptData(mapperUtils);
+        return executeTextResponseChain(discGlobalData, promptData);
+    }
+
+    public Mono<ComfyuiService.GeneratedFile> executeImageChain(DiscGlobalData discGlobalData) {
+        PromptData promptData = new PromptData(mapperUtils);
+
+        return Mono.fromCallable(() -> {
+                    ragContextService.prepare(discGlobalData, promptData);
+
+                    if (promptData.getRetrievedContext() != null) {
+                        LLMToolCalls.callSummaryTool(promptData);
+                    }
+
+                    imageSettingsPreparationService.prepare(discGlobalData, promptData);
+                    log.info("Image Prompt: {}", promptData.getImageSettings());
+                    return promptData;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(comfyuiRunService::generateImage)
+                .doOnError(error -> log.error("Error generating image", error));
+    }
+
+    public Mono<ComfyuiService.GeneratedFile> executeVideoChain(DiscGlobalData discGlobalData) {
+        PromptData promptData = new PromptData(mapperUtils);
+
+        return Mono.fromCallable(() -> {
+                    ragContextService.prepare(discGlobalData, promptData);
+
+                    if (promptData.getRetrievedContext() != null) {
+                        LLMToolCalls.callSummaryTool(promptData);
+                    }
+
+                    videoService.prepare(discGlobalData, promptData);
+                    return promptData;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(comfyuiRunService::generateVideo)
+                .doOnError(error -> log.error("Error generating video", error));
+    }
+
+    public Mono<ComfyuiService.GeneratedFile> executeMusicChain(DiscGlobalData discGlobalData) {
+        PromptData promptData = new PromptData(mapperUtils);
+
+        return Mono.fromCallable(() -> {
+                    musicGenerationService.prepare(discGlobalData, promptData);
+                    return promptData;
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .flatMap(comfyuiRunService::generateMusic)
+                .doOnError(error -> log.error("Error generating music", error));
     }
 
     @NotNull
-    private RuntimeContext executeTextResponseChain(DiscGlobalData discGlobalData,PromptData promptData) {
-
+    private RuntimeContext executeTextResponseChain(DiscGlobalData discGlobalData, PromptData promptData) {
         chatMemoryService.prepare(discGlobalData, promptData);
         ragContextService.prepare(discGlobalData, promptData);
 
@@ -103,7 +140,7 @@ public class LLMCallChain {
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 discGlobalData.getUserProfile(),
                 null,
-                promptData.getSummary() == null? null : new RetrievedContext(promptData.getSummary()),
+                promptData.getSummary() == null ? null : new RetrievedContext(promptData.getSummary()),
                 promptData.getChatMemoryPayload().longTermMemory(),
                 promptData.getChatMemoryPayload().recentMessages(),
                 promptData.getChatMemoryPayload().groupMemory(),
@@ -116,51 +153,4 @@ public class LLMCallChain {
             LLMToolCalls.callWebSearchTool();
         }
     }
-
-    private void executeImageChain(DiscGlobalData discGlobalData,PromptData promptData) {
-        ragContextService.prepare(discGlobalData, promptData);
-
-        if (promptData.getRetrievedContext() != null) {
-            LLMToolCalls.callSummaryTool(promptData);
-        }
-
-        try {
-            imageSettingsPreparationService.prepare(discGlobalData, promptData);
-            log.info("Image Prompt: {}", promptData.getImageSettings());
-            Path path = comfyuiRunService.generateImage(promptData);
-            discGlobalData.setImagePath(path);
-        } catch (Exception e) {
-            log.error("Error generating image", e);
-        }
-        promptData.setSummary(null);
-    }
-
-    private void executeVideoChain(DiscGlobalData discGlobalData,PromptData promptData) {
-        ragContextService.prepare(discGlobalData, promptData);
-
-        if (promptData.getRetrievedContext() != null) {
-            LLMToolCalls.callSummaryTool(promptData);
-        }
-
-        try {
-            videoService.prepare(discGlobalData, promptData);
-            Path path = comfyuiRunService.generateVideo(promptData);
-            discGlobalData.setImagePath(path);
-        } catch (Exception e) {
-            log.error("Error generating Video", e);
-        }
-        promptData.setSummary(null);
-    }
-
-    private void executeMusicChain(DiscGlobalData discGlobalData, PromptData promptData) {
-        try {
-            musicGenerationService.prepare(discGlobalData, promptData);
-            Path path = comfyuiRunService.generateMusic(promptData);
-            discGlobalData.setImagePath(path);
-        } catch (Exception e) {
-            log.error("Error generating Music", e);
-        }
-        promptData.setSummary(null);
-    }
-
 }

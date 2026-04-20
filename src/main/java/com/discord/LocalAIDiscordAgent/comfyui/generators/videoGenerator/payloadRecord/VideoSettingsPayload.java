@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.payloadRecord;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record VideoSettingsRecord (
+public record VideoSettingsPayload(
         @JsonProperty(required = true)
         String positivePrompt,
         @JsonProperty(required = true)

@@ -1,6 +1,6 @@
-package com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.payloadRecord.VideoSettingsPayload;
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
@@ -9,10 +9,8 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 @Service
-public class VideoSettingGenerationService {
+public class VideoSettingCreatePayloadService {
 
     private static final String SYSTEM_MESSAGE = """
             Your task is to generate:
@@ -47,30 +45,25 @@ public class VideoSettingGenerationService {
 
     private final ChatClient internalChatClient;
 
-    public VideoSettingGenerationService(ChatModel structuredLLMModel) {
+    public VideoSettingCreatePayloadService(ChatModel generatorPayloadChatModel) {
 
-        var converter = new BeanOutputConverter<>(VideoSettingsRecord.class);
+        var converter = new BeanOutputConverter<>(VideoSettingsPayload.class);
 
         var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(VideoSettingsRecord.class)
+                .outputType(VideoSettingsPayload.class)
                 .maxRepeatAttempts(3)
                 .build();
 
 
-        this.internalChatClient = ChatClient.builder(structuredLLMModel)
+        this.internalChatClient = ChatClient.builder(generatorPayloadChatModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .model("ministral-3:14b")
-                        .numCtx(4096)
-                        .numPredict(1200)
                         .format(converter.getJsonSchemaMap())
-                        .disableThinking()
-                        .temperature(0.2)
                         .build())
                 .defaultAdvisors(validation)
                 .build();
     }
 
-    public VideoSettingsRecord generate(String userMessage, String context) {
+    public VideoSettingsPayload generatePayload(String userMessage, String context) {
         String safeContext = context == null ? "" : context.trim();
 
         return internalChatClient.prompt()
@@ -83,6 +76,6 @@ public class VideoSettingGenerationService {
                         --------------------------
                         """.formatted(userMessage))
                 .call()
-                .entity(VideoSettingsRecord.class);
+                .entity(VideoSettingsPayload.class);
     }
 }

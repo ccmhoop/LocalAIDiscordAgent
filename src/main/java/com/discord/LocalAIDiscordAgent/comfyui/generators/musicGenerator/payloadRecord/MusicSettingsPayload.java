@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.payloadRecord;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record MusicSettingsRecord(
+public record MusicSettingsPayload(
         @JsonProperty(required = true) String tags,
         @JsonProperty(required = true) String lyrics,
         @JsonProperty(required = true) int bpm,

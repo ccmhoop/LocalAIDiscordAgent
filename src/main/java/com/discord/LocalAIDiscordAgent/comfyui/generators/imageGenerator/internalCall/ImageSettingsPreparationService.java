@@ -1,6 +1,7 @@
-package com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.imageAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.validation.ImageSettingsValidator;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
@@ -10,11 +11,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class ImageSettingsPreparationService {
 
-    private final ImageSettingGenerationService generationService;
+    private final ImageSettingCreatePayloadService generationService;
     private final ImageSettingsValidator validator;
 
     public ImageSettingsPreparationService(
-            ImageSettingGenerationService generationService,
+            ImageSettingCreatePayloadService generationService,
             ImageSettingsValidator validator
     ) {
         this.generationService = generationService;
@@ -30,7 +31,7 @@ public class ImageSettingsPreparationService {
         }
         String context = promptData.getSummary();
 
-        ImageSettingsRecord settings = generationService.generate(normalizedUserMessage, normalize(context));
+        ImageSettingsPayload settings = generationService.generatePayload(normalizedUserMessage, normalize(context));
         log.info("Generated image settings: {}", settings);
 
         if (!validator.isUsable(settings)) {
@@ -40,8 +41,8 @@ public class ImageSettingsPreparationService {
         promptData.setImageSettings(normalize(settings));
     }
 
-    private ImageSettingsRecord normalize(ImageSettingsRecord settings) {
-        return new ImageSettingsRecord(
+    private ImageSettingsPayload normalize(ImageSettingsPayload settings) {
+        return new ImageSettingsPayload(
                 normalize(settings.positivePrompt()),
                 normalize(settings.negativePrompt()),
                 settings.pixelWidth(),

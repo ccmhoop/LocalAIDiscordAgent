@@ -1,8 +1,7 @@
-package com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.imageAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
-import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
+import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
@@ -10,10 +9,8 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 @Service
-public class ImageSettingGenerationService {
+public class ImageSettingCreatePayloadService {
 
     private static final String SYSTEM_MESSAGE = """
             Your task is to generate:
@@ -61,32 +58,28 @@ public class ImageSettingGenerationService {
 
     private final ChatClient internalChatClient;
 
-    public ImageSettingGenerationService(ChatModel structuredLLMModel) {
+    public ImageSettingCreatePayloadService(ChatModel generatorPayloadChatModel) {
 
-        var converter = new BeanOutputConverter<>(ImageSettingsRecord.class);
-
-        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+        var converter = new BeanOutputConverter<>(ImageSettingsPayload.class);
 
         var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(ImageSettingsRecord.class)
-                .objectMapper(MapperUtils.lenientJsonMapper())
+                .outputType(ImageSettingsPayload.class)
                 .maxRepeatAttempts(3)
                 .build();
 
-        this.internalChatClient = ChatClient.builder(structuredLLMModel)
+        this.internalChatClient = ChatClient.builder(generatorPayloadChatModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .format(schemaFormat)
-                        .disableThinking()
-                        .temperature(0.5)
+                        .format(converter.getJsonSchemaMap())
                         .build())
                 .defaultAdvisors(validation)
                 .build();
     }
 
-    public ImageSettingsRecord generate(String userMessage, String context) {
+    public ImageSettingsPayload generatePayload(String userMessage, String context) {
         String safeContext = context == null ? "" : context.trim();
 
         return internalChatClient.prompt()
+                .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .system(SYSTEM_MESSAGE.formatted(safeContext))
                 .user("""
                         user_message:
@@ -95,6 +88,6 @@ public class ImageSettingGenerationService {
                         --------------------------
                         """.formatted(userMessage))
                 .call()
-                .entity(ImageSettingsRecord.class);
+                .entity(ImageSettingsPayload.class);
     }
 }

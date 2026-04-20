@@ -8,6 +8,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.net.URI;
 import java.net.URLEncoder;
@@ -40,12 +42,64 @@ public class ComfyuiService {
         this.objectMapper = new ObjectMapper();
     }
 
-    public byte[] runGenerationWorkflow(Map<String, Object> apiWorkflow) {
+    public Mono<GeneratedFile> runGenerationWorkflow(Map<String, Object> workflow) {
+        return Mono.fromCallable(() -> runGenerationWorkflowBlocking(workflow))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private GeneratedFile runGenerationWorkflowBlocking(Map<String, Object> workflow) {
         String clientId = UUID.randomUUID().toString();
         AtomicReference<String> promptIdRef = new AtomicReference<>();
         CompletableFuture<Void> finishedFuture = new CompletableFuture<>();
 
-        WebSocket webSocket = httpClient.newWebSocketBuilder()
+        WebSocket webSocket = openWebSocket(clientId, promptIdRef, finishedFuture);
+
+        try {
+            QueuePromptResponse response = queuePrompt(workflow, clientId);
+
+            String promptId = response.prompt_id();
+            promptIdRef.set(promptId);
+
+            if (response.node_errors() != null && !response.node_errors().isEmpty()) {
+                log.warn("ComfyUI returned node_errors for prompt {}: {}", promptId, response.node_errors());
+            }
+
+            log.info("Queued ComfyUI prompt {}", promptId);
+
+            finishedFuture.orTimeout(10, TimeUnit.MINUTES).join();
+
+            HistoryEntry historyEntry = fetchHistoryEntry(promptId);
+            FileRef fileRef = extractFirstFile(historyEntry);
+
+            if (fileRef == null) {
+                throw new IllegalStateException("No output file found in ComfyUI history for prompt_id=" + promptId);
+            }
+
+            byte[] bytes = downloadFile(fileRef);
+            if (bytes == null || bytes.length == 0) {
+                throw new IllegalStateException("Downloaded file is empty for prompt_id=" + promptId);
+            }
+
+            log.info("Downloaded ComfyUI output for prompt {} ({} bytes)", promptId, bytes.length);
+
+            return new GeneratedFile(
+                    promptId,
+                    fileRef.filename(),
+                    fileRef.subfolder(),
+                    fileRef.type(),
+                    bytes
+            );
+        } finally {
+            closeQuietly(webSocket);
+        }
+    }
+
+    private WebSocket openWebSocket(
+            String clientId,
+            AtomicReference<String> promptIdRef,
+            CompletableFuture<Void> finishedFuture
+    ) {
+        return httpClient.newWebSocketBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .buildAsync(
                         URI.create(wsBaseUrl + "/ws?clientId=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)),
@@ -102,64 +156,22 @@ public class ComfyuiService {
                         }
                 )
                 .join();
+    }
 
-        try {
-            QueuePromptRequest request = new QueuePromptRequest(apiWorkflow, clientId);
+    private QueuePromptResponse queuePrompt(Map<String, Object> workflow, String clientId) {
+        QueuePromptRequest request = new QueuePromptRequest(workflow, clientId);
 
-            QueuePromptResponse response = restClient.post()
-                    .uri("/prompt")
-                    .body(request)
-                    .retrieve()
-                    .body(QueuePromptResponse.class);
+        QueuePromptResponse response = restClient.post()
+                .uri("/prompt")
+                .body(request)
+                .retrieve()
+                .body(QueuePromptResponse.class);
 
-            if (response == null || response.prompt_id() == null || response.prompt_id().isBlank()) {
-                throw new IllegalStateException("ComfyUI did not return a prompt_id");
-            }
-
-            if (response.node_errors() != null && !response.node_errors().isEmpty()) {
-                log.warn("ComfyUI returned node_errors: {}", response.node_errors());
-            }
-
-            String promptId = response.prompt_id();
-            promptIdRef.set(promptId);
-
-            log.info("Queued ComfyUI prompt {}", promptId);
-
-            finishedFuture.orTimeout(10, TimeUnit.MINUTES).join();
-
-            Map<String, Object> historyEntry = fetchHistoryEntry(promptId);
-
-            FileRef fileRef = extractFirstFile(historyEntry);
-            if (fileRef == null) {
-                throw new IllegalStateException("No output file found in ComfyUI history for prompt_id=" + promptId);
-            }
-
-            URI fileUri = UriComponentsBuilder.fromPath("/view")
-                    .queryParam("filename", fileRef.filename())
-                    .queryParam("subfolder", fileRef.subfolder())
-                    .queryParam("type", fileRef.type())
-                    .build(true)
-                    .toUri();
-
-            byte[] fileBytes = restClient.get()
-                    .uri(fileUri)
-                    .retrieve()
-                    .body(byte[].class);
-
-            if (fileBytes == null || fileBytes.length == 0) {
-                throw new IllegalStateException("Downloaded file is empty");
-            }
-
-            log.info("Downloaded ComfyUI output for prompt {} ({} bytes)", promptId, fileBytes.length);
-            return fileBytes;
-
-        } finally {
-            try {
-                webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "done").join();
-            } catch (Exception e) {
-                log.debug("Ignoring websocket close error", e);
-            }
+        if (response == null || response.prompt_id() == null || response.prompt_id().isBlank()) {
+            throw new IllegalStateException("ComfyUI did not return a prompt_id");
         }
+
+        return response;
     }
 
     private void handleWebsocketMessage(
@@ -196,7 +208,7 @@ public class ComfyuiService {
         }
     }
 
-    private Map<String, Object> fetchHistoryEntry(String promptId) {
+    private HistoryEntry fetchHistoryEntry(String promptId) {
         Map<String, Object> history = restClient.get()
                 .uri("/history/{promptId}", promptId)
                 .retrieve()
@@ -213,11 +225,11 @@ public class ComfyuiService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> typed = (Map<String, Object>) rawMap;
-        return typed;
+        return new HistoryEntry(typed);
     }
 
-    private FileRef extractFirstFile(Map<String, Object> historyEntry) {
-        Object outputsObj = historyEntry.get("outputs");
+    private FileRef extractFirstFile(HistoryEntry historyEntry) {
+        Object outputsObj = historyEntry.data().get("outputs");
         if (!(outputsObj instanceof Map<?, ?> outputs)) {
             return null;
         }
@@ -233,6 +245,11 @@ public class ComfyuiService {
             }
 
             ref = extractFromField(nodeOutput, "images");
+            if (ref != null) {
+                return ref;
+            }
+
+            ref = extractFromField(nodeOutput, "videos");
             if (ref != null) {
                 return ref;
             }
@@ -263,6 +280,28 @@ public class ComfyuiService {
         return null;
     }
 
+    private byte[] downloadFile(FileRef fileRef) {
+        URI fileUri = UriComponentsBuilder.fromPath("/view")
+                .queryParam("filename", fileRef.filename())
+                .queryParam("subfolder", fileRef.subfolder())
+                .queryParam("type", fileRef.type())
+                .build(true)
+                .toUri();
+
+        return restClient.get()
+                .uri(fileUri)
+                .retrieve()
+                .body(byte[].class);
+    }
+
+    private void closeQuietly(WebSocket webSocket) {
+        try {
+            webSocket.sendClose(WebSocket.NORMAL_CLOSURE, "done").join();
+        } catch (Exception e) {
+            log.debug("Ignoring websocket close error", e);
+        }
+    }
+
     private String asString(Object value) {
         return value == null ? null : String.valueOf(value);
     }
@@ -282,5 +321,17 @@ public class ComfyuiService {
             String filename,
             String subfolder,
             String type
+    ) {}
+
+    public record HistoryEntry(
+            Map<String, Object> data
+    ) {}
+
+    public record GeneratedFile(
+            String promptId,
+            String filename,
+            String subfolder,
+            String type,
+            byte[] bytes
     ) {}
 }

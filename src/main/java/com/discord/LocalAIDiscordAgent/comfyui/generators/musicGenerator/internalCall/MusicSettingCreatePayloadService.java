@@ -1,12 +1,6 @@
-package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.StreamReadFeature;
-import com.fasterxml.jackson.core.json.JsonReadFeature;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
@@ -19,9 +13,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class MusicSettingGenerationService {
-
-    private final ObjectMapper objectMapper;
+public class MusicSettingCreatePayloadService {
 
     private static final String SYSTEM_MESSAGE = """
             You are a music generation settings generator.
@@ -92,43 +84,24 @@ public class MusicSettingGenerationService {
 
     private final ChatClient internalChatClient;
 
-    public MusicSettingGenerationService(ChatModel structuredLLMModel) {
+    public MusicSettingCreatePayloadService(ChatModel generatorPayloadChatModel) {
 
-        JsonFactory factory = JsonFactory.builder()
-                .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
-                .build();
-
-        this.objectMapper = JsonMapper.builder(factory)
-                .findAndAddModules()
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
-                .enable(JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
-                .build();
-
-        var converter = new BeanOutputConverter<>(MusicSettingsRecord.class);
+        var converter = new BeanOutputConverter<>(MusicSettingsPayload.class);
 
         var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(MusicSettingsRecord.class)
-//                .objectMapper(new ObjectMapper())
+                .outputType(MusicSettingsPayload.class)
                 .maxRepeatAttempts(3)
                 .build();
 
-
-        this.internalChatClient = ChatClient.builder(structuredLLMModel)
+        this.internalChatClient = ChatClient.builder(generatorPayloadChatModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .model("ministral-3:14b")
-                        .numCtx(4096)
-                        .numPredict(1200)
                         .format(converter.getJsonSchemaMap())
-                        .disableThinking()
-                        .temperature(0.2)
                         .build())
                 .defaultAdvisors(validation)
                 .build();
     }
 
-    public MusicSettingsRecord generate(String userMessage) {
+    public MusicSettingsPayload generatePayload(String userMessage) {
         return internalChatClient.prompt()
                 .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .system(SYSTEM_MESSAGE)
@@ -141,6 +114,6 @@ public class MusicSettingGenerationService {
                         --------------------------
                         """.formatted(userMessage))
                 .call()
-                .entity(MusicSettingsRecord.class);
+                .entity(MusicSettingsPayload.class);
     }
 }

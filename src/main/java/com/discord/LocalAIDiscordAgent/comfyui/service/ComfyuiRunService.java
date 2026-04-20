@@ -1,13 +1,12 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.service.ImageGenerationService;
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.service.MusicGenerationService;
-import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.service.VideoGenerationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.service.ImageGenerationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.service.MusicGenerationService;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.service.VideoGenerationService;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.nio.file.Path;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Service
@@ -20,22 +19,22 @@ public class ComfyuiRunService {
     public ComfyuiRunService(
             MusicGenerationService musicGenerationService,
             ImageGenerationService imageGenerationService,
-            VideoGenerationService videoGenerationService) {
+            VideoGenerationService videoGenerationService
+    ) {
         this.musicGenerationService = musicGenerationService;
         this.imageGenerationService = imageGenerationService;
         this.videoGenerationService = videoGenerationService;
     }
 
-    public Path generateMusic(PromptData promptData) throws Exception {
-       return musicGenerationService.generateMusic(promptData);
+    public Mono<ComfyuiService.GeneratedFile> generateMusic(PromptData promptData) {
+        return musicGenerationService.generateMusic(promptData);
     }
 
-    public Path generateImage(PromptData promptData) throws Exception{
+    public Mono<ComfyuiService.GeneratedFile> generateImage(PromptData promptData) {
         return imageGenerationService.generateImage(promptData);
     }
 
-    public Path generateVideo(PromptData promptData) throws Exception{
+    public Mono<ComfyuiService.GeneratedFile> generateVideo(PromptData promptData) {
         return videoGenerationService.generateVideo(promptData);
     }
-
 }

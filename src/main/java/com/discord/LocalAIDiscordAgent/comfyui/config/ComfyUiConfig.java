@@ -24,9 +24,14 @@ public class ComfyUiConfig {
             HttpClient comfyUiHttpClient,
             @Value("${comfyui.http-base-url}") String httpBaseUrl
     ) {
+        JdkClientHttpRequestFactory requestFactory =
+                new JdkClientHttpRequestFactory(comfyUiHttpClient);
+
+        requestFactory.setReadTimeout(Duration.ofSeconds(30));
+
         return RestClient.builder()
                 .baseUrl(httpBaseUrl)
-                .requestFactory(new JdkClientHttpRequestFactory(comfyUiHttpClient))
+                .requestFactory(requestFactory)
                 .build();
     }
 }

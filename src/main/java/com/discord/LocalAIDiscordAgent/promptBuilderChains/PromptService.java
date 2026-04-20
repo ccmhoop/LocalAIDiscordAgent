@@ -4,10 +4,10 @@ import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.systemMessage.SystemMessagePresets;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.*;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RuntimeContext;
+import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.SystemMessageConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 
 @Slf4j
 @Service
@@ -24,13 +24,9 @@ public class PromptService {
         this.llmCallChain = llmCallChain;
     }
 
-    public String getSystemPromptAsJson(
-            DiscGlobalData discGlobalData
-    ) {
-        RuntimeContext runtimeContext = llmCallChain.executeContextChainRuntime(discGlobalData);
-        if (discGlobalData.getImagePath() != null)  {
-            return null;
-        }
+    public String getSystemPromptAsJson(DiscGlobalData discGlobalData) {
+        RuntimeContext runtimeContext = llmCallChain.executeTextContextRuntime(discGlobalData);
+
         return systemMessageFactory.buildSystemMessage(
                 buildSystemMessageConfig(runtimeContext)
         );
@@ -40,5 +36,4 @@ public class PromptService {
         SystemMessageConfig baseConfig = SystemMessagePresets.qwenFriendlyDefault();
         return SystemMessagePresets.withMessageMemory(baseConfig, context);
     }
-
 }

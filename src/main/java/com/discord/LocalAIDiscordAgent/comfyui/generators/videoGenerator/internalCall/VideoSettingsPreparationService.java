@@ -1,6 +1,6 @@
-package com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.payloadRecord.VideoSettingsPayload;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class VideoSettingsPreparationService {
 
-    private final VideoSettingGenerationService generationService;
+    private final VideoSettingCreatePayloadService generationService;
 
     public VideoSettingsPreparationService(
-            VideoSettingGenerationService generationService
+            VideoSettingCreatePayloadService generationService
     ) {
         this.generationService = generationService;
     }
@@ -27,14 +27,14 @@ public class VideoSettingsPreparationService {
         }
         String context = promptData.getSummary();
 
-        VideoSettingsRecord settings = generationService.generate(normalizedUserMessage, normalize(context));
+        VideoSettingsPayload settings = generationService.generatePayload(normalizedUserMessage, normalize(context));
         log.info("Generated video settings: {}", settings);
 
         promptData.setVideoSettings(normalize(settings));
     }
 
-    private VideoSettingsRecord normalize(VideoSettingsRecord settings) {
-        return new VideoSettingsRecord(
+    private VideoSettingsPayload normalize(VideoSettingsPayload settings) {
+        return new VideoSettingsPayload(
                 normalize(settings.positivePrompt()),
                 normalize(settings.negativePrompt())
         );

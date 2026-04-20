@@ -1,6 +1,6 @@
-package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.validation;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.validation;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -20,7 +20,7 @@ public class MusicSettingsValidator {
             "640x1536"
     );
 
-    public boolean isUsable(ImageSettingsRecord settings) {
+    public boolean isUsable(ImageSettingsPayload settings) {
         if (settings == null) {
             return false;
         }

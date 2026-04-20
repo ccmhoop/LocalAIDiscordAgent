@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
+package com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.validation.MusicSettingsValidator;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.validation.MusicSettingsValidator;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
@@ -12,11 +12,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class MusicSettingsPreparationService {
 
-    private final MusicSettingGenerationService generationService;
+    private final MusicSettingCreatePayloadService generationService;
 //    private final MusicSettingsValidator validator;
 
     public MusicSettingsPreparationService(
-            MusicSettingGenerationService generationService,
+            MusicSettingCreatePayloadService generationService,
             MusicSettingsValidator validator
     ) {
         this.generationService = generationService;
@@ -32,7 +32,7 @@ public class MusicSettingsPreparationService {
         }
 //        String context = promptData.getSummary();
 
-        MusicSettingsRecord settings = generationService.generate(normalizedUserMessage);
+        MusicSettingsPayload settings = generationService.generatePayload(normalizedUserMessage);
         log.info("Generated music settings: {}", settings);
 
 //        if (!validator.isUsable(settings)) {
@@ -42,8 +42,8 @@ public class MusicSettingsPreparationService {
         promptData.setMusicSettings(settings);
     }
 
-    private ImageSettingsRecord normalize(ImageSettingsRecord settings) {
-        return new ImageSettingsRecord(
+    private ImageSettingsPayload normalize(ImageSettingsPayload settings) {
+        return new ImageSettingsPayload(
                 normalize(settings.positivePrompt()),
                 normalize(settings.negativePrompt()),
                 settings.pixelWidth(),

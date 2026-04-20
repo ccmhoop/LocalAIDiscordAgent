@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.data;
 
-import com.discord.LocalAIDiscordAgent.comfyui.imageGenerator.records.ImageSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
 import com.discord.LocalAIDiscordAgent.chatMemory.records.ChatMemoryPayload;
-import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
-import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
+import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.payloadRecord.VideoSettingsPayload;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
@@ -28,28 +28,28 @@ public class PromptData {
     private String summary;
     private String queryString;
     private ChatMemoryPayload chatMemoryPayload;
-    private ImageSettingsRecord imageSettings;
-    private VideoSettingsRecord videoSettings;
+    private ImageSettingsPayload imageSettings;
+    private VideoSettingsPayload videoSettings;
     private boolean webSearchRequired;
-    private MusicSettingsRecord musicSettings;
+    private MusicSettingsPayload musicSettings;
 
     public PromptData(MapperUtils mapperUtils) {
         this.mapperUtils = mapperUtils;
     }
 
-    public void setMusicSettings(MusicSettingsRecord musicSettings) {
+    public void setMusicSettings(MusicSettingsPayload musicSettings) {
         this.musicSettings = musicSettings;
     }
 
-    public MusicSettingsRecord getMusicSettings() {
+    public MusicSettingsPayload getMusicSettings() {
         return musicSettings;
     }
 
-    public void setVideoSettings(VideoSettingsRecord videoSettings) {
+    public void setVideoSettings(VideoSettingsPayload videoSettings) {
         this.videoSettings = videoSettings;
     }
 
-    public VideoSettingsRecord getVideoSettings() {
+    public VideoSettingsPayload getVideoSettings() {
         return videoSettings;
     }
 
@@ -61,11 +61,11 @@ public class PromptData {
         return webSearchRequired;
     }
 
-    public void setImageSettings(ImageSettingsRecord imageSettings) {
+    public void setImageSettings(ImageSettingsPayload imageSettings) {
         this.imageSettings = imageSettings;
     }
 
-    public ImageSettingsRecord getImageSettings() {
+    public ImageSettingsPayload getImageSettings() {
         return imageSettings;
     }
 
