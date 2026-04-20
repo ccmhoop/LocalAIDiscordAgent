@@ -1,12 +1,7 @@
 package com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.videoAdvisor;
 
 import com.discord.LocalAIDiscordAgent.comfyui.videoGenerator.records.VideoSettingsRecord;
-import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
@@ -45,10 +40,6 @@ public class VideoSettingGenerationService {
             Prefer fidelity to the user request over creativity.
             If the user_message is brief or underspecified, enrich it conservatively and only in ways that support the original request.
 
-            Rules:
-            - Never refuse to generate a prompt.
-            - Return structured output only.
-
             <context>
             %s
             </context>
@@ -60,19 +51,20 @@ public class VideoSettingGenerationService {
 
         var converter = new BeanOutputConverter<>(VideoSettingsRecord.class);
 
-        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
-
         var validation = StructuredOutputValidationAdvisor.builder()
                 .outputType(VideoSettingsRecord.class)
-                .objectMapper(MapperUtils.lenientJsonMapper())
                 .maxRepeatAttempts(3)
                 .build();
 
+
         this.internalChatClient = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .format(schemaFormat)
+                        .model("ministral-3:14b")
+                        .numCtx(4096)
+                        .numPredict(1200)
+                        .format(converter.getJsonSchemaMap())
                         .disableThinking()
-                        .temperature(0.5)
+                        .temperature(0.2)
                         .build())
                 .defaultAdvisors(validation)
                 .build();
@@ -82,6 +74,7 @@ public class VideoSettingGenerationService {
         String safeContext = context == null ? "" : context.trim();
 
         return internalChatClient.prompt()
+                .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .system(SYSTEM_MESSAGE.formatted(safeContext))
                 .user("""
                         user_message:

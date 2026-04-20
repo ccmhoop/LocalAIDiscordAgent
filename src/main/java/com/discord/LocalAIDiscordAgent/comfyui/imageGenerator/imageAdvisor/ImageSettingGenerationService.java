@@ -53,11 +53,7 @@ public class ImageSettingGenerationService {
             - 768  x 1344
             - 1536 x 640
             - 640  x 1536
-
-            Rules:
-            - Never refuse to generate a prompt.
-            - Return structured output only.
-
+            
             <context>
             %s
             </context>

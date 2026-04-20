@@ -49,6 +49,7 @@ public class BotConfiguration {
         discord.on(listener.getEventType())
                 .flatMap(listener::execute)
                 .onErrorResume(listener::handleError)
+                .doOnError(error -> System.err.println("Error processing event: " + error.getMessage()))
                 .subscribe();
     }
 }

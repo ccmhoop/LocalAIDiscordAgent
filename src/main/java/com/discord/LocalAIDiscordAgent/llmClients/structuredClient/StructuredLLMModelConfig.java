@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class StructuredLLMModelConfig {
 
+    /*
+         Keep alive is set to 0s to prevent Ollama from filling the VRAM.
+         This prevents freezing the file generation process on low VRAM devices.
+     */
     @Bean
     public OllamaChatModel structuredLLMModel(OllamaApi ollamaApi) {
         return OllamaChatModel.builder()
@@ -16,8 +20,7 @@ public class StructuredLLMModelConfig {
                 .defaultOptions(
                         OllamaChatOptions.builder()
                                 .model("qwen3.5:9b")
-//                                .model("lfm2")
-//                                .model("devstral-small-2:24b")
+                                .keepAlive("0s")
                                 .disableThinking()
                                 .temperature(0.7)
                                 .numCtx(8192)

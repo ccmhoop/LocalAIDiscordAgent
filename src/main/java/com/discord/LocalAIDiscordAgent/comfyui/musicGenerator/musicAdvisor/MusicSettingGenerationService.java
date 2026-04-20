@@ -1,8 +1,14 @@
 package com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.musicAdvisor;
 
 import com.discord.LocalAIDiscordAgent.comfyui.musicGenerator.records.MusicSettingsRecord;
-import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.StreamReadFeature;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
@@ -10,10 +16,12 @@ import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
 
+@Slf4j
 @Service
 public class MusicSettingGenerationService {
+
+    private final ObjectMapper objectMapper;
 
     private static final String SYSTEM_MESSAGE = """
             You are a music generation settings generator.
@@ -56,9 +64,9 @@ public class MusicSettingGenerationService {
                 - Only include the lyrics and Section Headers.
 
             3. bpm:
-                - Choose an appropriate BPM based on the requested style, mood, and energy
-                - If the user specifies a BPM, use it
-                - If no BPM is provided, infer a musically appropriate value
+                - Choose an appropriate BPM based on the requested style, mood, and energy.
+                - If the user specifies a BPM, use it.
+                - If no BPM is provided, infer a musically appropriate value that fits the user's intent.
             
             4. keyscale:
                 - Choose an appropriate musical key from the predefined list, case sensitive: [ C major, G major, D major, A major, F major, Bb major, A minor, E minor, D minor, B minor ]
@@ -68,7 +76,7 @@ public class MusicSettingGenerationService {
             5. duration:
                 - Choose an appropriate duration based on the bpm
                 - Minimum duration is 90 seconds
-                - Maximum duration is 180 seconds
+                - Maximum duration is 150 seconds
             
             6. title:
                 - Generate a descriptive title that captures the user's intent
@@ -79,40 +87,54 @@ public class MusicSettingGenerationService {
             3. Remove filler, greetings, and irrelevant text.
             4. Do not invent highly specific details unless they are clearly implied by the user_message.
             5. If the request is vague, generate sensible defaults that fit the user's intent.
+            
             """;
 
     private final ChatClient internalChatClient;
 
     public MusicSettingGenerationService(ChatModel structuredLLMModel) {
 
-        var converter = new BeanOutputConverter<>(MusicSettingsRecord.class);
+        JsonFactory factory = JsonFactory.builder()
+                .enable(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION)
+                .build();
 
-        Map<String, Object> schemaFormat = converter.getJsonSchemaMap();
+        this.objectMapper = JsonMapper.builder(factory)
+                .findAndAddModules()
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
+                .enable(JsonReadFeature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER)
+                .build();
+
+        var converter = new BeanOutputConverter<>(MusicSettingsRecord.class);
 
         var validation = StructuredOutputValidationAdvisor.builder()
                 .outputType(MusicSettingsRecord.class)
-                .objectMapper(MapperUtils.lenientJsonMapper())
+//                .objectMapper(new ObjectMapper())
                 .maxRepeatAttempts(3)
                 .build();
 
+
         this.internalChatClient = ChatClient.builder(structuredLLMModel)
                 .defaultOptions(OllamaChatOptions.builder()
-                        .format(schemaFormat)
                         .model("ministral-3:14b")
+                        .numCtx(4096)
+                        .numPredict(1200)
+                        .format(converter.getJsonSchemaMap())
                         .disableThinking()
-                        .temperature(0.5)
+                        .temperature(0.2)
                         .build())
                 .defaultAdvisors(validation)
                 .build();
     }
 
     public MusicSettingsRecord generate(String userMessage) {
-
         return internalChatClient.prompt()
+                .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
                 .system(SYSTEM_MESSAGE)
                 .user("""
                         Generate a song based on the user_message.
-                        
+
                         user_message:
                         --------------------------
                         %s

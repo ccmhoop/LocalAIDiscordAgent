@@ -24,17 +24,20 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
     private final ChatClientService chatClientService;
     private final ProcessSummaryClient processSummaryClient;
     private final DiscGlobalDataService discGlobalDataService;
+    private final DiscordRequestQueueService discordRequestQueueService;
 
     public MessageCreateListenerINTF(
             UserService userService,
             ChatClientService chatClientService,
             ProcessSummaryClient processSummaryClient,
-            DiscGlobalDataService discGlobalDataService
+            DiscGlobalDataService discGlobalDataService,
+            DiscordRequestQueueService discordRequestQueueService
     ) {
         this.userService = userService;
         this.chatClientService = chatClientService;
         this.processSummaryClient = processSummaryClient;
         this.discGlobalDataService = discGlobalDataService;
+        this.discordRequestQueueService = discordRequestQueueService;
     }
 
     @Override
@@ -74,12 +77,17 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
                     .then();
         }
 
-        return processCommandAI(
-                message,
-                userService,
-                chatClientService,
-                processSummaryClient
-        ).contextWrite(ctx -> DiscGlobalDataContextHolder.put(ctx, discGlobalData));
+        String requestId = message.getId().asString();
+
+        return discordRequestQueueService.enqueue(
+                requestId,
+                () -> processCommandAI(
+                        message,
+                        userService,
+                        chatClientService,
+                        processSummaryClient
+                ).contextWrite(ctx -> DiscGlobalDataContextHolder.put(ctx, discGlobalData))
+        );
     }
 
     private boolean startsWithBotMention(String content, Snowflake botId) {
