@@ -80,7 +80,7 @@ public class LLMCallChain {
                     ragContextService.prepare(discGlobalData, promptData);
 
                     if (promptData.getRetrievedContext() != null) {
-                        LLMToolCalls.callSummaryTool(promptData);
+                        LLMToolCalls.callSummaryTool(promptData, discGlobalData);
                     }
 
                     imageSettingsPreparationService.prepare(discGlobalData, promptData);
@@ -99,7 +99,7 @@ public class LLMCallChain {
                     ragContextService.prepare(discGlobalData, promptData);
 
                     if (promptData.getRetrievedContext() != null) {
-                        LLMToolCalls.callSummaryTool(promptData);
+                        LLMToolCalls.callSummaryTool(promptData, discGlobalData);
                     }
 
                     videoService.prepare(discGlobalData, promptData);
@@ -129,11 +129,11 @@ public class LLMCallChain {
 
         if (promptData.getRetrievedContext() == null) {
             webSearchPreparationService.prepare(discGlobalData, promptData);
-            executeWebSearchyChain(promptData);
+            executeWebSearchyChain( discGlobalData, promptData);
         }
 
         if (promptData.getRetrievedContext() != null) {
-            LLMToolCalls.callSummaryTool(promptData);
+            LLMToolCalls.callSummaryTool(promptData, discGlobalData);
         }
 
         return new RuntimeContext(
@@ -148,9 +148,9 @@ public class LLMCallChain {
         );
     }
 
-    private void executeWebSearchyChain(PromptData promptData) {
+    private void executeWebSearchyChain(DiscGlobalData discGlobalData, PromptData promptData) {
         if (promptData.isWebSearchRequired()) {
-            LLMToolCalls.callWebSearchTool();
+            LLMToolCalls.callWebSearchTool(discGlobalData);
         }
     }
 }

@@ -38,7 +38,6 @@ import java.util.stream.StreamSupport;
 public class ToolService {
 
     private final ChatClient toolClient;
-    private final DiscGlobalData discGlobalData;
 //    private final ToolSummaryService toolSummaryService;
     private final ToolSystemMsgFactory toolSystemMsgFactory;
     private final WebSearchMemoryService webSearchMemoryService;
@@ -48,14 +47,12 @@ public class ToolService {
 
     public ToolService(
             ChatClient executeToolsClient,
-            DiscGlobalData discGlobalData,
             ToolSystemMsgFactory toolSystemMsgFactory,
             WebSearchMemoryService webSearchMemoryService
     ) {
         this.webSearchMemoryService = webSearchMemoryService;
         this.toolSystemMsgFactory = toolSystemMsgFactory;
 //        this.toolSummaryService = toolSummaryService;
-        this.discGlobalData = discGlobalData;
         this.toolClient = executeToolsClient;
     }
 
@@ -69,10 +66,10 @@ public class ToolService {
      * @return a summarized context generated from the tool outputs,
      * or null if no valid results are available
      */
-    public String executeTools() {
+    public String executeTools(DiscGlobalData discGlobalData) {
 //        this.webQAResults = webQAResults;
 
-        String toolsResults = processTools();
+        String toolsResults = processTools(discGlobalData);
 
         if (toolsResults.isEmpty()) {
             return null;
@@ -81,8 +78,8 @@ public class ToolService {
         return toolsResults;
     }
 
-    private String processTools() {
-        Prompt prompt = buildToolPrompt();
+    private String processTools(DiscGlobalData discGlobalData) {
+        Prompt prompt = buildToolPrompt(discGlobalData);
         ChatResponse toolResponse = runToolLLM(prompt);
         String toolsResults = "";
 
@@ -94,14 +91,14 @@ public class ToolService {
         return toolsResults;
     }
 
-    private Prompt buildToolPrompt() {
+    private Prompt buildToolPrompt(DiscGlobalData discGlobalData) {
         ChatOptions chatOptions = ToolCallingChatOptions.builder()
                 .toolCallbacks(ToolCallbacks.from(new WebSearchTool(webSearchMemoryService)))
                 .internalToolExecutionEnabled(false)
                 .build();
 
         String toolInstructions = toolSystemMsgFactory.buildToolSystemMsgJson(
-                ToolSystemMsgPresets.withContext(buildToolRuntimeContext())
+                ToolSystemMsgPresets.withContext(buildToolRuntimeContext(discGlobalData))
         );
 
         return Prompt.builder()
@@ -200,7 +197,7 @@ public class ToolService {
             return false;
         }
     }
-    private ToolRuntimeContext buildToolRuntimeContext() {
+    private ToolRuntimeContext buildToolRuntimeContext(DiscGlobalData discGlobalData) {
         return new ToolRuntimeContext(
                 LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                 discGlobalData.getUserProfile(),

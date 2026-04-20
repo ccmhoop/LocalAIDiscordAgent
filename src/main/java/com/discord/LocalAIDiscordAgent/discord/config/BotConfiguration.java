@@ -98,7 +98,6 @@ public class BotConfiguration {
             T event
     ) {
         return Mono.defer(() -> listener.execute(event))
-                .timeout(EVENT_TIMEOUT)
                 .retryWhen(
                         Retry.backoff(EVENT_RETRY_COUNT, EVENT_RETRY_FIRST_BACKOFF)
                                 .maxBackoff(EVENT_RETRY_MAX_BACKOFF)

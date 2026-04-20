@@ -15,24 +15,25 @@ import java.util.Map;
 @Service
 public class ToolSummaryService {
 
-    private final DiscGlobalData discGlobalData;
     private final ChatClient structuredToolClient;
     private final PromptData promptData;
+    private  DiscGlobalData discGlobalData;
 
     private String toolResults;
 
     public ToolSummaryService(
-            DiscGlobalData discGlobalData,
             ChatClient structuredToolClient, PromptData promptData
     ) {
         this.structuredToolClient = structuredToolClient;
-        this.discGlobalData = discGlobalData;
         this.promptData = promptData;
     }
 
     public String summerizeToolResults(
-            String retrievedContext
+            String retrievedContext,
+            DiscGlobalData discGlobalData
+
     ) {
+        this.discGlobalData = discGlobalData;
         this.toolResults = retrievedContext;
 
         String summarizedToolResults = summarizeToolResults();

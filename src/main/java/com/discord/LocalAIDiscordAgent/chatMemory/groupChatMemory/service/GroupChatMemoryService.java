@@ -40,12 +40,10 @@ public class GroupChatMemoryService extends ChatMemoryService<GroupChatMemory> {
 
     public GroupChatMemoryService(
             GroupChatMemoryRepository groupChatMemoryRepository,
-            @Value("${group.chat.memory.message.limit}") int messageLimit,
-            DiscGlobalData discGlobalData
+            @Value("${group.chat.memory.message.limit}") int messageLimit
     ) {
-        super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class, discGlobalData);
+        super(groupChatMemoryRepository, messageLimit, GroupChatMemory.class);
         this.chatRepo = groupChatMemoryRepository;
-        this.discGlobalData = discGlobalData;
     }
 
     public void setDiscGlobalData(DiscGlobalData discGlobalData) {

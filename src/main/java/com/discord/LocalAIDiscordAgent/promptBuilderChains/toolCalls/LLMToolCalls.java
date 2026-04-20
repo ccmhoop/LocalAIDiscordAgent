@@ -1,5 +1,6 @@
 package com.discord.LocalAIDiscordAgent.promptBuilderChains.toolCalls;
 
+import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolService;
 import com.discord.LocalAIDiscordAgent.toolClient.service.ToolSummaryService;
@@ -22,15 +23,15 @@ public class LLMToolCalls {
         this.toolSummaryService = toolSummaryService;
     }
 
-    public void callWebSearchTool() {
-        String toolContext = toolService.executeTools();
+    public void callWebSearchTool(DiscGlobalData discGlobalData) {
+        String toolContext = toolService.executeTools(discGlobalData);
         promptData.setRetrievedContext(toolContext);
     }
 
-    public void callSummaryTool(PromptData data) {
+    public void callSummaryTool(PromptData data, DiscGlobalData discGlobalData) {
         String retrievedContextString = data.getRetrievedContext();
         if (retrievedContextString != null && !retrievedContextString.isEmpty()) {
-            String summary = toolSummaryService.summerizeToolResults(retrievedContextString);
+            String summary = toolSummaryService.summerizeToolResults(retrievedContextString, discGlobalData );
             data.setSummary(summary);
         }else {
             data.setSummary(null);

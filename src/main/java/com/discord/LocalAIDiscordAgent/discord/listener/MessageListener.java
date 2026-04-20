@@ -3,7 +3,6 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
-import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessSummaryClient;
 import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
 import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
 import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
@@ -35,7 +34,6 @@ public abstract class MessageListener {
             Message eventMessage,
             UserService userService,
             ChatClientService chatClientService,
-            ProcessSummaryClient processSummaryClient,
             LLMCallChain llmCallChain
     ) {
         return DiscGlobalDataContextHolder.get()

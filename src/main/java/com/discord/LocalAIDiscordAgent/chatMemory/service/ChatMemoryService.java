@@ -3,9 +3,6 @@ package com.discord.LocalAIDiscordAgent.chatMemory.service;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.model.GroupChatMemory;
 import com.discord.LocalAIDiscordAgent.chatMemory.groupChatMemory.repository.GroupChatMemoryRepository;
 import com.discord.LocalAIDiscordAgent.chatMemory.interfaces.ChatMemoryINTF;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.repository.RecentChatMemoryRepository;
-import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,18 +26,15 @@ public abstract class ChatMemoryService<T extends ChatMemoryINTF> {
     private final JpaRepository<T, Long> repo;
     private final Class<T> modelClass;
     private int messageLimit;
-    private final DiscGlobalData discGlobalData;
 
     public ChatMemoryService(
             JpaRepository<T, Long> repo,
             int messageLimit,
-            Class<T> modelClass,
-            DiscGlobalData discGlobalData
+            Class<T> modelClass
     ) {
         this.repo = repo;
         this.modelClass = modelClass;
         this.messageLimit = messageLimit;
-        this.discGlobalData = discGlobalData;
     }
 
     public abstract void saveAndTrim(List<Message> messages, UserEntity user);

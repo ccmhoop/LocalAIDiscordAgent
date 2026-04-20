@@ -38,12 +38,10 @@ public class RecentChatMemoryService extends ChatMemoryService<RecentChatMemory>
 
     public RecentChatMemoryService(
             RecentChatMemoryRepository recentChatMemoryRepository,
-            @Value("${recent.chat.memory.message.limit}") int messageLimit,
-            DiscGlobalData discGlobalData
+            @Value("${recent.chat.memory.message.limit}") int messageLimit
     ) {
-        super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class, discGlobalData);
+        super(recentChatMemoryRepository, messageLimit, RecentChatMemory.class);
         this.chatRepo = recentChatMemoryRepository;
-        this.discGlobalData = discGlobalData;
     }
 
     public void setDiscGlobalData(DiscGlobalData discGlobalData) {

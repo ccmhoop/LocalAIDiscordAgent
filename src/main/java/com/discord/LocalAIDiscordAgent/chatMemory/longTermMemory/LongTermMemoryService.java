@@ -35,9 +35,8 @@ public class LongTermMemoryService {
 
     private boolean shouldSave = true;
 
-    public LongTermMemoryService(DiscGlobalData discGlobalData, VectorStore longTermVectorMemory) {
+    public LongTermMemoryService(VectorStore longTermVectorMemory) {
         this.writer = longTermVectorMemory;
-        this.discGlobalData = discGlobalData;
         this.vectorStore = longTermVectorMemory;
     }
 
