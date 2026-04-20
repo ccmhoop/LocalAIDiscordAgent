@@ -5,10 +5,13 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,9 +29,11 @@ public class DiscordRequestQueueService {
     private final Sinks.Many<QueuedRequest> sink =
             Sinks.many().unicast().onBackpressureBuffer();
 
-    private final ConcurrentMap<String, Sinks.One<Void>> inFlightRequests = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, InternalAdmission> inFlightRequests = new ConcurrentHashMap<>();
+    private final List<InternalAdmission> pendingQueue = new ArrayList<>();
 
     private final Object emitLock = new Object();
+    private final Object queueLock = new Object();
 
     private final AtomicBoolean acceptingRequests = new AtomicBoolean(false);
 
@@ -58,7 +63,8 @@ public class DiscordRequestQueueService {
         log.info("Discord request queue started");
     }
 
-    public Mono<Void> enqueue(String requestId, Supplier<Mono<Void>> taskSupplier) {
+
+    public Mono<QueueAdmission> enqueueWithPosition(String requestId, Supplier<Mono<Void>> taskSupplier) {
         Objects.requireNonNull(requestId, "requestId must not be null");
         Objects.requireNonNull(taskSupplier, "taskSupplier must not be null");
 
@@ -66,15 +72,27 @@ public class DiscordRequestQueueService {
             return Mono.error(new IllegalStateException("Discord request queue is not accepting requests"));
         }
 
-        Sinks.One<Void> completion = Sinks.one();
-        Sinks.One<Void> existing = inFlightRequests.putIfAbsent(requestId, completion);
-
+        InternalAdmission existing = inFlightRequests.get(requestId);
         if (existing != null) {
             log.info("Request already queued/running [{}] - joining existing execution", requestId);
-            return existing.asMono();
+            return Mono.just(existing.publicView());
         }
 
-        QueuedRequest request = new QueuedRequest(requestId, taskSupplier, completion);
+        InternalAdmission admission = new InternalAdmission(requestId);
+
+        synchronized (queueLock) {
+            InternalAdmission doubleCheck = inFlightRequests.get(requestId);
+            if (doubleCheck != null) {
+                log.info("Request already queued/running [{}] - joining existing execution", requestId);
+                return Mono.just(doubleCheck.publicView());
+            }
+
+            inFlightRequests.put(requestId, admission);
+            pendingQueue.add(admission);
+            refreshQueuePositionsLocked();
+        }
+
+        QueuedRequest request = new QueuedRequest(requestId, taskSupplier, admission);
 
         Sinks.EmitResult emitResult;
         synchronized (emitLock) {
@@ -82,22 +100,36 @@ public class DiscordRequestQueueService {
         }
 
         if (emitResult.isFailure()) {
-            inFlightRequests.remove(requestId, completion);
-            return Mono.error(new IllegalStateException(
-                    "Failed to enqueue request [" + requestId + "]: " + emitResult
-            ));
+            synchronized (queueLock) {
+                pendingQueue.remove(admission);
+                inFlightRequests.remove(requestId, admission);
+                refreshQueuePositionsLocked();
+            }
+
+            IllegalStateException enqueueError =
+                    new IllegalStateException("Failed to enqueue request [" + requestId + "]: " + emitResult);
+
+            admission.positionSink().tryEmitError(enqueueError);
+            admission.startedSink().tryEmitError(enqueueError);
+            admission.completionSink().tryEmitError(enqueueError);
+
+            return Mono.error(enqueueError);
         }
 
-        log.info("Queued request [{}]", requestId);
-
-        return completion.asMono()
-                .doOnCancel(() ->
-                        log.info("Caller stopped waiting for queued request [{}]", requestId)
-                );
+        log.info("Queued request [{}] at current position {}", requestId, admission.currentPosition());
+        return Mono.just(admission.publicView());
     }
 
     private Mono<Void> processRequest(QueuedRequest request) {
         return Mono.defer(() -> {
+                    synchronized (queueLock) {
+                        pendingQueue.remove(request.admission());
+                        refreshQueuePositionsLocked();
+                    }
+
+                    request.admission().startedSink().tryEmitEmpty();
+                    request.admission().positionSink().tryEmitComplete();
+
                     Mono<Void> task = request.taskSupplier().get();
 
                     if (task == null) {
@@ -114,7 +146,7 @@ public class DiscordRequestQueueService {
                 )
                 .doOnSuccess(unused -> {
                     log.info("Queued request completed [{}]", request.requestId());
-                    request.completion().tryEmitEmpty();
+                    request.admission().completionSink().tryEmitEmpty();
                 })
                 .doOnError(error -> {
                     if (error instanceof TimeoutException) {
@@ -122,11 +154,11 @@ public class DiscordRequestQueueService {
                     } else {
                         log.error("Queued request failed [{}]", request.requestId(), error);
                     }
-                    request.completion().tryEmitError(error);
+                    request.admission().completionSink().tryEmitError(error);
                 })
-                .doFinally(signalType ->
-                        inFlightRequests.remove(request.requestId(), request.completion())
-                )
+                .doFinally(signalType -> {
+                    inFlightRequests.remove(request.requestId(), request.admission());
+                })
                 .onErrorResume(error -> Mono.empty());
     }
 
@@ -144,17 +176,93 @@ public class DiscordRequestQueueService {
         log.info("Discord request queue stopped");
     }
 
+    private void refreshQueuePositionsLocked() {
+        for (int i = 0; i < pendingQueue.size(); i++) {
+            InternalAdmission admission = pendingQueue.get(i);
+            int newPosition = i + 1;
+
+            if (admission.currentPosition() != newPosition) {
+                admission.currentPosition(newPosition);
+                admission.positionSink().tryEmitNext(newPosition);
+            }
+        }
+    }
+
     private void failAllPending(Throwable error) {
-        inFlightRequests.forEach((requestId, completion) -> {
-            log.warn("Failing pending request [{}] because queue is stopping/stopped", requestId);
-            completion.tryEmitError(error);
-        });
-        inFlightRequests.clear();
+        synchronized (queueLock) {
+            for (InternalAdmission admission : inFlightRequests.values()) {
+                log.warn("Failing pending request [{}] because queue is stopping/stopped", admission.requestId());
+                admission.positionSink().tryEmitError(error);
+                admission.startedSink().tryEmitError(error);
+                admission.completionSink().tryEmitError(error);
+            }
+
+            pendingQueue.clear();
+            inFlightRequests.clear();
+        }
+    }
+
+    public record QueueAdmission(
+            String requestId,
+            int initialPosition,
+            Flux<Integer> positionUpdates,
+            Mono<Void> started,
+            Mono<Void> completion
+    ) {}
+
+    private static final class InternalAdmission {
+        private final String requestId;
+        private final Sinks.Many<Integer> positionSink;
+        private final Sinks.One<Void> startedSink;
+        private final Sinks.One<Void> completionSink;
+        private volatile int currentPosition;
+
+        private InternalAdmission(String requestId) {
+            this.requestId = requestId;
+            this.positionSink = Sinks.many().replay().latest();
+            this.startedSink = Sinks.one();
+            this.completionSink = Sinks.one();
+            this.currentPosition = 0;
+        }
+
+        private QueueAdmission publicView() {
+            return new QueueAdmission(
+                    requestId,
+                    currentPosition,
+                    positionSink.asFlux().distinctUntilChanged(),
+                    startedSink.asMono(),
+                    completionSink.asMono()
+            );
+        }
+
+        private String requestId() {
+            return requestId;
+        }
+
+        private Sinks.Many<Integer> positionSink() {
+            return positionSink;
+        }
+
+        private Sinks.One<Void> startedSink() {
+            return startedSink;
+        }
+
+        private Sinks.One<Void> completionSink() {
+            return completionSink;
+        }
+
+        private int currentPosition() {
+            return currentPosition;
+        }
+
+        private void currentPosition(int currentPosition) {
+            this.currentPosition = currentPosition;
+        }
     }
 
     private record QueuedRequest(
             String requestId,
             Supplier<Mono<Void>> taskSupplier,
-            Sinks.One<Void> completion
+            InternalAdmission admission
     ) {}
 }

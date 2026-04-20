@@ -9,7 +9,6 @@ import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCall
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.channel.MessageChannel;
 import discord4j.core.spec.MessageEditSpec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,6 +31,7 @@ public abstract class MessageListener {
 
     public Mono<Void> processCommandAI(
             Message eventMessage,
+            Message statusMessage,
             UserService userService,
             ChatClientService chatClientService,
             LLMCallChain llmCallChain
@@ -53,31 +53,33 @@ public abstract class MessageListener {
 
                                     UserEntity finalUser = user;
                                     RouteDecision decision = llmCallChain.decideRoute(discGlobalData);
+                                    String username = finalUser.getServerNickname() +": ";
 
                                     return switch (decision.mode()) {
                                         case TEXT -> handleTextCommand(
                                                 message,
+                                                statusMessage,
                                                 finalUser,
                                                 discGlobalData,
                                                 chatClientService
                                         );
                                         case IMAGE -> handleGeneratedCommand(
-                                                message,
+                                                statusMessage,
                                                 llmCallChain.executeImageChain(discGlobalData),
-                                                "Queued your image generation request...",
-                                                "Image generation complete."
+                                                username + "Generating your image.",
+                                                username + "Image generation complete."
                                         );
                                         case VIDEO -> handleGeneratedCommand(
-                                                message,
+                                                statusMessage,
                                                 llmCallChain.executeVideoChain(discGlobalData),
-                                                "Queued your video generation request...",
-                                                "Video generation complete."
+                                                username + "Generating your video.",
+                                                username + "Video generation complete."
                                         );
                                         case MUSIC -> handleGeneratedCommand(
-                                                message,
+                                                statusMessage,
                                                 llmCallChain.executeMusicChain(discGlobalData),
-                                                "Queued your music generation request...",
-                                                "Music generation complete."
+                                                username + "Generating your music." ,
+                                                username + "Music generation complete."
                                         );
                                     };
                                 })
@@ -95,72 +97,91 @@ public abstract class MessageListener {
 
     private Mono<Void> handleTextCommand(
             Message message,
+            Message statusMessage,
             UserEntity user,
             DiscGlobalData discGlobalData,
             ChatClientService chatClientService
     ) {
-        return message.getChannel()
-                .flatMap(channel ->
-                        chatClientService.generateLLMResponse(user, discGlobalData)
-                                .flatMapMany(response -> {
-                                    String cleanedResponse = cleanResponse(response);
-                                    List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
-                                    return Flux.fromIterable(chunks)
-                                            .concatMap(channel::createMessage);
-                                })
-                                .then()
-                );
+        return chatClientService.generateLLMResponse(user, discGlobalData)
+                .flatMap(response -> {
+                    String cleanedResponse = cleanResponse(response);
+                    List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
+
+                    if (chunks.isEmpty()) {
+                        return statusMessage.edit(
+                                MessageEditSpec.builder()
+                                        .contentOrNull("I'm sorry, I didn't understand you.")
+                                        .build()
+                        ).then();
+                    }
+
+                    Mono<Void> first = statusMessage.edit(
+                            MessageEditSpec.builder()
+                                    .contentOrNull(chunks.getFirst())
+                                    .build()
+                    ).then();
+
+                    if (chunks.size() == 1) {
+                        return first;
+                    }
+
+                    return first.then(
+                            message.getChannel()
+                                    .flatMapMany(channel -> Flux.fromIterable(chunks.subList(1, chunks.size()))
+                                            .concatMap(channel::createMessage))
+                                    .then()
+                    );
+                });
     }
 
     private Mono<Void> handleGeneratedCommand(
-            Message commandMessage,
+            Message statusMessage,
             Mono<ComfyuiService.GeneratedFile> generationMono,
             String queuedText,
             String doneText
     ) {
-        return commandMessage.getChannel()
-                .flatMap(channel -> channel.createMessage(queuedText)
-                        .flatMap(statusMessage -> {
-                            Mono<ComfyuiService.GeneratedFile> sharedGeneration = generationMono.cache();
+        Mono<ComfyuiService.GeneratedFile> sharedGeneration = generationMono.cache();
 
-                            Mono<Void> progressUpdates = Flux.interval(Duration.ofSeconds(10))
-                                    .takeUntilOther(sharedGeneration.materialize())
-                                    .concatMap(tick ->
-                                            statusMessage.edit(
-                                                            MessageEditSpec.builder()
-                                                                    .contentOrNull(queuedText + " Still working... elapsed " + ((tick + 1) * 10) + "s")
-                                                                    .build()
-                                                    )
-                                                    .onErrorResume(error -> Mono.empty())
-                                    )
-                                    .then();
+        Mono<Void> initialProcessingEdit = statusMessage.edit(
+                MessageEditSpec.builder()
+                        .contentOrNull(queuedText + setTimer(0))
+                        .build()
+        ).then().onErrorResume(error -> Mono.empty());
 
-                            Mono<Void> completionFlow = sharedGeneration
-                                    .flatMap(file -> sendGeneratedFile(channel, file, doneText))
-                                    .then(statusMessage.edit(
-                                            MessageEditSpec.builder()
-                                                    .contentOrNull(doneText)
-                                                    .build()
-                                    ))
-                                    .then()
-                                    .onErrorResume(error ->
-                                            statusMessage.edit(
-                                                            MessageEditSpec.builder()
-                                                                    .contentOrNull("Generation failed: " + safeMessage(error))
-                                                                    .build()
-                                                    )
-                                                    .then()
-                                    );
+        Mono<Void> progressUpdates = Flux.interval(Duration.ofSeconds(10))
+                .takeUntilOther(sharedGeneration.materialize())
+                .concatMap(tick ->
+                        statusMessage.edit(
+                                        MessageEditSpec.builder()
+                                                .contentOrNull(queuedText + setTimer((tick + 1) * 10))
+                                                .build()
+                                )
+                                .onErrorResume(error -> Mono.empty())
+                )
+                .then();
 
-                            return Mono.when(progressUpdates, completionFlow).then();
-                        })
+        Mono<Void> completionFlow = sharedGeneration
+                .flatMap(file -> editGeneratedMessage(statusMessage, file, doneText))
+                .onErrorResume(error ->
+                        statusMessage.edit(
+                                        MessageEditSpec.builder()
+                                                .contentOrNull("Generation failed: " + safeMessage(error))
+                                                .build()
+                                )
+                                .then()
                 );
+
+        return initialProcessingEdit.then(Mono.when(progressUpdates, completionFlow)).then();
     }
 
-    private Mono<Void> sendGeneratedFile(
-            MessageChannel channel,
+    private String setTimer(long timeRemaining) {
+        return "\nElapsed time: " + timeRemaining + "s";
+    }
+
+    private Mono<Void> editGeneratedMessage(
+            Message statusMessage,
             ComfyuiService.GeneratedFile file,
-            String caption
+            String doneText
     ) {
         if (file == null || file.bytes() == null || file.bytes().length == 0) {
             return Mono.empty();
@@ -169,11 +190,14 @@ public abstract class MessageListener {
         String filename = resolveFilename(file);
 
         return Mono.fromCallable(() -> new ByteArrayInputStream(file.bytes()))
+                .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(inputStream ->
-                        channel.createMessage(spec -> {
-                            spec.setContent(caption);
-                            spec.addFile(filename, inputStream);
-                        }).publishOn(Schedulers.boundedElastic()).doFinally(signal -> {
+                        statusMessage.edit(
+                                MessageEditSpec.builder()
+                                        .contentOrNull(doneText)
+                                        .addFile(filename, inputStream)
+                                        .build()
+                        ).publishOn(Schedulers.boundedElastic()).doFinally(signal -> {
                             try {
                                 inputStream.close();
                             } catch (Exception ignored) {

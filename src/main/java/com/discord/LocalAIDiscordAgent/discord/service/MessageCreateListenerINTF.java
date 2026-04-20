@@ -12,6 +12,7 @@ import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
+import discord4j.core.spec.MessageEditSpec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -84,22 +85,97 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
         }
 
         String requestId = message.getId().asString();
+        String nickname = safeNickname(discGlobalData.getServerNickname());
 
-        return discordRequestQueueService.enqueue(
-                requestId,
-                () -> processCommandAI(
-                        message,
-                        userService,
-                        chatClientService,
-                        llmCallChain
-                ).contextWrite(ctx -> DiscGlobalDataContextHolder.put(ctx, discGlobalData))
-        );
+        return message.getChannel()
+                .flatMap(channel ->
+                        channel.createMessage(buildQueuedPrompt(nickname, 1))
+                                .flatMap(statusMessage ->
+                                        discordRequestQueueService.enqueueWithPosition(
+                                                        requestId,
+                                                        () -> processCommandAI(
+                                                                message,
+                                                                statusMessage,
+                                                                userService,
+                                                                chatClientService,
+                                                                llmCallChain
+                                                        ).contextWrite(ctx -> DiscGlobalDataContextHolder.put(ctx, discGlobalData))
+                                                )
+                                                .flatMap(admission -> {
+                                                    Mono<Void> initialQueuedUpdate = statusMessage.edit(
+                                                            MessageEditSpec.builder()
+                                                                    .contentOrNull(buildQueuedPrompt(nickname, admission.initialPosition()))
+                                                                    .build()
+                                                    ).then();
+
+                                                    Mono<Void> queuePositionUpdates = admission.positionUpdates()
+                                                            .concatMap(position ->
+                                                                    statusMessage.edit(
+                                                                                    MessageEditSpec.builder()
+                                                                                            .contentOrNull(buildQueuedPrompt(nickname, position))
+                                                                                            .build()
+                                                                            )
+                                                                            .then()
+                                                                            .onErrorResume(error -> Mono.empty())
+                                                            )
+                                                            .takeUntilOther(admission.started())
+                                                            .then();
+
+                                                    Mono<Void> startedUpdate = admission.started()
+                                                            .then(statusMessage.edit(
+                                                                    MessageEditSpec.builder()
+                                                                            .contentOrNull(buildStartedPrompt(nickname))
+                                                                            .build()
+                                                            ))
+                                                            .then()
+                                                            .onErrorResume(error -> Mono.empty());
+
+                                                    Mono<Void> completionFailureOnly = admission.completion()
+                                                            .then()
+                                                            .onErrorResume(error ->
+                                                                    statusMessage.edit(
+                                                                                    MessageEditSpec.builder()
+                                                                                            .contentOrNull(buildFailedPrompt(nickname, error))
+                                                                                            .build()
+                                                                            )
+                                                                            .then()
+                                                            );
+
+                                                    return initialQueuedUpdate.then(
+                                                            Mono.whenDelayError(
+                                                                    queuePositionUpdates,
+                                                                    startedUpdate,
+                                                                    completionFailureOnly
+                                                            )
+                                                    );
+                                                })
+                                )
+                );
     }
 
     @Override
     public Mono<Void> handleError(Throwable error) {
         log.error("Unhandled error in MessageCreateListenerINTF", error);
         return Mono.empty();
+    }
+    private String buildQueuedPrompt(String nickname, int position) {
+        return nickname + ", your prompt is queued. Current queue position: " + position;
+    }
+
+    private String buildStartedPrompt(String nickname) {
+        return nickname + ", your prompt is being processed. Please wait a moment.";
+    }
+
+    private String buildFailedPrompt(String nickname, Throwable error) {
+        String msg = error.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = error.getClass().getSimpleName();
+        }
+        return nickname + ", your prompt failed: " + msg;
+    }
+
+    private String safeNickname(String nickname) {
+        return (nickname == null || nickname.isBlank()) ? "there" : nickname;
     }
 
     private boolean startsWithBotMention(String content, Snowflake botId) {
