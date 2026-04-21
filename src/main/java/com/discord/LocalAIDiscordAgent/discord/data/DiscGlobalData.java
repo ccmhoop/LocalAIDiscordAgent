@@ -1,10 +1,10 @@
 package com.discord.LocalAIDiscordAgent.discord.data;
 
-import com.discord.LocalAIDiscordAgent.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
-import com.discord.LocalAIDiscordAgent.chatMemory.recentChatMemory.model.RecentChatMemory;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.GroupMemory;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.RecentMessage;
-import com.discord.LocalAIDiscordAgent.systemMessage.records.SystemMsgRecords.UserProfile;
+import com.discord.LocalAIDiscordAgent.memory.chatMemory.longTermMemory.LongTermMemoryService.LongTermMemoryData;
+import com.discord.LocalAIDiscordAgent.memory.chatMemory.recentChatMemory.model.RecentChatMemory;
+import com.discord.LocalAIDiscordAgent.llm.systemMessage.records.SystemMsgRecords.GroupMemory;
+import com.discord.LocalAIDiscordAgent.llm.systemMessage.records.SystemMsgRecords.RecentMessage;
+import com.discord.LocalAIDiscordAgent.llm.systemMessage.records.SystemMsgRecords.UserProfile;
 import lombok.Getter;
 import org.springframework.ai.chat.messages.MessageType;
 

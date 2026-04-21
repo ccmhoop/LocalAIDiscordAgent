@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.comfyui.service;
 
-import com.discord.LocalAIDiscordAgent.comfyui.generators.imageGenerator.service.ImageGenerationService;
-import com.discord.LocalAIDiscordAgent.comfyui.generators.musicGenerator.service.MusicGenerationService;
-import com.discord.LocalAIDiscordAgent.comfyui.generators.videoGenerator.service.VideoGenerationService;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.data.PromptData;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.imageGenerator.service.ImageGenerationService;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.service.MusicGenerationService;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.videoGenerator.service.VideoGenerationService;
+import com.discord.LocalAIDiscordAgent.llm.llmChains.data.PromptData;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;

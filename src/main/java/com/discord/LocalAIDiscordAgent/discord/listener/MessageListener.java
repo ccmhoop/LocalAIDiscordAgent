@@ -3,9 +3,9 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
-import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
-import com.discord.LocalAIDiscordAgent.llmRouteDecider.records.RouteDecision;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
+import com.discord.LocalAIDiscordAgent.llm.llmChat.service.LLMChatService;
+import com.discord.LocalAIDiscordAgent.llm.llmRouteDecider.records.RouteDecision;
+import com.discord.LocalAIDiscordAgent.llm.llmChains.llmCallChains.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
@@ -33,7 +33,7 @@ public abstract class MessageListener {
             Message eventMessage,
             Message statusMessage,
             UserService userService,
-            ChatClientService chatClientService,
+            LLMChatService LLMChatService,
             LLMCallChain llmCallChain
     ) {
         return DiscGlobalDataContextHolder.get()
@@ -61,23 +61,24 @@ public abstract class MessageListener {
                                                 statusMessage,
                                                 finalUser,
                                                 discGlobalData,
-                                                chatClientService
+                                                LLMChatService,
+                                                decision.requiresContext()
                                         );
                                         case IMAGE -> handleGeneratedCommand(
                                                 statusMessage,
-                                                llmCallChain.executeImageChain(discGlobalData),
+                                                llmCallChain.executeImageChain(discGlobalData, decision.requiresContext()),
                                                 username + "Generating your image.",
                                                 username + "Image generation complete."
                                         );
                                         case VIDEO -> handleGeneratedCommand(
                                                 statusMessage,
-                                                llmCallChain.executeVideoChain(discGlobalData),
+                                                llmCallChain.executeVideoChain(discGlobalData, decision.requiresContext()),
                                                 username + "Generating your video.",
                                                 username + "Video generation complete."
                                         );
                                         case MUSIC -> handleGeneratedCommand(
                                                 statusMessage,
-                                                llmCallChain.executeMusicChain(discGlobalData),
+                                                llmCallChain.executeMusicChain(discGlobalData, decision.requiresContext()),
                                                 username + "Generating your music." ,
                                                 username + "Music generation complete."
                                         );
@@ -100,9 +101,10 @@ public abstract class MessageListener {
             Message statusMessage,
             UserEntity user,
             DiscGlobalData discGlobalData,
-            ChatClientService chatClientService
+            LLMChatService LLMChatService,
+            boolean requiresContext
     ) {
-        return chatClientService.generateLLMResponse(user, discGlobalData)
+        return LLMChatService.generateLLMResponse(user, discGlobalData, requiresContext)
                 .flatMap(response -> {
                     String cleanedResponse = cleanResponse(response);
                     List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
@@ -148,12 +150,12 @@ public abstract class MessageListener {
                         .build()
         ).then().onErrorResume(error -> Mono.empty());
 
-        Mono<Void> progressUpdates = Flux.interval(Duration.ofSeconds(10))
+        Mono<Void> progressUpdates = Flux.interval(Duration.ofSeconds(5))
                 .takeUntilOther(sharedGeneration.materialize())
                 .concatMap(tick ->
                         statusMessage.edit(
                                         MessageEditSpec.builder()
-                                                .contentOrNull(queuedText + setTimer((tick + 1) * 10))
+                                                .contentOrNull(queuedText + setTimer((tick + 1) * 5 - 5))
                                                 .build()
                                 )
                                 .onErrorResume(error -> Mono.empty())

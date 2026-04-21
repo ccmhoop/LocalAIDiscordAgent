@@ -5,8 +5,8 @@ import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataService;
 import com.discord.LocalAIDiscordAgent.discord.listener.EventListenerINTF;
 import com.discord.LocalAIDiscordAgent.discord.listener.MessageListener;
-import com.discord.LocalAIDiscordAgent.llmClients.chatClient.service.ChatClientService;
-import com.discord.LocalAIDiscordAgent.promptBuilderChains.llmCallChains.LLMCallChain;
+import com.discord.LocalAIDiscordAgent.llm.llmChat.service.LLMChatService;
+import com.discord.LocalAIDiscordAgent.llm.llmChains.llmCallChains.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
@@ -22,20 +22,20 @@ import reactor.core.publisher.Mono;
 public class MessageCreateListenerINTF extends MessageListener implements EventListenerINTF<MessageCreateEvent> {
 
     private final UserService userService;
-    private final ChatClientService chatClientService;
+    private final LLMChatService LLMChatService;
     private final DiscGlobalDataService discGlobalDataService;
     private final DiscordRequestQueueService discordRequestQueueService;
     private final LLMCallChain llmCallChain;
 
     public MessageCreateListenerINTF(
             UserService userService,
-            ChatClientService chatClientService,
+            LLMChatService LLMChatService,
             DiscGlobalDataService discGlobalDataService,
             DiscordRequestQueueService discordRequestQueueService,
             LLMCallChain llmCallChain
     ) {
         this.userService = userService;
-        this.chatClientService = chatClientService;
+        this.LLMChatService = LLMChatService;
         this.discGlobalDataService = discGlobalDataService;
         this.discordRequestQueueService = discordRequestQueueService;
         this.llmCallChain = llmCallChain;
@@ -97,7 +97,7 @@ public class MessageCreateListenerINTF extends MessageListener implements EventL
                                                                 message,
                                                                 statusMessage,
                                                                 userService,
-                                                                chatClientService,
+                                                                LLMChatService,
                                                                 llmCallChain
                                                         ).contextWrite(ctx -> DiscGlobalDataContextHolder.put(ctx, discGlobalData))
                                                 )
