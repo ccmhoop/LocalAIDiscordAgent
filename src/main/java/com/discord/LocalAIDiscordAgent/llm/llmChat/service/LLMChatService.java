@@ -2,7 +2,7 @@ package com.discord.LocalAIDiscordAgent.llm.llmChat.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
-import com.discord.LocalAIDiscordAgent.interactionProcessor.ProcessChatClient;
+import com.discord.LocalAIDiscordAgent.successHandler.ProcessChatClient;
 import com.discord.LocalAIDiscordAgent.llm.llmChat.helpers.ChatClientHelpers;
 import com.discord.LocalAIDiscordAgent.llm.llmChains.service.LLMChainService;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;

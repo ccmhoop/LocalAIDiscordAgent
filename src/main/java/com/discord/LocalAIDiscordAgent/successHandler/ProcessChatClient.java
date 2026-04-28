@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.interactionProcessor;
+package com.discord.LocalAIDiscordAgent.successHandler;
 
 import com.discord.LocalAIDiscordAgent.memory.chatMemory.groupChatMemory.service.GroupChatMemoryService;
 import com.discord.LocalAIDiscordAgent.memory.chatMemory.longTermMemory.LongTermMemoryService;

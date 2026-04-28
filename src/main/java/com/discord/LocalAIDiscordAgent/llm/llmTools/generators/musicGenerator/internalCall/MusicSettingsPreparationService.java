@@ -32,7 +32,7 @@ public class MusicSettingsPreparationService {
         }
 //        String context = promptData.getSummary();
 
-        MusicSettingsPayload settings = generationService.generatePayload(normalizedUserMessage);
+        MusicSettingsPayload settings = generationService.generatePayload(normalizedUserMessage, "");
         log.info("Generated music settings: {}", settings);
 
 //        if (!validator.isUsable(settings)) {

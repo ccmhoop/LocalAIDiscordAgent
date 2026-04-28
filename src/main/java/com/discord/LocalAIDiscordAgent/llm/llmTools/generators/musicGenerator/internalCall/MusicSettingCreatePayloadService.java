@@ -1,19 +1,15 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.internalCall;
 
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.generator.LLMSettingsGenerator;
 import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.AdvisorParams;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.stereotype.Service;
 
 
 @Slf4j
 @Service
-public class MusicSettingCreatePayloadService {
+public class MusicSettingCreatePayloadService extends LLMSettingsGenerator<MusicSettingsPayload> {
 
     private static final String SYSTEM_MESSAGE = """
             You are a music generation settings generator.
@@ -54,7 +50,7 @@ public class MusicSettingCreatePayloadService {
                 - Don't include the production style in the lyrics.
                 - Don't Vocal instructs, only the lyrics.
                 - Only include the lyrics and Section Headers.
-
+            
             3. bpm:
                 - Choose an appropriate BPM based on the requested style, mood, and energy.
                 - If the user specifies a BPM, use it.
@@ -82,38 +78,26 @@ public class MusicSettingCreatePayloadService {
             
             """;
 
-    private final ChatClient internalChatClient;
+    private static final String USER_INSTRUCT = """
+            Generate a song based on the user_message.
+            
+            user_message:
+            --------------------------
+            %s
+            --------------------------
+            """;
 
     public MusicSettingCreatePayloadService(ChatModel llmPayloadModel) {
-
-        var converter = new BeanOutputConverter<>(MusicSettingsPayload.class);
-
-        var validation = StructuredOutputValidationAdvisor.builder()
-                .outputType(MusicSettingsPayload.class)
-                .maxRepeatAttempts(3)
-                .build();
-
-        this.internalChatClient = ChatClient.builder(llmPayloadModel)
-                .defaultOptions(OllamaChatOptions.builder()
-                        .format(converter.getJsonSchemaMap())
-                        .build())
-                .defaultAdvisors(validation)
-                .build();
+        super(MusicSettingsPayload.class, llmPayloadModel);
     }
 
-    public MusicSettingsPayload generatePayload(String userMessage) {
-        return internalChatClient.prompt()
-                .advisors(AdvisorParams.ENABLE_NATIVE_STRUCTURED_OUTPUT)
-                .system(SYSTEM_MESSAGE)
-                .user("""
-                        Generate a song based on the user_message.
+    @Override
+    public String setSystemMessage() {
+        return SYSTEM_MESSAGE;
+    }
 
-                        user_message:
-                        --------------------------
-                        %s
-                        --------------------------
-                        """.formatted(userMessage))
-                .call()
-                .entity(MusicSettingsPayload.class);
+    @Override
+    public String setUserInstruction() {
+        return USER_INSTRUCT;
     }
 }
