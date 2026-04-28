@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.videoGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.generator.LLMSettingsGenerator;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.generator.LLMSettingsGenerator;
 import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.videoGenerator.payloadRecord.VideoSettingsPayload;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.internalCall;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.generator.LLMSettingsGenerator;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.generator.LLMSettingsGenerator;
 import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatModel;

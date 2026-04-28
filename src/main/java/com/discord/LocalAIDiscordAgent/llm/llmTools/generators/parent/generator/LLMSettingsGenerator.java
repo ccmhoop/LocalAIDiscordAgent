@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.generator;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.generator;
 
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;

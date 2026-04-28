@@ -1,12 +1,13 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.imageGenerator.validation;
 
 import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.validator.SettingsValidator;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
 @Component
-public class ImageSettingsValidator {
+public class ImageSettingsValidator extends SettingsValidator<ImageSettingsPayload> {
 
     private static final Set<String> ALLOWED_RESOLUTIONS = Set.of(
             "1024x1024",
@@ -20,6 +21,7 @@ public class ImageSettingsValidator {
             "640x1536"
     );
 
+    @Override
     public boolean isUsable(ImageSettingsPayload settings) {
         if (settings == null) {
             return false;
