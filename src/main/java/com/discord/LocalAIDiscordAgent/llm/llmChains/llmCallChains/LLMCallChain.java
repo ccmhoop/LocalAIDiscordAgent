@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.llm.llmChains.llmCallChains;
 
 import com.discord.LocalAIDiscordAgent.memory.chatMemory.chatMemoryAdvisor.ChatMemoryPreparationService;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.imageGenerator.internalCall.ImageSettingsPreparationService;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.internalCall.MusicSettingsPreparationService;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.videoGenerator.internalCall.VideoSettingsPreparationService;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.service.ImagePrepareSettingsPayloadService;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.service.MusicPrepareSettingsPayloadService;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.service.VideoPrepareSettingsPayloadService;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiRunService;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
@@ -36,9 +36,9 @@ public class LLMCallChain {
     private final RagContextPreparationService ragContextService;
     private final MapperUtils mapperUtils;
     private final WebSearchPreparationService webSearchPreparationService;
-    private final ImageSettingsPreparationService imageSettingsPreparationService;
-    private final MusicSettingsPreparationService musicGenerationService;
-    private final VideoSettingsPreparationService videoService;
+    private final ImagePrepareSettingsPayloadService imagePreparePayloadService;
+    private final MusicPrepareSettingsPayloadService musicGenerationService;
+    private final VideoPrepareSettingsPayloadService videoService;
 
     public LLMCallChain(
             ComfyuiRunService comfyuiRunService,
@@ -48,9 +48,9 @@ public class LLMCallChain {
             RagContextPreparationService ragContextService,
             MapperUtils mapperUtils,
             WebSearchPreparationService webSearchPreparationService,
-            ImageSettingsPreparationService imageSettingsPreparationService,
-            MusicSettingsPreparationService musicGenerationService,
-            VideoSettingsPreparationService videoService
+            ImagePrepareSettingsPayloadService imagePreparePayloadService,
+            MusicPrepareSettingsPayloadService musicGenerationService,
+            VideoPrepareSettingsPayloadService videoService
     ) {
         this.LLMToolCalls = LLMToolCalls;
         this.comfyuiRunService = comfyuiRunService;
@@ -59,7 +59,7 @@ public class LLMCallChain {
         this.ragContextService = ragContextService;
         this.mapperUtils = mapperUtils;
         this.webSearchPreparationService = webSearchPreparationService;
-        this.imageSettingsPreparationService = imageSettingsPreparationService;
+        this.imagePreparePayloadService = imagePreparePayloadService;
         this.musicGenerationService = musicGenerationService;
         this.videoService = videoService;
     }
@@ -83,7 +83,7 @@ public class LLMCallChain {
                         LLMToolCalls.callSummaryTool(promptData, discGlobalData);
                     }
 
-                    imageSettingsPreparationService.prepare(discGlobalData, promptData);
+                    imagePreparePayloadService.prepare(discGlobalData, promptData);
                     log.info("Image Prompt: {}", promptData.getImageSettings());
                     return promptData;
                 })

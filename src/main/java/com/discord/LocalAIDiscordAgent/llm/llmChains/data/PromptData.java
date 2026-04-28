@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.llm.llmChains.data;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.imageGenerator.payloadRecord.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.payload.ImageSettingsPayload;
 import com.discord.LocalAIDiscordAgent.memory.chatMemory.records.ChatMemoryPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.musicGenerator.payloadRecord.MusicSettingsPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.videoGenerator.payloadRecord.VideoSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload.MusicSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.payload.VideoSettingsPayload;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.llm.llmTools.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
