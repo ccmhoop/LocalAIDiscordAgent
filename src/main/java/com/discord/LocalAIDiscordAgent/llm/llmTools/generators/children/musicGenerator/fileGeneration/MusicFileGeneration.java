@@ -1,31 +1,31 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.service;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.fileGeneration;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload.MusicSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.dto.MusicSettingsDTO;
 import com.discord.LocalAIDiscordAgent.comfyui.helpers.ComfyHelper;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.llm.llmChains.data.PromptData;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 import java.util.UUID;
 
-@Service
-public class MusicGenerationService {
+@Component
+public class MusicFileGeneration {
 
     private final ObjectMapper objectMapper;
     private final ComfyuiService comfyuiService;
 
-    public MusicGenerationService(ObjectMapper objectMapper, ComfyuiService comfyuiService) {
+    public MusicFileGeneration(ObjectMapper objectMapper, ComfyuiService comfyuiService) {
         this.objectMapper = objectMapper;
         this.comfyuiService = comfyuiService;
     }
 
-    public Mono<ComfyuiService.GeneratedFile> generateMusic(PromptData promptData) {
+    public Mono<ComfyuiService.GeneratedFile> generateMusicFile(PromptData promptData) {
         return Mono.fromCallable(() -> buildWorkflow(promptData))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(comfyuiService::runGenerationWorkflow)
@@ -33,7 +33,7 @@ public class MusicGenerationService {
     }
 
     private Map<String, Object> buildWorkflow(PromptData promptData) throws Exception {
-        MusicSettingsPayload musicSettings = promptData.getMusicSettings();
+        MusicSettingsDTO musicSettings = promptData.getMusicSettings();
         ClassPathResource workflowResource = new ClassPathResource("comfyui/music_gen_api.json");
 
         if (!workflowResource.exists()) {
@@ -52,7 +52,7 @@ public class MusicGenerationService {
         return apiWorkflow;
     }
 
-    private void setMusicSettings(Map<String, Object> workflow, MusicSettingsPayload settings) {
+    private void setMusicSettings(Map<String, Object> workflow, MusicSettingsDTO settings) {
         Map<String, Object> inputs = ComfyHelper.getStringObjectMap(workflow, "94");
 
         inputs.put("keyscale", settings.keyscale());
@@ -67,7 +67,7 @@ public class MusicGenerationService {
 
     private ComfyuiService.GeneratedFile withMusicFilename(
             ComfyuiService.GeneratedFile file,
-            MusicSettingsPayload settings
+            MusicSettingsDTO settings
     ) {
         String baseName = sanitizeFilename(settings.title());
         if (baseName == null || baseName.isBlank()) {

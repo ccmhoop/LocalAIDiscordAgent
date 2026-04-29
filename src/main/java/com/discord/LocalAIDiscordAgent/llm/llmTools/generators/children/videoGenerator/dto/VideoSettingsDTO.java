@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.payload;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record VideoSettingsPayload(
+public record VideoSettingsDTO(
         @JsonProperty(required = true)
         String positivePrompt,
         @JsonProperty(required = true)

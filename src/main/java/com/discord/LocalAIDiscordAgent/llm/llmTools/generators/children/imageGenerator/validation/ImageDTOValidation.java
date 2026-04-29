@@ -1,13 +1,13 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.validation;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.payload.ImageSettingsPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.validation.SettingsPayloadValidator;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.dto.ImageSettingsDTO;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.validation.FileDTOValidation;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
 
 @Component
-public class ImageSettingsValidation extends SettingsPayloadValidator<ImageSettingsPayload> {
+public class ImageDTOValidation extends FileDTOValidation<ImageSettingsDTO> {
 
     private static final Set<String> ALLOWED_RESOLUTIONS = Set.of(
             "1024x1024",
@@ -22,7 +22,7 @@ public class ImageSettingsValidation extends SettingsPayloadValidator<ImageSetti
     );
 
     @Override
-    public boolean isUsable(ImageSettingsPayload settings) {
+    public boolean isUsable(ImageSettingsDTO settings) {
         if (settings == null) {
             return false;
         }

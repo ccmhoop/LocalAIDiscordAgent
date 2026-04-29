@@ -1,12 +1,12 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.llmCall;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.llmGenerate;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmCall.SettingsPayloadGenerator;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload.MusicSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmGenerate.FileSettingsLLMGenerate;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.dto.MusicSettingsDTO;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
 @Component
-public class MusicGenerateSettingsPayload extends SettingsPayloadGenerator<MusicSettingsPayload> {
+public class MusicSettingsLLMGenerate extends FileSettingsLLMGenerate<MusicSettingsDTO> {
 
     private static final String SYSTEM_MESSAGE = """
             You are a music generation settings generator.
@@ -84,8 +84,8 @@ public class MusicGenerateSettingsPayload extends SettingsPayloadGenerator<Music
             --------------------------
             """;
 
-    public MusicGenerateSettingsPayload(ChatModel llmPayloadModel) {
-        super(MusicSettingsPayload.class, llmPayloadModel);
+    public MusicSettingsLLMGenerate(ChatModel llmPayloadModel) {
+        super(MusicSettingsDTO.class, llmPayloadModel);
     }
 
     @Override

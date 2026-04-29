@@ -1,8 +1,8 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public record MusicSettingsPayload(
+public record MusicSettingsDTO(
         @JsonProperty(required = true) String tags,
         @JsonProperty(required = true) String lyrics,
         @JsonProperty(required = true) int bpm,

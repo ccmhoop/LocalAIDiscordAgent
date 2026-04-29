@@ -1,17 +1,19 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.llmCall;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.llmGenerate;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmCall.SettingsPayloadGenerator;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.payload.VideoSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmGenerate.FileSettingsLLMGenerate;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.dto.ImageSettingsDTO;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
 @Component
-public class VideoGenerateSettingsPayload extends SettingsPayloadGenerator<VideoSettingsPayload> {
+public class ImageSettingsLLMGenerate extends FileSettingsLLMGenerate<ImageSettingsDTO> {
 
     private static final String SYSTEM_MESSAGE = """
             Your task is to generate:
-            - one positive video prompt
-            - one negative video prompt
+            - one positive image prompt
+            - one negative image prompt
+            - choose a fitting image height
+            - choose a fitting image width
             
             Treat the user_message as the primary and authoritative source of intent.
             If <context> is provided, use it to guide the prompt generation.
@@ -19,20 +21,31 @@ public class VideoGenerateSettingsPayload extends SettingsPayloadGenerator<Video
             The generated prompts must stay closely aligned with the user_message.
             Preserve the user's requested subject, scene, style, mood, composition, and important constraints.
             
-            Improve the prompt only by making it clearer, more descriptive, and more useful for video generation.
+            Improve the prompt only by making it clearer, more descriptive, and more useful for image generation.
             Do not change the core subject, intent, or meaning of the request.
             Do not introduce unrelated concepts, extra subjects, new actions, new settings, or stylistic changes unless they are explicitly requested or clearly implied.
             If people or names are mentioned no matter the subject always include them in the prompt.
             Always use the likeness of the person or object mentioned in the user_message.
             
-            The positive video prompt should describe the video storyline of the video.
-            The negative video prompt should contain keywords of what should be avoided in the video.
+            The positive image prompt should describe what should appear in the image.
+            The negative image prompt should describe what should be avoided in the image.
             
-            The negative video prompt must not contradict the user_message.
-            Do not use the negative video prompt to remove requested subjects, styles, attributes, or important details.
+            The negative image prompt must not contradict the user_message.
+            Do not use the negative image prompt to remove requested subjects, styles, attributes, or important details.
             
             Prefer fidelity to the user request over creativity.
             If the user_message is brief or underspecified, enrich it conservatively and only in ways that support the original request.
+            
+            Available image resolutions in Width and Height:
+            - 1024 x 1024
+            - 1152 x 896
+            - 896  x 1152
+            - 1216 x 832
+            - 832  x 1216
+            - 1344 x 768
+            - 768  x 1344
+            - 1536 x 640
+            - 640  x 1536
             
             <context>
             %s
@@ -40,7 +53,7 @@ public class VideoGenerateSettingsPayload extends SettingsPayloadGenerator<Video
             """;
 
     private static final String USER_INSTRUCT = """
-            Generate a video based on the user_message.
+            Generate a image based on the user_message.
             
             user_message:
             --------------------------
@@ -48,8 +61,8 @@ public class VideoGenerateSettingsPayload extends SettingsPayloadGenerator<Video
             --------------------------
             """;
 
-    public VideoGenerateSettingsPayload(ChatModel llmPayloadModel) {
-        super(VideoSettingsPayload.class, llmPayloadModel);
+    public ImageSettingsLLMGenerate(ChatModel llmPayloadModel) {
+        super(ImageSettingsDTO.class, llmPayloadModel);
     }
 
     @Override

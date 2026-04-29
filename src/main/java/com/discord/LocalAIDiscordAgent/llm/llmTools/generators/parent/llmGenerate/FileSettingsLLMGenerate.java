@@ -1,4 +1,4 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmCall;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.llmGenerate;
 
 import org.springframework.ai.chat.client.AdvisorParams;
 import org.springframework.ai.chat.client.ChatClient;
@@ -7,14 +7,14 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 
-public abstract class SettingsPayloadGenerator<T extends Record> {
+public abstract class FileSettingsLLMGenerate<T extends Record> {
 
     private final Class<T> recordClass;
     private final String systemsMessage;
     private final String userInstruction;
     private final ChatClient internalChatClient;
 
-    public SettingsPayloadGenerator(Class<T> recordClass, ChatModel llmPayloadModel) {
+    public FileSettingsLLMGenerate(Class<T> recordClass, ChatModel llmPayloadModel) {
         assert recordClass != null;
         assert llmPayloadModel != null;
         this.recordClass = recordClass;
@@ -23,10 +23,7 @@ public abstract class SettingsPayloadGenerator<T extends Record> {
         this.internalChatClient = setInternalChatClient(llmPayloadModel);
     }
 
-    public abstract String setSystemMessage();
-    public abstract String setUserInstruction();
-
-    public T generatePayload(String userMessage, String context) {
+    public T generateFileSettings(String userMessage, String context) {
         String safeContext = context == null ? "" : context.trim();
 
         return internalChatClient.prompt()
@@ -53,5 +50,8 @@ public abstract class SettingsPayloadGenerator<T extends Record> {
                 .defaultAdvisors(validation)
                 .build();
     }
+
+    public abstract String setSystemMessage();
+    public abstract String setUserInstruction();
 
 }

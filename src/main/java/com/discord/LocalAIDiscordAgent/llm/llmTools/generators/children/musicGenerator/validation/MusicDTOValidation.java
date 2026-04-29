@@ -1,15 +1,14 @@
 package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.validation;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload.MusicSettingsPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.validation.SettingsPayloadValidator;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.dto.MusicSettingsDTO;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.parent.validation.FileDTOValidation;
 import org.springframework.stereotype.Component;
 
-
 @Component
-public class MusicSettingsValidation extends SettingsPayloadValidator<MusicSettingsPayload> {
+public class MusicDTOValidation extends FileDTOValidation<MusicSettingsDTO> {
 
     @Override
-    public boolean isUsable(MusicSettingsPayload settings) {
+    public boolean isUsable(MusicSettingsDTO settings) {
      return true;
     }
 

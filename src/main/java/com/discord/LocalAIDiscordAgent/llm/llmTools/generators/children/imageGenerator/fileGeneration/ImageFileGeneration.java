@@ -1,31 +1,31 @@
-package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.service;
+package com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.fileGeneration;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.payload.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.dto.ImageSettingsDTO;
 import com.discord.LocalAIDiscordAgent.comfyui.helpers.ComfyHelper;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.llm.llmChains.data.PromptData;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 import java.util.UUID;
 
-@Service
-public class ImageGenerationService {
+@Component
+public class ImageFileGeneration {
 
     private final ObjectMapper objectMapper;
     private final ComfyuiService comfyuiService;
 
-    public ImageGenerationService(ObjectMapper objectMapper, ComfyuiService comfyuiService) {
+    public ImageFileGeneration(ObjectMapper objectMapper, ComfyuiService comfyuiService) {
         this.objectMapper = objectMapper;
         this.comfyuiService = comfyuiService;
     }
 
-    public Mono<ComfyuiService.GeneratedFile> generateImage(PromptData promptData) {
+    public Mono<ComfyuiService.GeneratedFile> generateImageFile(PromptData promptData) {
         return Mono.fromCallable(() -> buildWorkflow(promptData))
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(comfyuiService::runGenerationWorkflow)
@@ -33,7 +33,7 @@ public class ImageGenerationService {
     }
 
     private Map<String, Object> buildWorkflow(PromptData promptData) throws Exception {
-        ImageSettingsPayload imageSettings = promptData.getImageSettings();
+        ImageSettingsDTO imageSettingsDTO = promptData.getImageSettingsDTO();
         ClassPathResource workflowResource = new ClassPathResource("comfyui/sdxl_api.json");
 
         if (!workflowResource.exists()) {
@@ -48,11 +48,11 @@ public class ImageGenerationService {
             );
         }
 
-        setImageSettings(apiWorkflow, imageSettings);
+        setImageSettings(apiWorkflow, imageSettingsDTO);
         return apiWorkflow;
     }
 
-    private void setImageSettings(Map<String, Object> workflow, ImageSettingsPayload settings) {
+    private void setImageSettings(Map<String, Object> workflow, ImageSettingsDTO settings) {
         Map<String, Object> inputs = ComfyHelper.getStringObjectMap(workflow, "5");
         inputs.put("width", settings.pixelWidth());
         inputs.put("height", settings.pixelHeight());

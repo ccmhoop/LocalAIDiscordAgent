@@ -1,9 +1,9 @@
 package com.discord.LocalAIDiscordAgent.llm.llmChains.data;
 
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.payload.ImageSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.imageGenerator.dto.ImageSettingsDTO;
 import com.discord.LocalAIDiscordAgent.memory.chatMemory.records.ChatMemoryPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.payload.MusicSettingsPayload;
-import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.payload.VideoSettingsPayload;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.musicGenerator.dto.MusicSettingsDTO;
+import com.discord.LocalAIDiscordAgent.llm.llmTools.generators.children.videoGenerator.dto.VideoSettingsDTO;
 import com.discord.LocalAIDiscordAgent.objectMapper.MapperUtils;
 import com.discord.LocalAIDiscordAgent.llm.llmTools.webSearch.records.WebSearchRecords.MergedWebQAItem;
 import lombok.Getter;
@@ -28,28 +28,28 @@ public class PromptData {
     private String summary;
     private String queryString;
     private ChatMemoryPayload chatMemoryPayload;
-    private ImageSettingsPayload imageSettings;
-    private VideoSettingsPayload videoSettings;
+    private ImageSettingsDTO imageSettingsDTO;
+    private VideoSettingsDTO videoSettings;
     private boolean webSearchRequired;
-    private MusicSettingsPayload musicSettings;
+    private MusicSettingsDTO musicSettings;
 
     public PromptData(MapperUtils mapperUtils) {
         this.mapperUtils = mapperUtils;
     }
 
-    public void setMusicSettings(MusicSettingsPayload musicSettings) {
+    public void setMusicSettings(MusicSettingsDTO musicSettings) {
         this.musicSettings = musicSettings;
     }
 
-    public MusicSettingsPayload getMusicSettings() {
+    public MusicSettingsDTO getMusicSettings() {
         return musicSettings;
     }
 
-    public void setVideoSettings(VideoSettingsPayload videoSettings) {
+    public void setVideoSettings(VideoSettingsDTO videoSettings) {
         this.videoSettings = videoSettings;
     }
 
-    public VideoSettingsPayload getVideoSettings() {
+    public VideoSettingsDTO getVideoSettings() {
         return videoSettings;
     }
 
@@ -61,12 +61,12 @@ public class PromptData {
         return webSearchRequired;
     }
 
-    public void setImageSettings(ImageSettingsPayload imageSettings) {
-        this.imageSettings = imageSettings;
+    public void setImageSettingsDTO(ImageSettingsDTO imageSettingsDTO) {
+        this.imageSettingsDTO = imageSettingsDTO;
     }
 
-    public ImageSettingsPayload getImageSettings() {
-        return imageSettings;
+    public ImageSettingsDTO getImageSettingsDTO() {
+        return imageSettingsDTO;
     }
 
     public void setChatMemoryPayload(ChatMemoryPayload chatMemoryPayload) {
