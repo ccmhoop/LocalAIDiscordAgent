@@ -1,7 +1,7 @@
 package com.discord.LocalAIDiscordAgent.llm.llmChains.service;
 
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
-import com.discord.LocalAIDiscordAgent.llm.llmChains.llmCallChains.LLMCallChain;
+import com.discord.LocalAIDiscordAgent.llm.llmChains.llmChain.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.llm.systemMessage.SystemMessageFactory;
 import com.discord.LocalAIDiscordAgent.llm.systemMessage.SystemMessagePresets;
 import com.discord.LocalAIDiscordAgent.llm.systemMessage.records.SystemMsgRecords.RuntimeContext;

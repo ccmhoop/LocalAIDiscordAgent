@@ -3,9 +3,9 @@ package com.discord.LocalAIDiscordAgent.discord.listener;
 import com.discord.LocalAIDiscordAgent.comfyui.service.ComfyuiService;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalData;
 import com.discord.LocalAIDiscordAgent.discord.data.DiscGlobalDataContextHolder;
-import com.discord.LocalAIDiscordAgent.llm.llmChat.service.LLMChatService;
-import com.discord.LocalAIDiscordAgent.llm.llmRouteDecider.records.RouteDecision;
-import com.discord.LocalAIDiscordAgent.llm.llmChains.llmCallChains.LLMCallChain;
+import com.discord.LocalAIDiscordAgent.llm.llmMain.service.LLMMainService;
+import com.discord.LocalAIDiscordAgent.llm.llmRouter.dto.LLMRouterDTO;
+import com.discord.LocalAIDiscordAgent.llm.llmChains.llmChain.LLMCallChain;
 import com.discord.LocalAIDiscordAgent.user.model.UserEntity;
 import com.discord.LocalAIDiscordAgent.user.service.UserService;
 import discord4j.core.object.entity.Message;
@@ -33,7 +33,7 @@ public abstract class MessageListener {
             Message eventMessage,
             Message statusMessage,
             UserService userService,
-            LLMChatService LLMChatService,
+            LLMMainService LLMMainService,
             LLMCallChain llmCallChain
     ) {
         return DiscGlobalDataContextHolder.get()
@@ -52,7 +52,7 @@ public abstract class MessageListener {
                                     }
 
                                     UserEntity finalUser = user;
-                                    RouteDecision decision = llmCallChain.decideRoute(discGlobalData);
+                                    LLMRouterDTO decision = llmCallChain.decideRoute(discGlobalData);
                                     String username = finalUser.getServerNickname() +": ";
 
                                     return switch (decision.mode()) {
@@ -61,7 +61,7 @@ public abstract class MessageListener {
                                                 statusMessage,
                                                 finalUser,
                                                 discGlobalData,
-                                                LLMChatService,
+                                                LLMMainService,
                                                 decision.requiresContext()
                                         );
                                         case IMAGE -> handleGeneratedCommand(
@@ -101,10 +101,10 @@ public abstract class MessageListener {
             Message statusMessage,
             UserEntity user,
             DiscGlobalData discGlobalData,
-            LLMChatService LLMChatService,
+            LLMMainService LLMMainService,
             boolean requiresContext
     ) {
-        return LLMChatService.generateLLMResponse(user, discGlobalData, requiresContext)
+        return LLMMainService.generateLLMResponse(user, discGlobalData, requiresContext)
                 .flatMap(response -> {
                     String cleanedResponse = cleanResponse(response);
                     List<String> chunks = splitIntoChunks(cleanedResponse, DISCORD_MAX_MESSAGE_LEN);
